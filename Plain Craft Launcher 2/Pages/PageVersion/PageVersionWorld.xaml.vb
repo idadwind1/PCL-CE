@@ -8,6 +8,7 @@ Public Class PageVersionWorld
         '重复加载部分
         PanBack.ScrollToHome()
         WorldPath = PageVersionLeft.Version.PathIndie + "saves"
+        If Not Directory.Exists(WorldPath) Then Directory.CreateDirectory(WorldPath)
         Reload()
 
         '非重复加载部分
