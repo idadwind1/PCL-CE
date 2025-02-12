@@ -14,8 +14,8 @@ jobs:
   build:
     name: Build
     runs-on: windows-latest
-    strategy:  
-       matrix:  
+    strategy:
+       matrix:
          configuration: [Beta, Release]
     steps:
 
