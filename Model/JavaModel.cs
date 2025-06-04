@@ -38,5 +38,24 @@ namespace PCL.Core.Helper.Java
         public bool IsJre { get; set; }
         public string JavaExePath => $@"{Path}\java.exe";
         public string JavawExePath => $@"{Path}\javaw.exe";
+
+        public override string ToString()
+        {
+            return (IsJre?"JRE":"JDK") + $" {Version} ({Brand}) " + (Is64Bit?"64 Bit":"32 Bit");
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (obj is JavaModel model)
+            {
+                return Path.Equals(model.Path, StringComparison.OrdinalIgnoreCase);
+            }
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return Path?.GetHashCode() ?? 0;
+        }
     }
 }
