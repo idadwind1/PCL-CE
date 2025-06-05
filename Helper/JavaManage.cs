@@ -1,22 +1,27 @@
-﻿using System;
+﻿using Microsoft.Win32;
+using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Microsoft.Win32;
-using System.IO.Compression;
-using System.Net.Http.Headers;
 
-namespace PCL.Core.Helper.Java
+using PCL.Core.Model;
+using System.Net.NetworkInformation;
+
+namespace PCL.Core.Helper
 {
-    public class JavaHelper
+    public class JavaManage
     {
-        public static async Task<List<JavaModel>> ScanJava()
+        private List<Java> _javas = new List<Java>();
+        public List<Java> JavaList
         {
-            var javaList = new List<JavaModel>();
+            get { return _javas.ToList(); }
+        }
+
+        public async Task ScanJava()
+        {
+            var javaList = new List<Java>();
             var javaPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             var SearchTasks = new List<Task>();
@@ -29,54 +34,29 @@ namespace PCL.Core.Helper.Java
 
             foreach (var javaExePath in javaPaths)
             {
-                var javaModel = Prase(javaExePath);
+                var javaModel = Java.Prase(javaExePath);
                 if (javaModel != null)
                 {
                     javaList.Add(javaModel);
                 }
             }
-
-            return javaList
+            
+            _javas = javaList
                 .OrderByDescending(x => x.Version)
                 .ToList();
         }
 
-        public static JavaModel Prase(string JavaExePath)
+        public async Task<List<Java>> SelectSuitableJava(Version MinVerison, Version MaxVersion)
         {
-            try
-            {
-                var JavaFileVersion = FileVersionInfo.GetVersionInfo(JavaExePath);
-                var JavaVersion = Version.Parse(JavaFileVersion.FileVersion);
-                var CompanyName = JavaFileVersion.CompanyName
-                    ?? JavaFileVersion.FileDescription
-                    ?? JavaFileVersion.ProductName
-                    ?? string.Empty;
-                var JavaBrand = DetermineBrand(CompanyName);
-
-                var CurrentJavaPath = Path.GetDirectoryName(JavaExePath);
-                var IsJavaJre = !File.Exists(Path.Combine(CurrentJavaPath, "javac.exe"));
-                var IsJava64Bit = Utils.Programe.IsExecutableFile64Bit(JavaExePath);
-                var ShouldDisableByDefault = (IsJavaJre && JavaVersion.Major >= 16)
-                    || (!IsJava64Bit && Environment.Is64BitOperatingSystem);
-
-                return new JavaModel
-                {
-                    Path = CurrentJavaPath,
-                    Version = JavaVersion,
-                    IsJre = IsJavaJre,
-                    Is64Bit = IsJava64Bit,
-                    IsEnabled = !ShouldDisableByDefault,
-                    Brand = JavaBrand
-                };
-            }
-            catch
-            {
-                // 忽略无法获取版本的Java路径
-            }
-            return null;
+            if (_javas == null || _javas.Count == 0)
+                await ScanJava();
+            return _javas
+                .Where(java => java.Version >= MinVerison && java.Version <= MaxVersion)
+                .OrderByDescending(java => java.Version)
+                .ToList();
         }
 
-        private static void ScanRegistryForJava(ref HashSet<string> javaPaths)
+        private void ScanRegistryForJava(ref HashSet<string> javaPaths)
         {
             var registryPaths = new List<string>
             {
@@ -112,7 +92,7 @@ namespace PCL.Core.Helper.Java
             }
         }
 
-        private static void ScanDefaultInstallPaths(ref HashSet<string> javaPaths)
+        private void ScanDefaultInstallPaths(ref HashSet<string> javaPaths)
         {
             var programFilesPaths = new List<string>
             {
@@ -147,7 +127,7 @@ namespace PCL.Core.Helper.Java
             }
         }
 
-        private static void ScanPathEnvironmentVariable(ref HashSet<string> javaPaths)
+        private void ScanPathEnvironmentVariable(ref HashSet<string> javaPaths)
         {
             string pathEnv = Environment.GetEnvironmentVariable("PATH");
             if (string.IsNullOrEmpty(pathEnv)) return;
@@ -163,38 +143,9 @@ namespace PCL.Core.Helper.Java
             }
         }
 
-        private static void ScanMicrosoftStoreJava(ref HashSet<string> javaPaths)
+        private void ScanMicrosoftStoreJava(ref HashSet<string> javaPaths)
         {
             //TODO: 扫描  Microsoft Java
         }
-
-        private static JavaBrandType DetermineBrand(string output)
-        {
-            if (output.IndexOf("Eclipse", StringComparison.OrdinalIgnoreCase) >= 0)
-                return JavaBrandType.EclipseTemurin;
-            if (output.IndexOf("Bellsoft", StringComparison.OrdinalIgnoreCase) >= 0)
-                return JavaBrandType.Bellsoft;
-            if (output.IndexOf("Microsoft", StringComparison.OrdinalIgnoreCase) >= 0)
-                return JavaBrandType.Microsoft;
-            if (output.IndexOf("Amazon", StringComparison.OrdinalIgnoreCase) >= 0)
-                return JavaBrandType.AmazonCorretto;
-            if (output.IndexOf("Azul", StringComparison.OrdinalIgnoreCase) >= 0)
-                return JavaBrandType.AzulZulu;
-            if (output.IndexOf("Oracle", StringComparison.OrdinalIgnoreCase) >= 0)
-                return JavaBrandType.Oracle;
-            if (output.IndexOf("Alibaba", StringComparison.OrdinalIgnoreCase) >= 0)
-                return JavaBrandType.Dragonwell;
-            return JavaBrandType.Unknown;
-        }
-
-        public static List<JavaModel> SelectSuitableJava(Version MinVerison, Version MaxVersion)
-        {
-            var javaList = ScanJava().Result;
-            return javaList
-                .Where(java => java.Version >= MinVerison && java.Version <= MaxVersion)
-                .OrderByDescending(java => java.Version)
-                .ToList();
-        }
-
     }
 }

@@ -110,7 +110,10 @@ namespace PCL.Core.Utils.PE
             }
         }
 
-        
+        public static bool IsMachine64Bit(MachineType machine)
+        {
+            return new List<MachineType> { MachineType.IA64, MachineType.ARM64, MachineType.AMD64 }.Contains(machine);
+        }
     }
 
     /// <summary>
@@ -152,10 +155,5 @@ namespace PCL.Core.Utils.PE
         public ushort Characteristics { get; set; }
         public bool IsValid { get; set; }
         public string ErrorMessage { get; set; }
-
-        /// <summary>
-        /// 判断是否为64位架构
-        /// </summary>
-        public bool Is64Bit => Machine == MachineType.AMD64 || Machine == MachineType.IA64 || Machine == MachineType.ARM64;
     }
 }
