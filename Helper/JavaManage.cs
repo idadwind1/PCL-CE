@@ -145,7 +145,37 @@ namespace PCL.Core.Helper
 
         private void ScanMicrosoftStoreJava(ref HashSet<string> javaPaths)
         {
-            //TODO: 扫描  Microsoft Java
+            var MsJavaFolder = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Packages",
+                "Microsoft.4297127D64EC6_8wekyb3d8bbwe", // Ms Java 的固定下载地址
+                "LocalCache",
+                "Local",
+                "runtime");
+            if (!Directory.Exists(MsJavaFolder))
+                return;
+            // 搜索第一级目录：以"java-runtime"开头的文件夹
+            foreach (var runtimeDir in Directory.EnumerateDirectories(MsJavaFolder))
+            {
+                string dirName = Path.GetFileName(runtimeDir);
+                if (!dirName.StartsWith("java-runtime"))
+                    continue;
+
+                // 搜索第二级目录：平台架构目录 (如 windows-x64)
+                foreach (var archDir in Directory.EnumerateDirectories(runtimeDir))
+                {
+                    // 搜索第三级目录：具体运行时版本目录
+                    foreach (var versionDir in Directory.EnumerateDirectories(archDir))
+                    {
+                        // 检查bin/java.exe是否存在
+                        string javaExePath = Path.Combine(versionDir, "bin", "java.exe");
+                        if (File.Exists(javaExePath))
+                        {
+                            javaPaths.Add(javaExePath);
+                        }
+                    }
+                }
+            }
         }
     }
 }
