@@ -34,6 +34,9 @@ namespace PCL.Core.Model
         /// </summary>
         public string JavaFolder { get; set; }
         public Version Version { get; set; }
+        public int JavaMajorVersion => Version.Major == 1
+            ? Version.Minor
+            : Version.Major;
         public JavaBrandType Brand { get; set; }
         /// <summary>
         /// 用户是否启动此 Java
@@ -46,7 +49,7 @@ namespace PCL.Core.Model
 
         public override string ToString()
         {
-            return (IsJre?"JRE":"JDK") + $" {Version} ({Brand}) " + (Is64Bit?"64 Bit":"32 Bit");
+            return (IsJre?"JRE":"JDK") + $" {JavaMajorVersion} ({Brand}) " + (Is64Bit?"64 Bit":"32 Bit") + $" {JavaFolder}";
         }
 
         public override bool Equals(object obj)
