@@ -15,14 +15,14 @@ namespace PCL.Core.Model
     public enum JavaBrandType
     {
         EclipseTemurin,
-        AmazonCorretto,
-        AzulZulu,
-        IBMSemeru,
+        Microsoft,
         Bellsoft,
+        AzulZulu,
+        AmazonCorretto,
+        IBMSemeru,
         Oracle,
         Dragonwell,
         TencentKona,
-        Microsoft,
         OpenJDK,
         Unknown
     }
