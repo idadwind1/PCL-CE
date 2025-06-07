@@ -51,6 +51,7 @@ namespace PCL.Core.Helper
             if (_javas == null || _javas.Count == 0)
                 await ScanJava();
             return _javas
+                .OrderBy(j => j.Version)
                 .Where(java => java.IsEnabled && java.Version >= MinVerison && java.Version <= MaxVersion)
                 .ToList();
         }
