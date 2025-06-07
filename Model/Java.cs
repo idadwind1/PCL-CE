@@ -49,7 +49,7 @@ namespace PCL.Core.Model
 
         public override string ToString()
         {
-            return (IsJre?"JRE":"JDK") + $" {JavaMajorVersion} ({Brand}) " + (Is64Bit?"64 Bit":"32 Bit") + $" {JavaFolder}";
+            return $" {(IsJre?"JRE":"JDK")} {JavaMajorVersion} {Brand} {(Is64Bit ? "64 Bit" : "32 Bit")} | {JavaFolder}";
         }
 
         public override bool Equals(object obj)
@@ -75,6 +75,8 @@ namespace PCL.Core.Model
         {
             try
             {
+                if (!File.Exists(JavaExePath))
+                    return null;
                 var JavaFileVersion = FileVersionInfo.GetVersionInfo(JavaExePath);
                 var JavaVersion = Version.Parse(JavaFileVersion.FileVersion);
                 var CompanyName = JavaFileVersion.CompanyName
@@ -102,10 +104,7 @@ namespace PCL.Core.Model
                     Brand = JavaBrand
                 };
             }
-            catch
-            {
-                // 忽略无法获取版本的Java路径
-            }
+            catch { /* 忽略无法获取版本的Java路径 */}
             return null;
         }
 

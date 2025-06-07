@@ -41,9 +41,9 @@ namespace PCL.Core.Helper
                 }
             }
             
-            _javas = javaList
-                .OrderByDescending(x => x.Version)
-                .ToList();
+            _javas = (from j in javaList
+                      orderby j.Version descending, j.Brand
+                      select j).ToList();
         }
 
         public async Task<List<Java>> SelectSuitableJava(Version MinVerison, Version MaxVersion)
@@ -51,9 +51,7 @@ namespace PCL.Core.Helper
             if (_javas == null || _javas.Count == 0)
                 await ScanJava();
             return _javas
-                .Where(java => java.Version >= MinVerison && java.Version <= MaxVersion)
-                .OrderByDescending(java => java.Version)
-                .OrderBy( java => java.Brand)
+                .Where(java => java.IsEnabled && java.Version >= MinVerison && java.Version <= MaxVersion)
                 .ToList();
         }
 
@@ -133,7 +131,7 @@ namespace PCL.Core.Helper
             {"java", "jdk", "jre",
             "dragonwell", "zulu", "oracle", "open", "corretto", "eclipse", "hotspot", "semeru", "kona",
             "environment", "env", "runtime", "x86_64", "amd64", "arm64",
-            "pcl", "hmcl", "baka"};
+            "pcl", "hmcl", "baka", "minecraft"};
 
             // 最大文件夹搜索深度
             const int MAX_SEARCH_DEPTH = 18;
