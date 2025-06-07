@@ -110,7 +110,8 @@ namespace PCL.Core.Model
 
         private static JavaBrandType DetermineBrand(string output)
         {
-            if (output.IndexOf("Eclipse", StringComparison.OrdinalIgnoreCase) >= 0)
+            if (output.IndexOf("Eclipse", StringComparison.OrdinalIgnoreCase) >= 0
+                || output.IndexOf("Temurin", StringComparison.OrdinalIgnoreCase) >= 0)
                 return JavaBrandType.EclipseTemurin;
             if (output.IndexOf("Bellsoft", StringComparison.OrdinalIgnoreCase) >= 0)
                 return JavaBrandType.Bellsoft;
