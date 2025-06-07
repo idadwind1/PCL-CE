@@ -5,9 +5,9 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Runtime.InteropServices;
 
 using PCL.Core.Model;
-using System.Net.NetworkInformation;
 
 namespace PCL.Core.Helper
 {
@@ -53,6 +53,7 @@ namespace PCL.Core.Helper
             return _javas
                 .Where(java => java.Version >= MinVerison && java.Version <= MaxVersion)
                 .OrderByDescending(java => java.Version)
+                .OrderBy( java => java.Brand)
                 .ToList();
         }
 
@@ -94,35 +95,90 @@ namespace PCL.Core.Helper
 
         private void ScanDefaultInstallPaths(ref HashSet<string> javaPaths)
         {
+            // 准备欲搜索目录
             var programFilesPaths = new List<string>
             {
-                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
-                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
-                Environment.GetFolderPath(Environment.SpecialFolder.Programs),
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)
             };
-
-            foreach (var pfPath in programFilesPaths)
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                string javaDir = Path.Combine(pfPath, "Java");
-                if (Directory.Exists(javaDir))
+                string[] keyFolders =
                 {
-                    foreach (var dirPath in Directory.GetDirectories(javaDir))
+                    "Program Files",
+                    "Program Files (x86)",
+                    "Programs"
+                };
+                foreach (var driver in DriveInfo.GetDrives())
+                {
+                    foreach (var keyFolder in keyFolders)
                     {
-                        string[] potentialJavas =
+                        programFilesPaths.Add(Path.Combine(driver.Name, keyFolder));
+                    }
+                }
+            }
+            else
+            {
+                programFilesPaths.AddRange(new List<string> {
+                    Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                    Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)
+                });
+            }
+            programFilesPaths = programFilesPaths
+                .Where(x => !string.IsNullOrEmpty(x) && Directory.Exists(x))
+                .ToList();
+
+            // 可能的目录关键词列表
+            string[] keyWord =
+            {"java", "jdk", "jre",
+            "dragonwell", "zulu", "oracle", "open", "corretto", "eclipse", "hotspot", "semeru", "kona",
+            "environment", "env", "runtime", "x86_64", "amd64", "arm64",
+            "pcl", "hmcl", "baka"};
+
+            // 最大文件夹搜索深度
+            const int MAX_SEARCH_DEPTH = 18;
+
+            // 使用 广度优先搜索 查找 Java 文件
+            foreach (var rootPath in programFilesPaths)
+            {
+                var queue = new Queue<(string path, int depth)>();
+                queue.Enqueue((rootPath, 0));
+                while (queue.Count > 0)
+                {
+                    var (currentPath, depth) = queue.Dequeue();
+                    if (depth > MAX_SEARCH_DEPTH) continue;
+                    try
+                    {
+                        // 只遍历包含关键字的目录
+                        var subDirs = Directory.EnumerateDirectories(currentPath)
+                            .Where(x => keyWord.Any(k => x.IndexOf(k, StringComparison.OrdinalIgnoreCase) >= 0));
+                        foreach (var dir in subDirs)
                         {
-                            Path.Combine(dirPath, "bin", "java.exe"),
-                            Path.Combine(dirPath, "jre", "bin", "java.exe")
-                        };
-                        var existingJavas = potentialJavas
-                            .Where(File.Exists)
-                            .ToList();
-                        foreach (var item in existingJavas)
-                        {
-                            javaPaths.Add(item);
+                            // 准备可能的 Java 路径
+                            var potentialJavas = new List<string>
+                            {
+                                Path.Combine(dir, "bin", "java.exe"),
+                                Path.Combine(dir, "jre", "bin", "java.exe")
+                            };
+                            potentialJavas = potentialJavas
+                                .Where(File.Exists)
+                                .ToList();
+                            // 存在 Java，节点达到目标
+                            if (potentialJavas.Any())
+                            {
+                                foreach (var javaPath in potentialJavas)
+                                {
+                                    if (File.Exists(javaPath))
+                                        javaPaths.Add(javaPath);
+                                }
+                            }
+                            else
+                            {
+                                queue.Enqueue((dir, depth + 1));
+                            }
                         }
                     }
+                    catch { /* 忽略无权限等异常 */ }
                 }
             }
         }

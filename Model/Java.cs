@@ -14,15 +14,16 @@ namespace PCL.Core.Model
 {
     public enum JavaBrandType
     {
-        Oracle,
-        Microsoft,
-        Bellsoft,
-        AzulZulu,
-        AmazonCorretto,
-        OpenJDK,
         EclipseTemurin,
+        AmazonCorretto,
+        AzulZulu,
+        IBMSemeru,
+        Bellsoft,
+        Oracle,
         Dragonwell,
-        Kona,
+        TencentKona,
+        Microsoft,
+        OpenJDK,
         Unknown
     }
     public class Java
@@ -62,6 +63,11 @@ namespace PCL.Core.Model
             return JavaFolder?.GetHashCode() ?? 0;
         }
 
+        /// <summary>
+        /// 通过路径获取 Java 实例化信息，如果 Java 信息出现错误返回 null
+        /// </summary>
+        /// <param name="JavaExePath">java.exe 的文件地址</param>
+        /// <returns></returns>
         public static Java Prase(string JavaExePath)
         {
             try
@@ -72,6 +78,8 @@ namespace PCL.Core.Model
                     ?? JavaFileVersion.FileDescription
                     ?? JavaFileVersion.ProductName
                     ?? string.Empty;
+                if (CompanyName == "N/A") // 某 O 开头的 Java 信息不写全
+                    CompanyName = JavaFileVersion.FileDescription;
                 var JavaBrand = DetermineBrand(CompanyName);
 
                 var CurrentJavaFolder = Path.GetDirectoryName(JavaExePath);
@@ -110,7 +118,13 @@ namespace PCL.Core.Model
                 return JavaBrandType.AmazonCorretto;
             if (output.IndexOf("Azul", StringComparison.OrdinalIgnoreCase) >= 0)
                 return JavaBrandType.AzulZulu;
+            if (output.IndexOf("IBM", StringComparison.OrdinalIgnoreCase) >= 0)
+                return JavaBrandType.IBMSemeru;
             if (output.IndexOf("Oracle", StringComparison.OrdinalIgnoreCase) >= 0)
+                return JavaBrandType.OpenJDK;
+            if (output.IndexOf("Tencent", StringComparison.OrdinalIgnoreCase) >= 0)
+                return JavaBrandType.TencentKona;
+            if (output.IndexOf("Java(TM)", StringComparison.OrdinalIgnoreCase) >= 0)
                 return JavaBrandType.Oracle;
             if (output.IndexOf("Alibaba", StringComparison.OrdinalIgnoreCase) >= 0)
                 return JavaBrandType.Dragonwell;
