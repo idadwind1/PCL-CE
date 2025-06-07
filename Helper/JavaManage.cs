@@ -50,10 +50,10 @@ namespace PCL.Core.Helper
         {
             if (_javas == null || _javas.Count == 0)
                 await ScanJava();
-            return _javas
-                .OrderBy(j => j.Version)
-                .Where(java => java.IsEnabled && java.Version >= MinVerison && java.Version <= MaxVersion)
-                .ToList();
+            return (from j in _javas
+                    where j.IsEnabled && j.Version >= MinVerison && j.Version <= MaxVersion
+                    orderby j.Version, j.Brand
+                    select j).ToList();
         }
 
         private void ScanRegistryForJava(ref HashSet<string> javaPaths)
