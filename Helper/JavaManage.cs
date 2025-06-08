@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 
 using PCL.Core.Model;
+using System.Net.Http.Headers;
+using System.Collections;
 
 namespace PCL.Core.Helper
 {
@@ -16,9 +18,20 @@ namespace PCL.Core.Helper
         private List<Java> _javas = new List<Java>();
         public List<Java> JavaList
         {
-            get { return _javas.ToList(); }
+            get { return _javas.ToList(); } //ToList 一下，防止直接引用导致的顺序打乱
         }
 
+        private void SortJavaList()
+        {
+            _javas = (from j in _javas
+                      orderby j.Version descending, j.Brand
+                      select j).ToList();
+        }
+
+        /// <summary>
+        /// 扫描 Java 会对当前已有的结果进行选择性保留
+        /// </summary>
+        /// <returns></returns>
         public async Task ScanJava()
         {
             var javaList = new List<Java>();
@@ -40,10 +53,59 @@ namespace PCL.Core.Helper
                     javaList.Add(javaModel);
                 }
             }
-            
-            _javas = (from j in javaList
-                      orderby j.Version descending, j.Brand
-                      select j).ToList();
+
+            // 同步启用信息
+            foreach (var newJava in javaList)
+            {
+                var oldJava = _javas.FirstOrDefault(j => j.JavaExePath == newJava.JavaExePath);
+                if (oldJava != null)
+                {
+                    newJava.IsEnabled = oldJava.IsEnabled;
+                }
+            }
+
+            // 保留新扫描到的 Java
+            var newJavaPaths = new HashSet<string>(javaList.Select(j => j.JavaExePath), StringComparer.OrdinalIgnoreCase);
+            // 保留原有但新扫描未找到的 Java
+            var oldOnlyJavas = _javas
+                .Where(j => !newJavaPaths.Contains(j.JavaExePath))
+                .Where(j => j.IsStillAvailable);
+            // 合并
+            _javas = javaList.Concat(oldOnlyJavas).ToList();
+            SortJavaList();
+        }
+
+        public void Add(Java j)
+        {
+            if (j == null)
+                throw new ArgumentNullException(nameof(j));
+            if (!HasJava(j.JavaExePath))
+            {
+                _javas.Add(j);
+                SortJavaList();
+            }
+        }
+
+        public void Add(string javaExe)
+        {
+            if (javaExe == null)
+                throw new ArgumentNullException(nameof(javaExe));
+            if (HasJava(javaExe))
+                return;
+            var temp = Java.Prase(javaExe);
+            if (temp == null)
+                return;
+            _javas.Add(temp);
+            SortJavaList();
+        }
+
+        public bool HasJava(string javaExe)
+        {
+            if (javaExe == null)
+                throw new ArgumentNullException(nameof(javaExe));
+            if (!File.Exists(javaExe))
+                throw new ArgumentException("Not a valid java file");
+            return _javas.Any(x => x.JavaExePath == javaExe);
         }
 
         public async Task<List<Java>> SelectSuitableJava(Version MinVerison, Version MaxVersion)
@@ -51,7 +113,7 @@ namespace PCL.Core.Helper
             if (_javas == null || _javas.Count == 0)
                 await ScanJava();
             return (from j in _javas
-                    where j.IsEnabled && j.Version >= MinVerison && j.Version <= MaxVersion
+                    where j.IsStillAvailable && j.IsEnabled && j.Version >= MinVerison && j.Version <= MaxVersion
                     orderby j.Version, j.Brand
                     select j).ToList();
         }
@@ -232,5 +294,41 @@ namespace PCL.Core.Helper
                 }
             }
         }
+
+        public List<JavaLocalCache> GetCache()
+        {
+            return (from j in _javas
+                    select new JavaLocalCache
+                    {
+                        Path = j.JavaExePath,
+                        IsEnable = j.IsEnabled
+                    }).ToList();
+        }
+
+        public void SetCache(List<JavaLocalCache> caches)
+        {
+            foreach (var cache in caches)
+            {
+                try
+                {
+                    var targetInRecord = _javas.Where(x => x.JavaExePath == cache.Path).First();
+                    targetInRecord.IsEnabled = cache.IsEnable;
+                }
+                catch
+                {
+                    var temp = Java.Prase(cache.Path);
+                    if (temp == null)
+                        continue;
+                    temp.IsEnabled = cache.IsEnable;
+                    _javas.Add(temp);
+                }
+            }
+        }
+    }
+
+    public class JavaLocalCache
+    {
+        public string Path {  get; set; }
+        public bool IsEnable { get; set; }
     }
 }

@@ -42,6 +42,7 @@ namespace PCL.Core.Model
         /// 用户是否启动此 Java
         /// </summary>
         public bool IsEnabled { get; set; }
+        public MachineType JavaArch { get; set; }
         public bool Is64Bit { get; set; }
         public bool IsJre { get; set; }
         public string JavaExePath => $@"{JavaFolder}\java.exe";
@@ -65,6 +66,8 @@ namespace PCL.Core.Model
         {
             return JavaFolder?.GetHashCode() ?? 0;
         }
+
+        public bool IsStillAvailable => File.Exists(JavaExePath);
 
         /// <summary>
         /// 通过路径获取 Java 实例化信息，如果 Java 信息出现错误返回 null
@@ -90,6 +93,7 @@ namespace PCL.Core.Model
                 var CurrentJavaFolder = Path.GetDirectoryName(JavaExePath);
                 var IsJavaJre = !File.Exists(Path.Combine(CurrentJavaFolder, "javac.exe"));
                 var PEData = PEHeaderReader.ReadPEHeader(JavaExePath);
+                var CurrentJavaArch = PEData.Machine;
                 var IsJava64Bit = PEHeaderReader.IsMachine64Bit(PEData.Machine);
                 var ShouldDisableByDefault = (IsJavaJre && JavaVersion.Major >= 16)
                     || (!IsJava64Bit && Environment.Is64BitOperatingSystem);
@@ -99,6 +103,7 @@ namespace PCL.Core.Model
                     JavaFolder = CurrentJavaFolder,
                     Version = JavaVersion,
                     IsJre = IsJavaJre,
+                    JavaArch = CurrentJavaArch,
                     Is64Bit = IsJava64Bit,
                     IsEnabled = !ShouldDisableByDefault,
                     Brand = JavaBrand
