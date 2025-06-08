@@ -135,7 +135,7 @@ namespace PCL.Core.Helper
             "pcl", "hmcl", "baka", "minecraft"};
 
             // 最大文件夹搜索深度
-            const int MAX_SEARCH_DEPTH = 18;
+            const int MAX_SEARCH_DEPTH = 12;
 
             // 使用 广度优先搜索 查找 Java 文件
             foreach (var rootPath in programFilesPaths)
