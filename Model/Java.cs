@@ -81,7 +81,7 @@ public class Java(string javaFolder, Version version, JavaBrandType brand, bool 
     /// </summary>
     /// <param name="javaExePath">java.exe 的文件地址</param>
     /// <returns></returns>
-    public static Java? Prase(string javaExePath)
+    public static Java? Parse(string javaExePath)
     {
         try
         {

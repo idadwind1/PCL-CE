@@ -40,7 +40,7 @@ public class JavaManage
 
         foreach (var javaExePath in javaPaths)
         {
-            var javaModel = Java.Prase(javaExePath);
+            var javaModel = Java.Parse(javaExePath);
             if (javaModel != null)
             {
                 javaList.Add(javaModel);
@@ -85,7 +85,7 @@ public class JavaManage
             throw new ArgumentNullException(nameof(javaExe));
         if (HasJava(javaExe))
             return;
-        var temp = Java.Prase(javaExe);
+        var temp = Java.Parse(javaExe);
         if (temp == null)
             return;
         _javas.Add(temp);
@@ -288,7 +288,7 @@ public class JavaManage
             }
             catch
             {
-                var temp = Java.Prase(cache.Path);
+                var temp = Java.Parse(cache.Path);
                 if (temp == null)
                     continue;
                 temp.IsEnabled = cache.IsEnable;
