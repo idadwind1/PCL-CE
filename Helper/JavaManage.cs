@@ -229,8 +229,7 @@ namespace PCL.Core.Helper
                             {
                                 foreach (var javaPath in potentialJavas)
                                 {
-                                    if (File.Exists(javaPath))
-                                        javaPaths.Add(javaPath);
+                                    javaPaths.Add(javaPath);
                                 }
                             }
                             else
