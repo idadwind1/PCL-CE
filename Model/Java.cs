@@ -1,142 +1,143 @@
-﻿using Microsoft.Win32;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-
 using PCL.Core.Utils.PE;
-using PCL.Core.Helper;
 
-namespace PCL.Core.Model
+namespace PCL.Core.Model;
+
+// ReSharper disable IdentifierTypo, InconsistentNaming
+
+public enum JavaBrandType
 {
-    public enum JavaBrandType
+    EclipseTemurin,
+    Microsoft,
+    Bellsoft,
+    AzulZulu,
+    AmazonCorretto,
+    IBMSemeru,
+    Oracle,
+    Dragonwell,
+    TencentKona,
+    OpenJDK,
+    Unknown
+}
+
+public class Java(string javaFolder, Version version, JavaBrandType brand, bool isEnabled, MachineType arch, bool is64Bit, bool isJre)
+{
+    /// <summary>
+    /// 就像这样：
+    /// D:\Program Files\Java24\bin
+    /// </summary>
+    public string JavaFolder => javaFolder;
+
+    public Version Version => version;
+    
+    public int JavaMajorVersion => Version.Major == 1
+        ? Version.Minor
+        : Version.Major;
+
+    public JavaBrandType Brand => brand;
+
+    /// <summary>
+    /// 用户是否启动此 Java
+    /// </summary>
+    public bool IsEnabled { get; set; } = isEnabled;
+
+    public MachineType JavaArch => arch;
+
+    public bool Is64Bit => is64Bit;
+
+    public bool IsJre => isJre;
+    
+    public string JavaExePath => $@"{JavaFolder}\java.exe";
+    
+    public string JavawExePath => $@"{JavaFolder}\javaw.exe";
+
+    public override string ToString()
     {
-        EclipseTemurin,
-        Microsoft,
-        Bellsoft,
-        AzulZulu,
-        AmazonCorretto,
-        IBMSemeru,
-        Oracle,
-        Dragonwell,
-        TencentKona,
-        OpenJDK,
-        Unknown
+        return $" {(IsJre ? "JRE" : "JDK")} {JavaMajorVersion} {Brand} {(Is64Bit ? "64 Bit" : "32 Bit")} | {JavaFolder}";
     }
-    public class Java
+
+    public override bool Equals(object? obj)
     {
-        /// <summary>
-        /// 就像这样：
-        /// D:\Program Files\Java24\bin
-        /// </summary>
-        public string JavaFolder { get; set; }
-        public Version Version { get; set; }
-        public int JavaMajorVersion => Version.Major == 1
-            ? Version.Minor
-            : Version.Major;
-        public JavaBrandType Brand { get; set; }
-        /// <summary>
-        /// 用户是否启动此 Java
-        /// </summary>
-        public bool IsEnabled { get; set; }
-        public MachineType JavaArch { get; set; }
-        public bool Is64Bit { get; set; }
-        public bool IsJre { get; set; }
-        public string JavaExePath => $@"{JavaFolder}\java.exe";
-        public string JavawExePath => $@"{JavaFolder}\javaw.exe";
-
-        public override string ToString()
+        if (obj is Java model)
         {
-            return $" {(IsJre?"JRE":"JDK")} {JavaMajorVersion} {Brand} {(Is64Bit ? "64 Bit" : "32 Bit")} | {JavaFolder}";
+            return JavaFolder.Equals(model.JavaFolder, StringComparison.OrdinalIgnoreCase);
         }
+        return false;
+    }
 
-        public override bool Equals(object obj)
+    public override int GetHashCode()
+    {
+        return JavaFolder.GetHashCode();
+    }
+
+    public bool IsStillAvailable => File.Exists(JavaExePath);
+
+    /// <summary>
+    /// 通过路径获取 Java 实例化信息，如果 Java 信息出现错误返回 null
+    /// </summary>
+    /// <param name="javaExePath">java.exe 的文件地址</param>
+    /// <returns></returns>
+    public static Java? Prase(string javaExePath)
+    {
+        try
         {
-            if (obj is Java model)
-            {
-                return Path.Equals(model.JavaFolder, StringComparison.OrdinalIgnoreCase);
-            }
-            return false;
+            if (!File.Exists(javaExePath))
+                return null;
+            var javaFileVersion = FileVersionInfo.GetVersionInfo(javaExePath);
+            var javaVersion = Version.Parse(javaFileVersion.FileVersion);
+            var companyName = javaFileVersion.CompanyName
+                              ?? javaFileVersion.FileDescription
+                              ?? javaFileVersion.ProductName
+                              ?? string.Empty;
+            if (companyName == "N/A") // 某 O 开头的 Java 信息不写全
+                companyName = javaFileVersion.FileDescription;
+            var javaBrand = DetermineBrand(companyName);
+
+            var currentJavaFolder = Path.GetDirectoryName(javaExePath)!;
+            var isJavaJre = !File.Exists(Path.Combine(currentJavaFolder, "javac.exe"));
+            var peData = PEHeaderReader.ReadPEHeader(javaExePath);
+            var currentJavaArch = peData.Machine;
+            var isJava64Bit = PEHeaderReader.IsMachine64Bit(peData.Machine);
+            var shouldDisableByDefault =
+                (isJavaJre && javaVersion.Major >= 16) || (!isJava64Bit && Environment.Is64BitOperatingSystem);
+
+            return new Java(
+                currentJavaFolder,
+                javaVersion,
+                javaBrand,
+                !shouldDisableByDefault,
+                currentJavaArch,
+                isJava64Bit,
+                isJavaJre
+            );
         }
+        catch { /* 忽略无法获取版本的Java路径 */ }
+        return null;
+    }
+    
+    private static readonly Dictionary<string, JavaBrandType> _brandMap = new()
+    {
+        ["Eclipse"] = JavaBrandType.EclipseTemurin,
+        ["Temurin"] = JavaBrandType.EclipseTemurin,
+        ["Bellsoft"] = JavaBrandType.Bellsoft,
+        ["Microsoft"] = JavaBrandType.Microsoft,
+        ["Amazon"] = JavaBrandType.AmazonCorretto,
+        ["Azul"] = JavaBrandType.AzulZulu,
+        ["IBM"] = JavaBrandType.IBMSemeru,
+        ["Oracle"] = JavaBrandType.OpenJDK,
+        ["Tencent"] = JavaBrandType.TencentKona,
+        ["Java(TM)"] = JavaBrandType.Oracle,
+        ["Alibaba"] = JavaBrandType.Dragonwell,
+    };
 
-        public override int GetHashCode()
-        {
-            return JavaFolder?.GetHashCode() ?? 0;
-        }
-
-        public bool IsStillAvailable => File.Exists(JavaExePath);
-
-        /// <summary>
-        /// 通过路径获取 Java 实例化信息，如果 Java 信息出现错误返回 null
-        /// </summary>
-        /// <param name="JavaExePath">java.exe 的文件地址</param>
-        /// <returns></returns>
-        public static Java Prase(string JavaExePath)
-        {
-            try
-            {
-                if (!File.Exists(JavaExePath))
-                    return null;
-                var JavaFileVersion = FileVersionInfo.GetVersionInfo(JavaExePath);
-                var JavaVersion = Version.Parse(JavaFileVersion.FileVersion);
-                var CompanyName = JavaFileVersion.CompanyName
-                    ?? JavaFileVersion.FileDescription
-                    ?? JavaFileVersion.ProductName
-                    ?? string.Empty;
-                if (CompanyName == "N/A") // 某 O 开头的 Java 信息不写全
-                    CompanyName = JavaFileVersion.FileDescription;
-                var JavaBrand = DetermineBrand(CompanyName);
-
-                var CurrentJavaFolder = Path.GetDirectoryName(JavaExePath);
-                var IsJavaJre = !File.Exists(Path.Combine(CurrentJavaFolder, "javac.exe"));
-                var PEData = PEHeaderReader.ReadPEHeader(JavaExePath);
-                var CurrentJavaArch = PEData.Machine;
-                var IsJava64Bit = PEHeaderReader.IsMachine64Bit(PEData.Machine);
-                var ShouldDisableByDefault = (IsJavaJre && JavaVersion.Major >= 16)
-                    || (!IsJava64Bit && Environment.Is64BitOperatingSystem);
-
-                return new Java
-                {
-                    JavaFolder = CurrentJavaFolder,
-                    Version = JavaVersion,
-                    IsJre = IsJavaJre,
-                    JavaArch = CurrentJavaArch,
-                    Is64Bit = IsJava64Bit,
-                    IsEnabled = !ShouldDisableByDefault,
-                    Brand = JavaBrand
-                };
-            }
-            catch { /* 忽略无法获取版本的Java路径 */}
-            return null;
-        }
-
-        private static JavaBrandType DetermineBrand(string output)
-        {
-            if (output.IndexOf("Eclipse", StringComparison.OrdinalIgnoreCase) >= 0
-                || output.IndexOf("Temurin", StringComparison.OrdinalIgnoreCase) >= 0)
-                return JavaBrandType.EclipseTemurin;
-            if (output.IndexOf("Bellsoft", StringComparison.OrdinalIgnoreCase) >= 0)
-                return JavaBrandType.Bellsoft;
-            if (output.IndexOf("Microsoft", StringComparison.OrdinalIgnoreCase) >= 0)
-                return JavaBrandType.Microsoft;
-            if (output.IndexOf("Amazon", StringComparison.OrdinalIgnoreCase) >= 0)
-                return JavaBrandType.AmazonCorretto;
-            if (output.IndexOf("Azul", StringComparison.OrdinalIgnoreCase) >= 0)
-                return JavaBrandType.AzulZulu;
-            if (output.IndexOf("IBM", StringComparison.OrdinalIgnoreCase) >= 0)
-                return JavaBrandType.IBMSemeru;
-            if (output.IndexOf("Oracle", StringComparison.OrdinalIgnoreCase) >= 0)
-                return JavaBrandType.OpenJDK;
-            if (output.IndexOf("Tencent", StringComparison.OrdinalIgnoreCase) >= 0)
-                return JavaBrandType.TencentKona;
-            if (output.IndexOf("Java(TM)", StringComparison.OrdinalIgnoreCase) >= 0)
-                return JavaBrandType.Oracle;
-            if (output.IndexOf("Alibaba", StringComparison.OrdinalIgnoreCase) >= 0)
-                return JavaBrandType.Dragonwell;
-            return JavaBrandType.Unknown;
-        }
+    private static JavaBrandType DetermineBrand(string? output)
+    {
+        if (output == null) return JavaBrandType.Unknown;
+        var result = _brandMap.Keys.First(item => output.IndexOf(item, StringComparison.OrdinalIgnoreCase) >= 0);
+        return result == null ? JavaBrandType.Unknown : _brandMap[result];
     }
 }
