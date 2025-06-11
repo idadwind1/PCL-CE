@@ -27,7 +27,6 @@ public class JavaManage
     /// <returns></returns>
     public async Task ScanJava()
     {
-        var javaList = new List<Java>();
         var javaPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         var searchTasks = new List<Task>();
@@ -38,33 +37,22 @@ public class JavaManage
         searchTasks.Add(searchers.StartNew(() => ScanMicrosoftStoreJava(ref javaPaths)));
         await searchers.ContinueWhenAll(searchTasks.ToArray(), _ => { });
 
-        foreach (var javaExePath in javaPaths)
+        // 记录之前设置为禁用的 Java
+        var disabledJava = from j in _javas where !j.IsEnabled select j.JavaExePath;
+        // 新搜索到的 Java 路径
+        var newJavaList = new HashSet<string>(_javas.Select(x => x.JavaExePath).Concat(javaPaths), StringComparer.OrdinalIgnoreCase);
+
+        var ret = newJavaList
+            .Select(x => Java.Parse(x))
+            .Where(x => x != null)
+            .ToList();
+        foreach (var j in ret)
         {
-            var javaModel = Java.Parse(javaExePath);
-            if (javaModel != null)
-            {
-                javaList.Add(javaModel);
-            }
+            if (disabledJava.Contains(j.JavaExePath))
+                j.IsEnabled = false;
         }
 
-        // 同步启用信息
-        foreach (var newJava in javaList)
-        {
-            var oldJava = _javas.FirstOrDefault(j => j.JavaExePath == newJava.JavaExePath);
-            if (oldJava != null)
-            {
-                newJava.IsEnabled = oldJava.IsEnabled;
-            }
-        }
-
-        // 保留新扫描到的 Java
-        var newJavaPaths = new HashSet<string>(javaList.Select(j => j.JavaExePath), StringComparer.OrdinalIgnoreCase);
-        // 保留原有但新扫描未找到的 Java
-        var oldOnlyJavas = _javas
-            .Where(j => !newJavaPaths.Contains(j.JavaExePath))
-            .Where(j => j.IsStillAvailable);
-        // 合并
-        _javas = javaList.Concat(oldOnlyJavas).ToList();
+        _javas = ret;
         SortJavaList();
     }
 
@@ -72,11 +60,10 @@ public class JavaManage
     {
         if (j == null)
             throw new ArgumentNullException(nameof(j));
-        if (!HasJava(j.JavaExePath))
-        {
-            _javas.Add(j);
-            SortJavaList();
-        }
+        if (HasJava(j.JavaExePath))
+            return;
+        _javas.Add(j);
+        SortJavaList();
     }
 
     public void Add(string javaExe)
@@ -196,9 +183,7 @@ public class JavaManage
                 Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)
             });
         }
-        programFilesPaths = programFilesPaths
-            .Where(x => !string.IsNullOrEmpty(x) && Directory.Exists(x))
-            .ToList();
+        programFilesPaths = [.. programFilesPaths.Where(x => !string.IsNullOrEmpty(x) && Directory.Exists(x))];
 
         // 使用 广度优先搜索 查找 Java 文件
         foreach (var rootPath in programFilesPaths)
@@ -222,9 +207,7 @@ public class JavaManage
                             Path.Combine(dir, "bin", "java.exe"),
                             Path.Combine(dir, "jre", "bin", "java.exe")
                         };
-                        potentialJavas = potentialJavas
-                            .Where(File.Exists)
-                            .ToList();
+                        potentialJavas = [.. potentialJavas.Where(File.Exists)];
                         
                         // 存在 Java，节点达到目标
                         if (potentialJavas.Any()) foreach (var javaPath in potentialJavas) javaPaths.Add(javaPath);
