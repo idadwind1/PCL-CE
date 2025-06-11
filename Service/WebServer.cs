@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Net;
+using System.Text;
 using System.Threading.Tasks;
+using PCL.Core.Utils;
 
 namespace PCL.Core.Service;
 
@@ -50,18 +52,19 @@ public class WebServer : IDisposable
         var context = await _listener.GetContextAsync();
         await Task.Run(() =>
         {
-            Exception? possibleEx = null;
             try
             {
                 RequestCallback(context);
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-                possibleEx = e;
+                var response = context.Response;
+                response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                response.ContentEncoding = Encoding.UTF8;
+                response.ContentType = "text/plain";
+                new StringStream($"Stacktrace:\n{ex}").CopyTo(response.OutputStream);
             }
             context.Response.Close();
-            if (possibleEx is { } ex) throw ex; // TODO log
         });
     }
 
