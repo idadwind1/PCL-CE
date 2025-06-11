@@ -45,6 +45,34 @@ public class WebServer : IDisposable
         _listener.Start();
     }
 
+    private async Task ResponseOnce()
+    {
+        var context = await _listener.GetContextAsync();
+        await Task.Run(() =>
+        {
+            Exception? possibleEx = null;
+            try
+            {
+                RequestCallback(context);
+            }
+            catch (Exception e)
+            {
+                context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                possibleEx = e;
+            }
+            context.Response.Close();
+            if (possibleEx is { } ex) throw ex; // TODO log
+        });
+    }
+
+    public async Task StartResponseOnce()
+    {
+        if (_started) throw new InvalidOperationException("Server already started");
+        _started = true;
+        await ResponseOnce();
+        _started = false;
+    }
+
     /// <summary>
     /// 开始响应客户端请求。
     /// </summary>
@@ -53,28 +81,8 @@ public class WebServer : IDisposable
     {
         if (_started) throw new InvalidOperationException("Server already started");
         _started = true;
-
         _running = true;
-        while (_running)
-        {
-            var context = await _listener.GetContextAsync();
-            await Task.Run(() =>
-            {
-                Exception? possibleEx = null;
-                try
-                {
-                    RequestCallback(context);
-                }
-                catch (Exception e)
-                {
-                    context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-                    possibleEx = e;
-                }
-                context.Response.Close();
-                if (possibleEx is { } ex) throw ex; // TODO log
-            });
-        }
-
+        while (_running) await ResponseOnce();
         _started = false;
     }
 
