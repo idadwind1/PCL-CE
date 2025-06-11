@@ -137,13 +137,19 @@ public class JavaManage
     }
 
     // 可能的目录关键词列表
-    private static readonly string[] Keywords =
+    private static readonly string[] mostPossibleKeyWords =
     [
         "java", "jdk", "jre",
-        "dragonwell", "zulu", "oracle", "open", "corretto", "eclipse", "hotspot", "semeru", "kona",
-        "environment", "env", "runtime", "x86_64", "amd64", "arm64",
-        "pcl", "hmcl", "baka", "minecraft"
+        "dragonwell", "zulu", "oracle", "open", "corretto", "eclipse", "hotspot", "semeru", "kona"
     ];
+    
+    private static readonly string[] possibleKeyWords =
+    [
+        "environment", "env", "runtime", "x86_64", "amd64", "arm64",
+        "pcl", "hmcl", "baka", "minecraft", "microsoft"
+    ];
+
+    private static readonly string[] totalKeyWords = [..mostPossibleKeyWords.Concat(possibleKeyWords)];
 
     // 最大文件夹搜索深度
     const int MAX_SEARCH_DEPTH = 12;
@@ -158,6 +164,7 @@ public class JavaManage
         };
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
+            // 特定目录搜索
             string[] keyFolders =
             [
                 "Program Files",
@@ -166,8 +173,21 @@ public class JavaManage
             ];
             programFilesPaths.AddRange(
                 from driver in DriveInfo.GetDrives()
+                where driver.IsReady
                 from keyFolder in keyFolders
                 select Path.Combine(driver.Name, keyFolder));
+            // 根目录搜索
+            foreach (var dri in from d in DriveInfo.GetDrives() where d.IsReady select d.Name)
+            {
+                var possibleDirs = from dir in Directory.EnumerateDirectories(dri) select dir;
+                foreach (var possibleDir in possibleDirs)
+                {
+                    if (mostPossibleKeyWords.Any(x => possibleDir.IndexOf(x,StringComparison.OrdinalIgnoreCase) >= 0))
+                    {
+                        programFilesPaths.Add(possibleDir);
+                    }
+                }
+            }
         }
         else
         {
@@ -193,7 +213,7 @@ public class JavaManage
                 {
                     // 只遍历包含关键字的目录
                     var subDirs = Directory.EnumerateDirectories(currentPath)
-                        .Where(x => Keywords.Any(k => x.IndexOf(k, StringComparison.OrdinalIgnoreCase) >= 0));
+                        .Where(x => totalKeyWords.Any(k => x.IndexOf(k, StringComparison.OrdinalIgnoreCase) >= 0));
                     foreach (var dir in subDirs)
                     {
                         // 准备可能的 Java 路径
