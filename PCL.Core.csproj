@@ -139,6 +139,7 @@
     <Compile Include="Service\RoutedWebServer.cs" />
     <Compile Include="Service\System.Runtime.CompilerServices.cs" />
     <Compile Include="Service\WebServer.cs" />
+    <Compile Include="Utils\ExpandoObjectConverter.cs" />
     <Compile Include="Utils\PEHeaderReader.cs" />
     <Compile Include="Utils\StringStream.cs" />
   </ItemGroup>

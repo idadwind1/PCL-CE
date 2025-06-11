@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -218,6 +219,12 @@ public class RoutedWebServer : WebServer
     /// <param name="callback">回调函数</param>
     /// <returns>是否添加成功，若已存在相同路径则无法添加</returns>
     public bool Route(string path, RoutedClientRequestWithNothing callback) => Route(path, (_, _) => callback());
+
+    private static readonly JsonSerializerOptions ParsingJsonOptions = new()
+    {
+        AllowTrailingCommas = true,
+        Converters = { new ExpandoObjectConverter() }
+    };
     
     /// <summary>
     /// 以 <see cref="RoutedClientRequestParsingJson"/> 回调添加路由
@@ -227,10 +234,15 @@ public class RoutedWebServer : WebServer
     /// <returns>是否添加成功，若已存在相同路径则无法添加</returns>
     public bool RouteParsingJson(string path, RoutedClientRequestParsingJson callback) => Route(path, (p, request) =>
     {
-        dynamic obj;
-        try { obj = JsonSerializer.Deserialize<dynamic>(request.InputStream); }
-        catch (JsonException) { return RoutedResponse.BadRequest; }
-        return callback(p, obj);
+        try
+        {
+            dynamic? obj = JsonSerializer.Deserialize<ExpandoObject>(request.InputStream, ParsingJsonOptions);
+            return callback(p, obj);
+        }
+        catch (JsonException)
+        {
+            return RoutedResponse.BadRequest;
+        }
     });
 
     public bool RemoveRoutePath(string path)
