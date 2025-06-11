@@ -24,6 +24,7 @@ public enum JavaBrandType
     Unknown
 }
 
+[Serializable]
 public class Java(string javaFolder, Version version, JavaBrandType brand, bool isEnabled, MachineType arch, bool is64Bit, bool isJre)
 {
     /// <summary>

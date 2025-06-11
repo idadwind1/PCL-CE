@@ -134,6 +134,7 @@ public enum MachineType : ushort
     WCEMIPSV2 = 0x169,   // MIPS little-endian WCE v2
 }
 
+[Serializable]
 public struct PEStruct
 {
     public MachineType Machine;

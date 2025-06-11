@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 
 namespace PCL.Core.Helper;
 
+[Serializable]
 public class SemVer(int major, int minor, int patch, string? prerelease = null, string? buildMetadata = null)
     : IComparable<SemVer>, IEquatable<SemVer>
 {
