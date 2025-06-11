@@ -9,17 +9,12 @@ public class StringStream : Stream
     private readonly MemoryStream _innerStream;
 
     /// <summary>
-    /// 使用默认的 UTF-8 编码初始化 StringStream。
-    /// </summary>
-    public StringStream(string source) : this(source, Encoding.UTF8) { }
-
-    /// <summary>
     /// 使用指定编码初始化 StringStream。
     /// </summary>
-    public StringStream(string source, Encoding encoding)
+    public StringStream(string source, Encoding? encoding = null)
     {
         if (source == null) throw new ArgumentNullException(nameof(source));
-        if (encoding == null) throw new ArgumentNullException(nameof(encoding));
+        encoding ??= Encoding.UTF8;
 
         var buffer = encoding.GetBytes(source);
         _innerStream = new MemoryStream(buffer);

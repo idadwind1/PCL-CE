@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Text.Json;
 using PCL.Core.Utils;
 
 namespace PCL.Core.Service;
@@ -11,6 +12,7 @@ namespace PCL.Core.Service;
 /// <summary>
 /// 用于 <see cref="RoutedWebServer"/> 响应客户端请求的服务端响应结构。
 /// </summary>
+[Serializable]
 public struct RoutedResponse()
 {
     /// <summary>
@@ -24,7 +26,7 @@ public struct RoutedResponse()
     public Encoding? ContentEncoding = null;
     
     /// <summary>
-    /// [Header] 内容类型
+    /// [Header] 内容 MIME 类型
     /// </summary>
     public string? ContentType = null;
     
@@ -62,32 +64,55 @@ public struct RoutedResponse()
         if (Cookies is {} cookies) target.Cookies = cookies;
         if (InputStream is {} inputStream) inputStream.CopyTo(target.OutputStream);
     }
+    
+    /// <summary>
+    /// 返回指定 HTTP 状态码的空响应
+    /// </summary>
+    /// <param name="statusCode">HTTP 状态码</param>
+    public static RoutedResponse Empty(HttpStatusCode statusCode) => new() { StatusCode = statusCode };
 
     /// <summary>
-    /// 默认的 404 Not Found 响应。
+    /// 默认的 204 (No Content) 响应。
     /// </summary>
-    public static readonly RoutedResponse NotFound = new() { StatusCode = HttpStatusCode.NotFound };
+    public static readonly RoutedResponse NoContent = Empty(HttpStatusCode.NoContent);
 
     /// <summary>
-    /// 默认的 204 No Content 响应。
+    /// 默认的 400 (Bad Request) 响应。
     /// </summary>
-    public static readonly RoutedResponse NoContent = new() { StatusCode = HttpStatusCode.NoContent };
+    public static readonly RoutedResponse BadRequest = Empty(HttpStatusCode.BadRequest);
+
+    /// <summary>
+    /// 默认的 404 (Not Found) 响应。
+    /// </summary>
+    public static readonly RoutedResponse NotFound = Empty(HttpStatusCode.NotFound);
+
+    /// <summary>
+    /// 默认的 500 (Internal Server Error) 响应。
+    /// </summary>
+    public static readonly RoutedResponse InternalServerError = Empty(HttpStatusCode.InternalServerError);
+
+    /// <summary>
+    /// 默认的 502 (Bad Gateway) 响应。
+    /// </summary>
+    public static readonly RoutedResponse BadGateway = Empty(HttpStatusCode.BadGateway);
 
     /// <summary>
     /// 响应指定输入流的内容。
     /// </summary>
     /// <param name="stream">输入流</param>
-    /// <param name="contentType">内容类型</param>
-    /// <param name="encoding">输入流内容使用的字符编码</param>
-    public static RoutedResponse Input(Stream stream, string? contentType = null, Encoding? encoding = null) =>
-        new() { InputStream = stream, ContentType = contentType ?? "application/octet-stream", ContentEncoding = encoding ?? Encoding.UTF8 };
+    /// <param name="contentType">内容 MIME 类型</param>
+    /// <param name="encoding">输入流内容使用的字符编码，默认为 UTF-8</param>
+    public static RoutedResponse Input(Stream stream, string contentType = "application/octet-stream", Encoding? encoding = null) =>
+        new() { InputStream = stream, ContentType = contentType , ContentEncoding = encoding ?? Encoding.UTF8 };
 
     /// <summary>
     /// 响应指定文本内容。
     /// </summary>
     /// <param name="text">文本内容</param>
-    public static RoutedResponse Text(string text) =>
-        new() { InputStream = new StringStream(text), ContentEncoding = Encoding.UTF8 };
+    /// <param name="contentType">内容 MIME 类型</param>
+    /// <param name="encoding">响应流使用的字符编码，默认为 UTF-8</param>
+    public static RoutedResponse Text(string text, string contentType = "text/plain", Encoding? encoding = null) =>
+        Input(new StringStream(text, encoding), contentType, encoding);
 
     /// <summary>
     /// 响应重定向。
@@ -96,6 +121,30 @@ public struct RoutedResponse()
     /// <param name="statusCode">重定向状态码</param>
     public static RoutedResponse Redirect(string location, HttpStatusCode statusCode = HttpStatusCode.Found) =>
         new() { StatusCode = statusCode, RedirectLocation = location };
+
+    /// <summary>
+    /// 响应指定对象序列化得到的 JSON 内容，固定使用 UTF-8 编码
+    /// </summary>
+    /// <param name="obj">用于序列化的对象</param>
+    /// <param name="options">JSON 序列化选项</param>
+    public static RoutedResponse Json(object obj, JsonSerializerOptions? options)
+    {
+        var stream = new MemoryStream();
+        JsonSerializer.Serialize(stream, obj, options);
+        stream.Position = 0;
+        return new RoutedResponse
+        {
+            ContentEncoding = Encoding.UTF8,
+            ContentType = "application/json, charset=utf-8",
+            InputStream = stream
+        };
+    }
+
+    /// <summary>
+    /// 响应指定对象序列化得到的 JSON 内容，固定使用 UTF-8 编码
+    /// </summary>
+    /// <param name="obj">用于序列化的对象</param>
+    public static RoutedResponse Json(object obj) => Json(obj, null);
 }
 
 public delegate RoutedResponse RoutedClientRequest(string path, HttpListenerRequest request);
@@ -103,6 +152,8 @@ public delegate RoutedResponse RoutedClientRequest(string path, HttpListenerRequ
 public delegate RoutedResponse RoutedClientRequestWithNothing();
 
 public delegate void RoutedClientRequestWithContext(string path, HttpListenerContext context);
+
+public delegate RoutedResponse RoutedClientRequestParsingJson(string path, dynamic obj);
 
 /// <summary>
 /// 基于路径路由的 HTTP 服务端。将会按添加顺序匹配路由，从而返回指定访问路径的响应。
@@ -140,7 +191,7 @@ public class RoutedWebServer : WebServer
     /// <param name="path">路由路径</param>
     /// <param name="callback">回调函数</param>
     /// <returns>是否添加成功，若已存在相同路径则无法添加</returns>
-    public bool Route(string path, RoutedClientRequestWithContext callback)
+    public bool RouteWithContext(string path, RoutedClientRequestWithContext callback)
     {
         if (_pathCallbackMap.ContainsKey(path)) return false;
         _pathList.AddLast(path);
@@ -154,7 +205,7 @@ public class RoutedWebServer : WebServer
     /// <param name="path">路由路径</param>
     /// <param name="callback">回调函数</param>
     /// <returns>是否添加成功，若已存在相同路径则无法添加</returns>
-    public bool Route(string path, RoutedClientRequest callback) => Route(path, (p, context) =>
+    public bool Route(string path, RoutedClientRequest callback) => RouteWithContext(path, (p, context) =>
     {
         var result = callback(p, context.Request);
         result.Pour(context.Response);
@@ -167,6 +218,20 @@ public class RoutedWebServer : WebServer
     /// <param name="callback">回调函数</param>
     /// <returns>是否添加成功，若已存在相同路径则无法添加</returns>
     public bool Route(string path, RoutedClientRequestWithNothing callback) => Route(path, (_, _) => callback());
+    
+    /// <summary>
+    /// 以 <see cref="RoutedClientRequestParsingJson"/> 回调添加路由
+    /// </summary>
+    /// <param name="path">路由路径</param>
+    /// <param name="callback">回调函数</param>
+    /// <returns>是否添加成功，若已存在相同路径则无法添加</returns>
+    public bool RouteParsingJson(string path, RoutedClientRequestParsingJson callback) => Route(path, (p, request) =>
+    {
+        dynamic obj;
+        try { obj = JsonSerializer.Deserialize<dynamic>(request.InputStream); }
+        catch (JsonException) { return RoutedResponse.BadRequest; }
+        return callback(p, obj);
+    });
 
     public bool RemoveRoutePath(string path)
     {
