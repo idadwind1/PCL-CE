@@ -12,7 +12,7 @@ namespace PCL.Core.Helper;
 public class JavaManage
 {
     private List<Java> _javas = [];
-    public List<Java> JavaList => _javas.ToList(); //ToList 一下，防止直接引用导致的顺序打乱
+    public List<Java> JavaList => [.. _javas];
 
     private void SortJavaList()
     {
@@ -35,7 +35,7 @@ public class JavaManage
         searchTasks.Add(searchers.StartNew(() => ScanDefaultInstallPaths(ref javaPaths)));
         searchTasks.Add(searchers.StartNew(() => ScanPathEnvironmentVariable(ref javaPaths)));
         searchTasks.Add(searchers.StartNew(() => ScanMicrosoftStoreJava(ref javaPaths)));
-        await searchers.ContinueWhenAll(searchTasks.ToArray(), _ => { });
+        await searchers.ContinueWhenAll([.. searchTasks], _ => { });
 
         // 记录之前设置为禁用的 Java
         var disabledJava = from j in _javas where !j.IsEnabled select j.JavaExePath;
@@ -127,7 +127,7 @@ public class JavaManage
     private static readonly string[] mostPossibleKeyWords =
     [
         "java", "jdk", "jre",
-        "dragonwell", "zulu", "oracle", "open", "corretto", "eclipse", "hotspot", "semeru", "kona"
+        "dragonwell", "azul", "zulu", "oracle", "open", "amazon", "corretto", "eclipse" , "temurin", "hotspot", "semeru", "kona", "bellsoft"
     ];
     
     private static readonly string[] possibleKeyWords =
@@ -164,7 +164,7 @@ public class JavaManage
                 from keyFolder in keyFolders
                 select Path.Combine(driver.Name, keyFolder));
             // 根目录搜索
-            foreach (var dri in from d in DriveInfo.GetDrives() where d.IsReady select d.Name)
+            foreach (var dri in from d in DriveInfo.GetDrives() where d.IsReady && (d.DriveType == DriveType.Fixed || d.DriveType == DriveType.Removable) select d.Name)
             {
                 var possibleDirs = from dir in Directory.EnumerateDirectories(dri) select dir;
                 foreach (var possibleDir in possibleDirs)
@@ -210,8 +210,10 @@ public class JavaManage
                         potentialJavas = [.. potentialJavas.Where(File.Exists)];
                         
                         // 存在 Java，节点达到目标
-                        if (potentialJavas.Any()) foreach (var javaPath in potentialJavas) javaPaths.Add(javaPath);
-                        else queue.Enqueue((dir, depth + 1));
+                        if (potentialJavas.Any())
+                            foreach (var javaPath in potentialJavas) javaPaths.Add(javaPath);
+                        else
+                            queue.Enqueue((dir, depth + 1));
                     }
                 }
                 catch { /* 忽略无权限等异常 */ }
