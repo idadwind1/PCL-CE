@@ -21,39 +21,45 @@ public class JavaManage
             select j).ToList();
     }
 
+    private Task? _scanTask = null;
     /// <summary>
     /// 扫描 Java 会对当前已有的结果进行选择性保留
     /// </summary>
     /// <returns></returns>
     public async Task ScanJava()
     {
-        var javaPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (_scanTask == null || _scanTask.IsCompleted)
+            _scanTask = Task.Run(async () =>
+            {
+                var javaPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        var searchTasks = new List<Task>();
-        var searchers = new TaskFactory();
-        searchTasks.Add(searchers.StartNew(() => ScanRegistryForJava(ref javaPaths)));
-        searchTasks.Add(searchers.StartNew(() => ScanDefaultInstallPaths(ref javaPaths)));
-        searchTasks.Add(searchers.StartNew(() => ScanPathEnvironmentVariable(ref javaPaths)));
-        searchTasks.Add(searchers.StartNew(() => ScanMicrosoftStoreJava(ref javaPaths)));
-        await searchers.ContinueWhenAll([.. searchTasks], _ => { });
+                Task[] searchTasks = [
+                    Task.Run(() => ScanRegistryForJava(ref javaPaths)),
+                    Task.Run(() => ScanDefaultInstallPaths(ref javaPaths)),
+                    Task.Run(() => ScanPathEnvironmentVariable(ref javaPaths)),
+                    Task.Run(() => ScanMicrosoftStoreJava(ref javaPaths))
+                    ];
+                await Task.WhenAll(searchTasks);
 
-        // 记录之前设置为禁用的 Java
-        var disabledJava = from j in _javas where !j.IsEnabled select j.JavaExePath;
-        // 新搜索到的 Java 路径
-        var newJavaList = new HashSet<string>(_javas.Select(x => x.JavaExePath).Concat(javaPaths), StringComparer.OrdinalIgnoreCase);
+                // 记录之前设置为禁用的 Java
+                var disabledJava = from j in _javas where !j.IsEnabled select j.JavaExePath;
+                // 新搜索到的 Java 路径
+                var newJavaList = new HashSet<string>(_javas.Select(x => x.JavaExePath).Concat(javaPaths), StringComparer.OrdinalIgnoreCase);
 
-        var ret = newJavaList
-            .Select(x => Java.Parse(x))
-            .Where(x => x != null)
-            .ToList();
-        foreach (var j in ret)
-        {
-            if (disabledJava.Contains(j.JavaExePath))
-                j.IsEnabled = false;
-        }
+                var ret = newJavaList
+                    .Select(x => Java.Parse(x))
+                    .Where(x => x != null)
+                    .ToList();
+                foreach (var j in ret)
+                {
+                    if (disabledJava.Contains(j.JavaExePath))
+                        j.IsEnabled = false;
+                }
 
-        _javas = ret;
-        SortJavaList();
+                _javas = ret;
+                SortJavaList();
+            });
+        await _scanTask;
     }
 
     public void Add(Java j)
@@ -96,6 +102,15 @@ public class JavaManage
             where j.IsStillAvailable && j.IsEnabled && j.Version >= MinVerison && j.Version <= MaxVersion
             orderby j.Version, j.Brand
             select j).ToList();
+    }
+
+    /// <summary>
+    /// 检查并移除已不存在的 Java
+    /// </summary>
+    /// <returns></returns>
+    public void CheckJavaAvailability()
+    {
+        _javas = [..from j in _javas where j.IsStillAvailable select j];
     }
 
     private static void ScanRegistryForJava(ref HashSet<string> javaPaths)
