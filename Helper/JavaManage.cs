@@ -173,22 +173,18 @@ public class JavaManage
                 "Program Files (x86)",
                 "Programs"
             ];
+            var isDriverSuitable = (DriveInfo d) => d.IsReady && (d.DriveType == DriveType.Fixed || d.DriveType == DriveType.Removable);
             programFilesPaths.AddRange(
                 from driver in DriveInfo.GetDrives()
-                where driver.IsReady
+                where isDriverSuitable(driver)
                 from keyFolder in keyFolders
                 select Path.Combine(driver.Name, keyFolder));
             // 根目录搜索
-            foreach (var dri in from d in DriveInfo.GetDrives() where d.IsReady && (d.DriveType == DriveType.Fixed || d.DriveType == DriveType.Removable) select d.Name)
+            foreach (var dri in from d in DriveInfo.GetDrives() where isDriverSuitable(d) select d.Name)
             {
-                var possibleDirs = from dir in Directory.EnumerateDirectories(dri) select dir;
-                foreach (var possibleDir in possibleDirs)
-                {
-                    if (mostPossibleKeyWords.Any(x => possibleDir.IndexOf(x,StringComparison.OrdinalIgnoreCase) >= 0))
-                    {
-                        programFilesPaths.Add(possibleDir);
-                    }
-                }
+                programFilesPaths.AddRange(from dir in Directory.EnumerateDirectories(dri)
+                                           where mostPossibleKeyWords.Any(x => dir.IndexOf(x, StringComparison.OrdinalIgnoreCase) >= 0)
+                                           select dir);
             }
         }
         else
@@ -198,7 +194,7 @@ public class JavaManage
                 Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)
             });
         }
-        programFilesPaths = [.. programFilesPaths.Where(x => !string.IsNullOrEmpty(x) && Directory.Exists(x))];
+        programFilesPaths = [.. programFilesPaths.Where(x => !string.IsNullOrEmpty(x) && Directory.Exists(x)).Distinct()];
 
         // 使用 广度优先搜索 查找 Java 文件
         foreach (var rootPath in programFilesPaths)
@@ -217,11 +213,9 @@ public class JavaManage
                     foreach (var dir in subDirs)
                     {
                         // 准备可能的 Java 路径
-                        var potentialJavas = new List<string>
-                        {
-                            Path.Combine(dir, "bin", "java.exe"),
-                            Path.Combine(dir, "jre", "bin", "java.exe")
-                        };
+                        List<string> potentialJavas = [
+                            Path.Combine(dir, "java.exe")
+                            ];
                         potentialJavas = [.. potentialJavas.Where(File.Exists)];
                         
                         // 存在 Java，节点达到目标
