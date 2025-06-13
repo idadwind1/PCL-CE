@@ -100,7 +100,7 @@ public class JavaManage
             await ScanJava();
         return (from j in _javas
             where j.IsStillAvailable && j.IsEnabled && j.Version >= MinVerison && j.Version <= MaxVersion
-            orderby j.Version, j.Brand
+            orderby j.Version, j.IsJre descending, j.Brand
             select j).ToList();
     }
 
