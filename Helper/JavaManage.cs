@@ -115,6 +115,7 @@ public class JavaManage
 
     private static void ScanRegistryForJava(ref HashSet<string> javaPaths)
     {
+        // JavaSoft
         var registryPaths = new List<string>
         {
             @"SOFTWARE\JavaSoft\Java Development Kit",
@@ -132,8 +133,29 @@ public class JavaManage
                 using var subKey = regKey.OpenSubKey(subKeyName);
                 var javaHome = subKey?.GetValue("JavaHome") as string;
                 if (string.IsNullOrEmpty(javaHome)) continue;
-                var javaExePath = Path.Combine(javaHome, "bin\\java.exe");
+                var javaExePath = Path.Combine(javaHome, "bin", "java.exe");
                 if (File.Exists(javaExePath)) javaPaths.Add(javaExePath);
+            }
+        }
+
+        //Brand Java Register Path
+        string[] brandKeyNames = [
+            @"SOFTWARE\Azul Systems\Zulu",
+            @"SOFTWARE\BellSoft\Liberica"
+            ];
+        foreach (var key in brandKeyNames)
+        {
+            var zuluKey = Registry.LocalMachine.OpenSubKey(key);
+            if (zuluKey != null)
+            {
+                foreach (var subKeyName in zuluKey.GetSubKeyNames())
+                {
+                    var path = zuluKey.OpenSubKey(subKeyName)?.GetValue("InstallationPath") as string;
+                    if (path == null) continue;
+                    var javaExePath = Path.Combine(path, "bin", "java.exe");
+                    if (!File.Exists(javaExePath)) continue;
+                    javaPaths.Add(javaExePath);
+                }
             }
         }
     }
