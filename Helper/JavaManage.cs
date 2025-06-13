@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using PCL.Core.Model;
+using System.Collections.Concurrent;
 
 namespace PCL.Core.Helper;
 
@@ -31,7 +32,7 @@ public class JavaManage
         if (_scanTask == null || _scanTask.IsCompleted)
             _scanTask = Task.Run(async () =>
             {
-                var javaPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                var javaPaths = new ConcurrentBag<string>();
 
                 Task[] searchTasks = [
                     Task.Run(() => ScanRegistryForJava(ref javaPaths)),
@@ -113,7 +114,7 @@ public class JavaManage
         _javas = [..from j in _javas where j.IsStillAvailable select j];
     }
 
-    private static void ScanRegistryForJava(ref HashSet<string> javaPaths)
+    private static void ScanRegistryForJava(ref ConcurrentBag<string> javaPaths)
     {
         // JavaSoft
         var registryPaths = new List<string>
@@ -178,7 +179,7 @@ public class JavaManage
     // 最大文件夹搜索深度
     const int MAX_SEARCH_DEPTH = 12;
 
-    private static void ScanDefaultInstallPaths(ref HashSet<string> javaPaths)
+    private static void ScanDefaultInstallPaths(ref ConcurrentBag<string> javaPaths)
     {
         // 准备欲搜索目录
         var programFilesPaths = new List<string>
@@ -252,7 +253,7 @@ public class JavaManage
         }
     }
 
-    private static void ScanPathEnvironmentVariable(ref HashSet<string> javaPaths)
+    private static void ScanPathEnvironmentVariable(ref ConcurrentBag<string> javaPaths)
     {
         var pathEnv = Environment.GetEnvironmentVariable("PATH");
         if (string.IsNullOrEmpty(pathEnv)) return;
@@ -268,7 +269,7 @@ public class JavaManage
         }
     }
 
-    private static void ScanMicrosoftStoreJava(ref HashSet<string> javaPaths)
+    private static void ScanMicrosoftStoreJava(ref ConcurrentBag<string> javaPaths)
     {
         var storeJavaFolder = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
