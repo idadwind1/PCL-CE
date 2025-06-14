@@ -26,6 +26,9 @@ namespace PCL.Core.Helper.Configure
         {
             lock (_fileOpLock)
             {
+                var folder = _filePath.Substring(0, _filePath.LastIndexOf(Path.DirectorySeparatorChar) + 1);
+                if (!Directory.Exists(folder))
+                    Directory.CreateDirectory(folder);
                 using var fs = new FileStream(_filePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
                 using var reader = new StreamReader(fs, Encoding.UTF8);
                 var ctx = reader.ReadToEnd();

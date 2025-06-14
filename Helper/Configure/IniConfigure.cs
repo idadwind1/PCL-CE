@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.IO;
+using System.Text;
 
 namespace PCL.Core.Helper.Configure
 {
@@ -24,6 +25,9 @@ namespace PCL.Core.Helper.Configure
         {
             lock (_fileOpLock)
             {
+                var folder = _path.Substring(0, _path.LastIndexOf(Path.DirectorySeparatorChar) + 1);
+                if (!Directory.Exists(folder))
+                    Directory.CreateDirectory(folder);
                 using var fs = new FileStream(_path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
                 using var reader = new StreamReader(fs);
                 _content = new();
@@ -40,7 +44,13 @@ namespace PCL.Core.Helper.Configure
         
         public void Set(string key, object value)
         {
-            _content.AddOrUpdate(key, _ => value.ToString(),(_, _) => value.ToString());
+            if (key.Contains(Environment.NewLine))
+                throw new ArgumentException(nameof(key));
+            _content.AddOrUpdate(
+                key,
+                _ => Convert.ToBase64String(Encoding.UTF8.GetBytes(value.ToString())),
+                (_, _) => Convert.ToBase64String(Encoding.UTF8.GetBytes(value.ToString())));
+            Flush();
         }
         
         public TValue? Get<TValue>(string key)
@@ -49,7 +59,7 @@ namespace PCL.Core.Helper.Configure
             {
                 if (_content.TryGetValue(key, out string? ret))
                 {
-                    return (TValue)Convert.ChangeType(ret, typeof(TValue));
+                    return (TValue)Convert.ChangeType(Encoding.UTF8.GetString(Convert.FromBase64String(ret)), typeof(TValue));
                 }
             }
             catch { }
