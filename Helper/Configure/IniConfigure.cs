@@ -83,7 +83,6 @@ namespace PCL.Core.Helper.Configure
                 {
                     writer.WriteLine($"{item.Key}:{item.Value}");
                 }
-                writer.Flush();
                 writer.Close();
                 fs.Close();
                 File.Replace($"{_path}.temp", _path, $"{_path}.bak");

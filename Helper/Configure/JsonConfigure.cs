@@ -89,7 +89,6 @@ namespace PCL.Core.Helper.Configure
                 using var fs = new FileStream($"{_filePath}.temp",FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
                 using var writer = new StreamWriter(fs, Encoding.UTF8);
                 writer.Write(res);
-                writer.Flush();
                 writer.Close();
                 fs.Close();
                 File.Replace($"{_filePath}.temp", _filePath, $"{_filePath}.bak");
