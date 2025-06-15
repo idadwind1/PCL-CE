@@ -132,11 +132,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Helper\Configure\IConfigure.cs" />
     <Compile Include="Helper\Configure\IniConfigure.cs" />
     <Compile Include="Helper\Configure\JsonConfigure.cs" />
     <Compile Include="Helper\JavaManage.cs" />
     <Compile Include="Helper\SemVer.cs" />
-    <Compile Include="Interface\IConfigure.cs" />
     <Compile Include="Model\Java.cs" />
     <Compile Include="Model\ResourceProject\Curseforge\CurseforgeAuthors.cs" />
     <Compile Include="Model\ResourceProject\Curseforge\CurseforgeCategories.cs" />

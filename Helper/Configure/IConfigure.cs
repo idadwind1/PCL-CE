@@ -1,4 +1,4 @@
-﻿namespace PCL.Core.Interface;
+﻿namespace PCL.Core.Helper.Configure;
 public interface IConfigure
 {
     /// <summary>
