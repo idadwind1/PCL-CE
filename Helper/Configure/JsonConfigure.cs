@@ -15,9 +15,7 @@ namespace PCL.Core.Helper.Configure
         private readonly object _fileOpLock = new object();
         public JsonConfigure(string filePath)
         {
-            if (filePath == null)
-                throw new ArgumentNullException(nameof(filePath));
-            _filePath  = filePath;
+            _filePath  = filePath ?? throw new ArgumentNullException(nameof(filePath));
             _load();
             _content ??= new();
         }

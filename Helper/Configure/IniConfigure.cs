@@ -15,9 +15,7 @@ namespace PCL.Core.Helper.Configure
         private readonly object _fileOpLock = new object();
         public IniConfigure(string path, bool base64Encode = true)
         {
-            if (string.IsNullOrEmpty(path))
-                throw new ArgumentNullException(nameof(path));
-            _path = path;
+            _path = path ?? throw new ArgumentNullException(nameof(path));
             _base64Encode = base64Encode;
             _load();
             _content ??= new();
