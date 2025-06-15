@@ -135,6 +135,8 @@
     <Compile Include="Helper\Configure\IConfigure.cs" />
     <Compile Include="Helper\Configure\IniConfigure.cs" />
     <Compile Include="Helper\Configure\JsonConfigure.cs" />
+    <Compile Include="Helper\Diff\BsDiff.cs" />
+    <Compile Include="Helper\Diff\IBinaryDiff.cs" />
     <Compile Include="Helper\JavaManage.cs" />
     <Compile Include="Helper\SemVer.cs" />
     <Compile Include="Model\Java.cs" />
