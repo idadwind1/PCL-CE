@@ -11,12 +11,14 @@ namespace PCL.Core.Helper.Configure
         private ConcurrentDictionary<string, string> _content;
         
         private readonly string _path;
+        private readonly bool _base64Encode;
         private readonly object _fileOpLock = new object();
-        public IniConfigure(string path)
+        public IniConfigure(string path, bool base64Encode = true)
         {
             if (string.IsNullOrEmpty(path))
                 throw new ArgumentNullException(nameof(path));
             _path = path;
+            _base64Encode = base64Encode;
             _load();
             _content ??= new();
         }
@@ -46,10 +48,13 @@ namespace PCL.Core.Helper.Configure
         {
             if (key.Contains(Environment.NewLine))
                 throw new ArgumentException(nameof(key));
+            var wValue = _base64Encode
+                ? Convert.ToBase64String(Encoding.UTF8.GetBytes(value.ToString()))
+                : value.ToString();
             _content.AddOrUpdate(
                 key,
-                _ => Convert.ToBase64String(Encoding.UTF8.GetBytes(value.ToString())),
-                (_, _) => Convert.ToBase64String(Encoding.UTF8.GetBytes(value.ToString())));
+                _ => wValue,
+                (_, _) => wValue);
             Flush();
         }
         
@@ -57,9 +62,14 @@ namespace PCL.Core.Helper.Configure
         {
             try
             {
-                if (_content.TryGetValue(key, out string? ret))
+                if (_content.TryGetValue(key, out string? value))
                 {
-                    return (TValue)Convert.ChangeType(Encoding.UTF8.GetString(Convert.FromBase64String(ret)), typeof(TValue));
+                    if (string.IsNullOrEmpty(value))
+                        return default;
+                    var ret = _base64Encode 
+                        ? Encoding.UTF8.GetString(Convert.FromBase64String(value))
+                        : value;
+                    return (TValue)Convert.ChangeType(ret, typeof(TValue));
                 }
             }
             catch { }
