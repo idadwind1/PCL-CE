@@ -45,7 +45,12 @@ public class JavaManage
                 // 记录之前设置为禁用的 Java
                 var disabledJava = from j in _javas where !j.IsEnabled select j.JavaExePath;
                 // 新搜索到的 Java 路径
-                var newJavaList = new HashSet<string>(_javas.Select(x => x.JavaExePath).Concat(javaPaths), StringComparer.OrdinalIgnoreCase);
+                var newJavaList = new HashSet<string>(
+                    _javas
+                        .Select(x => x.JavaExePath)
+                        .Concat(javaPaths)
+                        .Select(x => x.TrimEnd(@"\".ToCharArray())),
+                    StringComparer.OrdinalIgnoreCase);
 
                 var ret = newJavaList
                     .Where(x => !x.Contains("javapath"))
