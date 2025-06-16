@@ -341,6 +341,7 @@ public class JavaManage
     }
 }
 
+[Serializable]
 public class JavaLocalCache
 {
     public string Path { get; set; } = "";
