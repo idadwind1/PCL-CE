@@ -101,12 +101,12 @@ public class JavaManage
         return _javas.Any(x => x.JavaExePath == javaExe);
     }
 
-    public async Task<List<Java>> SelectSuitableJava(Version MinVerison, Version MaxVersion)
+    public async Task<List<Java>> SelectSuitableJava(Version minVerison, Version maxVersion)
     {
         if (_javas.Count == 0)
             await ScanJava();
         return (from j in _javas
-            where j.IsStillAvailable && j.IsEnabled && j.Version >= MinVerison && j.Version <= MaxVersion
+            where j.IsStillAvailable && j.IsEnabled && j.Version >= minVerison && j.Version <= maxVersion
             orderby j.Version, j.IsJre, j.Brand
             select j).ToList();
     }
