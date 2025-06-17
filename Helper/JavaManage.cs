@@ -139,7 +139,9 @@ public class JavaManage
             {
                 using var subKey = regKey.OpenSubKey(subKeyName);
                 var javaHome = subKey?.GetValue("JavaHome") as string;
-                if (string.IsNullOrEmpty(javaHome)) continue;
+                if (string.IsNullOrEmpty(javaHome)
+                    || Path.GetInvalidPathChars().Any(x => javaHome.Contains(x)))
+                    continue;
                 var javaExePath = Path.Combine(javaHome, "bin", "java.exe");
                 if (File.Exists(javaExePath)) javaPaths.Add(javaExePath);
             }
@@ -158,7 +160,9 @@ public class JavaManage
                 foreach (var subKeyName in zuluKey.GetSubKeyNames())
                 {
                     var path = zuluKey.OpenSubKey(subKeyName)?.GetValue("InstallationPath") as string;
-                    if (path == null) continue;
+                    if (string.IsNullOrEmpty(path)
+                        || Path.GetInvalidPathChars().Any(x => path.Contains(x)))
+                        continue;
                     var javaExePath = Path.Combine(path, "bin", "java.exe");
                     if (!File.Exists(javaExePath)) continue;
                     javaPaths.Add(javaExePath);
@@ -270,11 +274,11 @@ public class JavaManage
         var paths = pathEnv.Split([';'], StringSplitOptions.RemoveEmptyEntries);
         foreach (var targetPath in paths)
         {
+            if (Path.GetInvalidPathChars().Any(x => targetPath.Contains(x)))
+                continue;
             var javaExePath = Path.Combine(targetPath, "java.exe");
             if (File.Exists(javaExePath))
-            {
                 javaPaths.Add(javaExePath);
-            }
         }
     }
 
