@@ -22,6 +22,8 @@ public class JavaManage
             select j).ToList();
     }
 
+    private static readonly string[] excludeFolderName = ["javapath", "java8path", "common files"];
+
     private Task? _scanTask = null;
     /// <summary>
     /// 扫描 Java 会对当前已有的结果进行选择性保留
@@ -53,7 +55,7 @@ public class JavaManage
                     StringComparer.OrdinalIgnoreCase);
 
                 var ret = newJavaList
-                    .Where(x => !x.Contains("javapath"))
+                    .Where(x => excludeFolderName.All(k => x.Split(Path.PathSeparator).Contains(k)))
                     .Select(x => Java.Parse(x))
                     .Where(x => x != null)
                     .ToList();
