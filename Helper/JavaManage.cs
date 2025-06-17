@@ -199,8 +199,7 @@ public class JavaManage
             string[] keyFolders =
             [
                 "Program Files",
-                "Program Files (x86)",
-                "Programs"
+                "Program Files (x86)"
             ];
             var isDriverSuitable = (DriveInfo d) => d.IsReady && (d.DriveType == DriveType.Fixed || d.DriveType == DriveType.Removable);
             programFilesPaths.AddRange(
