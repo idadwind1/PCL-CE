@@ -51,11 +51,11 @@ public class JavaManage
                     _javas
                         .Select(x => x.JavaExePath)
                         .Concat(javaPaths)
-                        .Select(x => x.TrimEnd(@"\".ToCharArray())),
+                        .Select(x => x.TrimEnd(Path.DirectorySeparatorChar)),
                     StringComparer.OrdinalIgnoreCase);
 
                 var ret = newJavaList
-                    .Where(x => excludeFolderName.All(k => x.Split(Path.PathSeparator).Contains(k)))
+                    .Where(x => !excludeFolderName.Any(k => x.Split(Path.DirectorySeparatorChar).Contains(k, StringComparer.OrdinalIgnoreCase)))
                     .Select(x => Java.Parse(x))
                     .Where(x => x != null)
                     .ToList();
