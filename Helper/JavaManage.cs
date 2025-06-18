@@ -55,7 +55,7 @@ public class JavaManage
                     StringComparer.OrdinalIgnoreCase);
 
                 var ret = newJavaList
-                    .Where(x => !excludeFolderName.Any(k => x.Split(Path.DirectorySeparatorChar).Contains(k, StringComparer.OrdinalIgnoreCase)))
+                    .Where(x => !x.Split(Path.DirectorySeparatorChar).Any(part => excludeFolderName.Contains(part, StringComparer.OrdinalIgnoreCase)))
                     .Select(x => Java.Parse(x))
                     .Where(x => x != null)
                     .ToList();
