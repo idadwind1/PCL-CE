@@ -16,7 +16,7 @@ public class JsonConfigure : IConfigure
     {
         _filePath  = filePath ?? throw new ArgumentNullException(nameof(filePath));
         _load();
-        _content ??= new();
+        _content ??= new ConcurrentDictionary<string, string>();
     }
 
     private void _load()
@@ -31,16 +31,16 @@ public class JsonConfigure : IConfigure
             var ctx = reader.ReadToEnd();
             if (string.IsNullOrEmpty(ctx))
             {
-                _content = new();
+                _content = new ConcurrentDictionary<string, string>();
             }
             try
             {
                 var jObject = JsonSerializer.Deserialize<ConcurrentDictionary<string, String>>(ctx);
-                _content = jObject ?? new();
+                _content = jObject ?? new ConcurrentDictionary<string, string>();
             }
             catch
             {
-                _content = new();
+                _content = new ConcurrentDictionary<string, string>();
             }
         }
     }
@@ -53,15 +53,8 @@ public class JsonConfigure : IConfigure
 
     public TValue? Get<TValue>(string key)
     {
-        try
-        {
-            if (_content.TryGetValue(key, out string? ret))
-            {
-                return (TValue)Convert.ChangeType(ret, typeof(TValue));
-            }
-        }
-        catch { }
-        return default;
+        if (!_content.TryGetValue(key, out var ret) || string.IsNullOrEmpty(ret)) return default;
+        return (TValue)Convert.ChangeType(ret, typeof(TValue));
     }
 
     public bool Contains(string key)

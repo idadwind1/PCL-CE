@@ -47,11 +47,11 @@ public class VarInt
         ulong result = 0;
         int shift = 0;
         int bytesRead = 0;
-        const int MaxBytes = 10; // ulong最大需要10字节
+        const int maxBytes = 10; // ulong最大需要10字节
         
         foreach (byte b in bytes)
         {
-            if (bytesRead >= MaxBytes)
+            if (bytesRead >= maxBytes)
                 throw new FormatException("VarInt exceeds maximum length");
             
             // 取低7位并移位合并
@@ -93,7 +93,7 @@ public class VarInt
         ulong result = 0;
         int shift = 0;
         int bytesRead = 0;
-        const int MaxBytes = 10;
+        const int maxBytes = 10;
         
         while (true)
         {
@@ -104,7 +104,7 @@ public class VarInt
             byte b = (byte)byteValue;
             bytesRead++;
             
-            if (bytesRead > MaxBytes)
+            if (bytesRead > maxBytes)
                 throw new FormatException("VarInt exceeds maximum length");
             
             result |= (ulong)(b & 0x7F) << shift;

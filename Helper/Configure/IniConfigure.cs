@@ -16,7 +16,7 @@ public class IniConfigure : IConfigure
         _path = path ?? throw new ArgumentNullException(nameof(path));
         _base64Encode = base64Encode;
         _load();
-        _content ??= new();
+        _content ??= new ConcurrentDictionary<string, string>();
     }
 
     private void _load()
@@ -28,9 +28,8 @@ public class IniConfigure : IConfigure
                 Directory.CreateDirectory(folder);
             using var fs = new FileStream(_path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
             using var reader = new StreamReader(fs);
-            _content = new();
-            string? line;
-            while ((line = reader.ReadLine()) != null)
+            _content = new ConcurrentDictionary<string, string>();
+            while (reader.ReadLine() is { } line)
             {
                 var splitPos = line.IndexOf(':');
                 var key = line.Substring(0, splitPos);
@@ -56,20 +55,11 @@ public class IniConfigure : IConfigure
     
     public TValue? Get<TValue>(string key)
     {
-        try
-        {
-            if (_content.TryGetValue(key, out string? value))
-            {
-                if (string.IsNullOrEmpty(value))
-                    return default;
-                var ret = _base64Encode 
-                    ? Encoding.UTF8.GetString(Convert.FromBase64String(value))
-                    : value;
-                return (TValue)Convert.ChangeType(ret, typeof(TValue));
-            }
-        }
-        catch { }
-        return default;
+        if (!_content.TryGetValue(key, out var value) || string.IsNullOrEmpty(value)) return default;
+        var ret = _base64Encode 
+            ? Encoding.UTF8.GetString(Convert.FromBase64String(value))
+            : value;
+        return (TValue)Convert.ChangeType(ret, typeof(TValue));
     }
     
     public bool Contains(string key)
