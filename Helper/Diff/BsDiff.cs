@@ -132,7 +132,7 @@ extra block; seek forwards in oldfile by z bytes".
 				long seekPos = ctrlReader.ReadInt64();
 
 				//Console.WriteLine($"Round add-range = {addRange}, copy-range = {copyRange}, seek-pos = {seekPos}");
-
+				
 				// 新加入的
 				if (newDataPos + addRange > newLen)
 					throw new Exception(
@@ -140,13 +140,10 @@ extra block; seek forwards in oldfile by z bytes".
 
 				for (int i = 0; i < addRange; i++)
 				{
-					var readed = diffReader.ReadByte();
-					if (readed == -1)
-						throw new EndOfStreamException("Unexpected end of stream when try to add new");
 					if (oldDataPos + i < originData.Length)
-						ret[newDataPos + i] = (byte)(readed + originData[oldDataPos + i]);
+						ret[newDataPos + i] = (byte)(diffReader.ReadByte() + originData[oldDataPos + i]);
 					else
-						ret[newDataPos + i] = readed;
+						ret[newDataPos + i] = diffReader.ReadByte();
 				}
 
 				newDataPos += addRange;
@@ -159,10 +156,7 @@ extra block; seek forwards in oldfile by z bytes".
 
 				for (int i = 0; i < copyRange; i++)
 				{
-					var readed = extraReader.ReadByte();
-					if (readed == -1)
-						throw new EndOfStreamException("Unexpected end of stream");
-					ret[newDataPos + i] = (byte)readed;
+					ret[newDataPos + i] = extraReader.ReadByte();
 				}
 
 				newDataPos += copyRange;
