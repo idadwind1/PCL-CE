@@ -44,27 +44,38 @@ public static class LogWrapper
         null,
         true,
         10));
-    
-    public static void Info(string? module, string msg, InfoLevel level = InfoLevel.Hint)
+
+    private static void CallLog(string msg, LogLevel level)
     {
         switch (level)
         {
-            case InfoLevel.Debug:
-                CurrentLogger.Debug($"{module} {msg}");
+            case LogLevel.Fatal:
+                CurrentLogger.Fatal(msg);
                 break;
-            case InfoLevel.Hint:
-                CurrentLogger.Info($"{module} {msg}");
+            case LogLevel.Error:
+                CurrentLogger.Error(msg);
                 break;
-            case InfoLevel.MsgBox:
-                CurrentLogger.Warn($"{module} {msg}");
+            case LogLevel.Warning:
+                CurrentLogger.Warn(msg);
                 break;
-            case InfoLevel.Trace:
-                CurrentLogger.Trace($"{module} {msg}");
+            case LogLevel.Info:
+                CurrentLogger.Info(msg);
+                break;
+            case LogLevel.Debug:
+                CurrentLogger.Debug(msg);
+                break;
+            case LogLevel.Trace:
+                CurrentLogger.Trace(msg);
                 break;
             default:
-                CurrentLogger.Info($"{module} {msg}");
+                CurrentLogger.Info(msg);
                 break;
         }
+    }
+    
+    public static void Info(string? module, string msg, InfoLevel level = InfoLevel.Hint)
+    {
+        CallLog($"{module} {msg}", (LogLevel)level);
         OnLog?.Invoke((LogLevel)level, msg, false, module);
     }
     
@@ -75,21 +86,7 @@ public static class LogWrapper
     
     public static void Error(Exception? ex, string? module, string msg, ErrorLevel level = ErrorLevel.Debug)
     {
-        switch (level)
-        {
-            case ErrorLevel.Debug:
-                CurrentLogger.Debug($"{module} {msg}: {ex?.Message}");
-                break;
-            case ErrorLevel.Fatal:
-            case ErrorLevel.Feedback:
-            case ErrorLevel.Hint:
-            case ErrorLevel.MsgBox:
-                CurrentLogger.Fatal($"{module} {msg}: {ex?.Message}");
-                break;
-            default:
-                CurrentLogger.Error($"{module} {msg}: {ex?.Message}");
-                break;
-        }
+        CallLog($"{module} {msg}: {ex?.Message}", (LogLevel)level);
         OnLog?.Invoke((LogLevel)level, msg, true, module, ex);
     }
     
