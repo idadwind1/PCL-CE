@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace PCL.Core.Service;
+namespace PCL.Core.Helper;
 
 public enum LogLevel
 {
@@ -31,7 +31,7 @@ public enum ErrorLevel
     Fatal = LogLevel.Fatal,
 }
 
-public static class Logger
+public static class LogWrapper
 {
     public static event LogHandler? OnLog;
     

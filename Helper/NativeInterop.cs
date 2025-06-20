@@ -6,7 +6,6 @@ using System.Linq;
 using System.Text;
 using System.Runtime.InteropServices;
 using System.Threading;
-using PCL.Core.Service;
 using PCL.Core.Utils;
 
 namespace PCL.Core.Helper;
@@ -33,11 +32,11 @@ public static class NativeInterop
             }
             catch (ThreadInterruptedException)
             {
-                Logger.Trace("Thread", $"{threadName.Value}: 已中止");
+                LogWrapper.Trace("Thread", $"{threadName.Value}: 已中止");
             }
             catch (Exception ex)
             {
-                Logger.Error(ex, "Thread", $"{threadName.Value}: 抛出异常", ErrorLevel.Feedback);
+                LogWrapper.Error(ex, "Thread", $"{threadName.Value}: 抛出异常", ErrorLevel.Feedback);
             }
         }) { Priority = priority };
         threadName.Value ??= $"WorkerThread@{thread.ManagedThreadId}";
@@ -48,8 +47,8 @@ public static class NativeInterop
 
     #region 命名管道通信
     
-    private static void PipeLog(string message) => Logger.Trace("Pipe", message);
-    private static void PipeLogDebug(string message) => Logger.Debug("Pipe", message);
+    private static void PipeLog(string message) => LogWrapper.Trace("Pipe", message);
+    private static void PipeLogDebug(string message) => LogWrapper.Debug("Pipe", message);
 
     /// <summary>
     /// 获取指定命名管道当前连接的客户端进程 ID
@@ -86,7 +85,7 @@ public static class NativeInterop
 
         RunInNewThread(() =>
         {
-            Logger.Debug("Pipe", $"{identifier}: {pipeName} 服务端已在 '{threadName}' 工作线程启动");
+            LogWrapper.Debug("Pipe", $"{identifier}: {pipeName} 服务端已在 '{threadName}' 工作线程启动");
             var hasNextLoop = true;
             var connected = false;
 
@@ -125,7 +124,7 @@ public static class NativeInterop
                         }
                     }
                     connected = true;
-                    Logger.Debug("Pipe", $"{identifier}: {clientProcessId} 已连接");
+                    LogWrapper.Debug("Pipe", $"{identifier}: {clientProcessId} 已连接");
                     // 初始化读取/写入流
                     var reader = new StreamReader(pipe, PipeEncoding, false, 1024, true);
                     var writer = new StreamWriter(pipe, PipeEncoding, 1024, true);
@@ -145,7 +144,7 @@ public static class NativeInterop
                     }
                     else
                     {
-                        Logger.Error(ex, "Pipe",  $"{identifier}: 服务端出错", ErrorLevel.Hint);
+                        LogWrapper.Error(ex, "Pipe",  $"{identifier}: 服务端出错", ErrorLevel.Hint);
                         if (stopWhenException) hasNextLoop = false;
                     }
                 }

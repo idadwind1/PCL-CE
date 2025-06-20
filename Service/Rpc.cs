@@ -159,7 +159,7 @@ public delegate RpcResponse RpcFunction(string? argument, string? content, bool 
 /// </summary>
 public static class Rpc
 {
-    private static void Log(string msg) => Logger.Trace("RPC", msg);
+    private static void Log(string msg) => LogWrapper.Trace("RPC", msg);
     
     private static readonly string EchoPipeName = $"PCLCE_RPC@{NativeInterop.CurrentProcess.Id}";
     private static readonly string[] RequestTypeArray = ["GET", "SET", "REQ"];
@@ -343,7 +343,7 @@ public static class Rpc
             else
             {
                 RpcResponse.Err(ex.ToString(), "stacktrace").Response(writer);
-                Logger.Error(ex, "RPC", "处理请求时发生异常");
+                LogWrapper.Error(ex, "RPC", "处理请求时发生异常");
             }
         }
         return true;
