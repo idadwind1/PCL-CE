@@ -228,7 +228,8 @@ public class JavaManage
             });
         }
         programFilesPaths = [.. programFilesPaths.Where(x => !string.IsNullOrEmpty(x) && Directory.Exists(x)).Distinct()];
-
+        LogWrapper.Info($"[Java] 对下列目录进行广度关键词搜索{Environment.NewLine}{string.Join(Environment.NewLine, programFilesPaths)}");
+        
         // 使用 广度优先搜索 查找 Java 文件
         foreach (var rootPath in programFilesPaths)
         {
@@ -307,6 +308,7 @@ public class JavaManage
                     var javaExePath = Path.Combine(versionDir, "bin", "java.exe");
                     if (File.Exists(javaExePath))
                     {
+                        LogWrapper.Info($"[Java] 搜寻到可能的 Microsoft 官方 Java {javaExePath}");
                         javaPaths.Add(javaExePath);
                     }
                 }

@@ -48,6 +48,8 @@ public sealed class Logger : IDisposable
         lastFile?.Dispose();
         Task.Run(() =>
         {
+            if (!_configuration.AutoDeleteOldFile)
+                return;
             var logFiles = Directory.GetFiles(_configuration.StoreFolder);
             var needToDelete = logFiles.Select(x => new FileInfo(x))
                 .OrderBy(x => x.CreationTime)
