@@ -1,4 +1,6 @@
 ﻿using System;
+using System.IO;
+using PCL.Core.Helper.Logger;
 
 namespace PCL.Core.Helper;
 
@@ -34,9 +36,35 @@ public enum ErrorLevel
 public static class LogWrapper
 {
     public static event LogHandler? OnLog;
+
+    public static Logger.Logger CurrentLogger = new(new LoggerConfiguration(
+        Path.Combine(Environment.CurrentDirectory, "PCL", "Log"),
+        LoggerSegmentMode.BySize,
+        5 * 1024 * 1024,
+        null,
+        true,
+        10));
     
     public static void Info(string? module, string msg, InfoLevel level = InfoLevel.Hint)
     {
+        switch (level)
+        {
+            case InfoLevel.Debug:
+                CurrentLogger.Debug($"{module} {msg}");
+                break;
+            case InfoLevel.Hint:
+                CurrentLogger.Info($"{module} {msg}");
+                break;
+            case InfoLevel.MsgBox:
+                CurrentLogger.Warn($"{module} {msg}");
+                break;
+            case InfoLevel.Trace:
+                CurrentLogger.Trace($"{module} {msg}");
+                break;
+            default:
+                CurrentLogger.Info($"{module} {msg}");
+                break;
+        }
         OnLog?.Invoke((LogLevel)level, msg, false, module);
     }
     
@@ -47,6 +75,21 @@ public static class LogWrapper
     
     public static void Error(Exception? ex, string? module, string msg, ErrorLevel level = ErrorLevel.Debug)
     {
+        switch (level)
+        {
+            case ErrorLevel.Debug:
+                CurrentLogger.Debug($"{module} {msg}: {ex?.Message}");
+                break;
+            case ErrorLevel.Fatal:
+            case ErrorLevel.Feedback:
+            case ErrorLevel.Hint:
+            case ErrorLevel.MsgBox:
+                CurrentLogger.Fatal($"{module} {msg}: {ex?.Message}");
+                break;
+            default:
+                CurrentLogger.Error($"{module} {msg}: {ex?.Message}");
+                break;
+        }
         OnLog?.Invoke((LogLevel)level, msg, true, module, ex);
     }
     

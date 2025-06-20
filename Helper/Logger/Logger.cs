@@ -58,11 +58,12 @@ public sealed class Logger : IDisposable
         });
     }
 
-    public void Test(string message) => Log($"[{GetTimeFormatted()}] [TEST] {message}");
+    public void Trace(string message) => Log($"[{GetTimeFormatted()}] [TRACE] {message}");
     public void Debug(string message) => Log($"[{GetTimeFormatted()}] [DEBUG] {message}");
     public void Info(string message) => Log($"[{GetTimeFormatted()}] [INFO] {message}");
     public void Warn(string message) => Log($"[{GetTimeFormatted()}] [WARN] {message}");
     public void Error(string message) => Log($"[{GetTimeFormatted()}] [ERROR] {message}");
+    public void Fatal(string message) => Log($"[{GetTimeFormatted()}] [FATAL] {message}");
     private static string GetTimeFormatted() => $"{DateTime.Now:HH:mm:ss.fff}";
     public void Log(string message)
     {
