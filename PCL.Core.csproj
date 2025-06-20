@@ -141,6 +141,9 @@
     <Compile Include="Helper\Diff\BsDiff.cs" />
     <Compile Include="Helper\Diff\IBinaryDiff.cs" />
     <Compile Include="Helper\JavaManage.cs" />
+    <Compile Include="Helper\Logger\Logger.cs" />
+    <Compile Include="Helper\Logger\LoggerConfiguration.cs" />
+    <Compile Include="Helper\Logger\LoggerSegmentMode.cs" />
     <Compile Include="Helper\SemVer.cs" />
     <Compile Include="Helper\VarInt.cs" />
     <Compile Include="Model\Java.cs" />
