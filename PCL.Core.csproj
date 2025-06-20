@@ -144,6 +144,8 @@
     <Compile Include="Helper\Logger\Logger.cs" />
     <Compile Include="Helper\Logger\LoggerConfiguration.cs" />
     <Compile Include="Helper\Logger\LoggerSegmentMode.cs" />
+    <Compile Include="Helper\LogWrapper.cs" />
+    <Compile Include="Helper\NativeInterop.cs" />
     <Compile Include="Helper\SemVer.cs" />
     <Compile Include="Helper\VarInt.cs" />
     <Compile Include="Model\Java.cs" />
@@ -161,9 +163,11 @@
     <Compile Include="Model\ResourceProject\Modrinth\ModrinthModeratorMessage.cs" />
     <Compile Include="Model\ResourceProject\Modrinth\ModrinthProject.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Service\Rpc.cs" />
     <Compile Include="Service\RoutedWebServer.cs" />
     <Compile Include="Service\System.Runtime.CompilerServices.cs" />
     <Compile Include="Service\WebServer.cs" />
+    <Compile Include="Utils\AtomicVariable.cs" />
     <Compile Include="Utils\ExpandoObjectConverter.cs" />
     <Compile Include="Utils\PEHeaderReader.cs" />
     <Compile Include="Utils\StringStream.cs" />
