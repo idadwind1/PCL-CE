@@ -19,9 +19,15 @@ namespace PCL.Core.Controls
         public BlurBorder()
         {
             BlurHelper.BlurChanged += OnBlurChanged;
-            
+
             // 防止内存泄漏
-            Unloaded += (_, _) => BlurHelper.BlurChanged -= OnBlurChanged;
+            Unloaded += (sender, _) =>
+            {
+                if (sender is BlurBorder bo && bo.Parent is null)
+                {
+                    BlurHelper.BlurChanged -= OnBlurChanged;
+                }
+            };
         }
 
         private readonly Stack<UIElement> _panelStack = new();
