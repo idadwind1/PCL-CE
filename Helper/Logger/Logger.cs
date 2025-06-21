@@ -44,10 +44,12 @@ public sealed class Logger : IDisposable
         Directory.CreateDirectory(_configuration.StoreFolder);
         _currentFile = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.Read);
         _currentStream = new StreamWriter(_currentFile);
-        lastWriter?.Dispose();
-        lastFile?.Dispose();
         Task.Run(() =>
         {
+            lastWriter?.Close();
+            lastWriter?.Dispose();
+            lastFile?.Close();
+            lastFile?.Dispose();
             if (!_configuration.AutoDeleteOldFile)
                 return;
             var logFiles = Directory.GetFiles(_configuration.StoreFolder);
@@ -76,14 +78,14 @@ public sealed class Logger : IDisposable
 
     private void ProcessLogQueue(CancellationToken token)
     {
-        const int maxBatchCount = 50;
+        const int maxBatchCount = 100;
         var batch = new StringBuilder();
         long currentBatchCount = 0;
         while (!token.IsCancellationRequested)
         {
             try
             {
-                _logEvent.Wait(token);
+                _logEvent.Wait(600, token);
                 while (_logQueue.TryDequeue(out var message))
                 {
                     batch.AppendLine(message);
