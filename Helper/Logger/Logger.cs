@@ -136,6 +136,8 @@ public sealed class Logger : IDisposable
     {
         if (_disposed) return;
         _disposed = true;
+        if (!_logQueue.IsEmpty && !_logEvent.IsSet)
+            _logEvent.Set();
         while (!_logQueue.IsEmpty) //等待日志写入完成
         {
             Thread.Sleep(100);
@@ -143,5 +145,6 @@ public sealed class Logger : IDisposable
         _cts.Cancel();
         _logEvent.Dispose();
         _currentStream?.Dispose();
+        _currentFile?.Dispose();
     }
 }
