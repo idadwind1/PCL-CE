@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -22,14 +23,17 @@ public sealed class Logger : IDisposable
     private StreamWriter? _currentStream;
     private FileStream? _currentFile;
     private int _fileIndex = 0;
+    private List<string> _files = [];
     
     private readonly ConcurrentQueue<string> _logQueue = new();
     private readonly ManualResetEventSlim _logEvent = new(false);
     private readonly CancellationTokenSource _cts = new();
 
+    public List<string> LogFiles => [.._files];
+    
     private void CreateNewFile()
     {
-        var nameFormat = (_configuration.FileNameFormat ?? $"{DateTime.Now:yyyy-M-d}-{{0}}") + ".log";
+        var nameFormat = (_configuration.FileNameFormat ?? $"Launch-{DateTime.Now:yyyy-M-d}-{{0}}") + ".log";
         string filename;
         string filePath;
         do
@@ -39,6 +43,7 @@ public sealed class Logger : IDisposable
             if (_fileIndex >= int.MaxValue)
                 throw new Exception("WTF are you doing!!!");
         } while (File.Exists(filePath));
+        _files.Add(filePath);
         var lastWriter = _currentStream;
         var lastFile = _currentFile;
         Directory.CreateDirectory(_configuration.StoreFolder);
