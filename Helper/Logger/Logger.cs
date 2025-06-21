@@ -96,6 +96,7 @@ public sealed class Logger : IDisposable
                         currentBatchCount = 0;
                     }
                 }
+                _logEvent.Reset();
             }
             catch (OperationCanceledException) {}
             catch (Exception e)
