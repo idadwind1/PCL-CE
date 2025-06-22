@@ -5,14 +5,17 @@ namespace PCL.Core.Lifecycle;
 /// <summary>
 /// 若要获取服务项自身的上下文实例，请使用 <see cref="Lifecycle.GetContext"/> 。
 /// </summary>
-public class LifecycleContext(ILifecycleService service, Action<LifecycleLogItem> logAction)
+public class LifecycleContext(
+    ILifecycleService service,
+    Action<LifecycleLogItem> onLog,
+    Action onRequestExit)
 {
-    public virtual void CustomLog(
+    public void CustomLog(
         string message,
         Exception? ex = null,
         LifecycleLogLevel level = LifecycleLogLevel.Trace,
         LifecycleActionLevel? actionLevel = null
-    ) => logAction(new LifecycleLogItem(service, message, ex, level, actionLevel));
+    ) => onLog(new LifecycleLogItem(service, message, ex, level, actionLevel));
     
     public void Trace(string message, Exception? ex = null, LifecycleActionLevel? actionLevel = null) => CustomLog(message, ex, LifecycleLogLevel.Trace, actionLevel);
     public void Debug(string message, Exception? ex = null, LifecycleActionLevel? actionLevel = null) => CustomLog(message, ex, LifecycleLogLevel.Debug, actionLevel);
@@ -24,11 +27,7 @@ public class LifecycleContext(ILifecycleService service, Action<LifecycleLogItem
     /// <summary>
     /// 请求退出程序。仅可在 <see cref="LifecycleState.BeforeLoading"/> 时使用。
     /// </summary>
-    /// <exception cref="NotImplementedException"></exception>
-    public void RequestExit()
-    {
-        throw new NotImplementedException();
-    }
+    public void RequestExit() => onRequestExit();
 
     // -- EMPTY INSTANCE --
     
