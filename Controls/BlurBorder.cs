@@ -16,20 +16,6 @@ namespace PCL.Core.Controls
 {
     public class BlurBorder : Border
     {
-        public BlurBorder()
-        {
-            BlurHelper.BlurChanged += OnBlurChanged;
-
-            // 防止内存泄漏
-            Unloaded += (sender, _) =>
-            {
-                if (sender is BlurBorder bo && bo.Parent is null)
-                {
-                    BlurHelper.BlurChanged -= OnBlurChanged;
-                }
-            };
-        }
-
         private readonly Stack<UIElement> _panelStack = new();
 
         /// <summary>
@@ -191,15 +177,6 @@ namespace PCL.Core.Controls
             base.OnRender(dc);
         }
 
-        private void OnBlurChanged(object? sender, int e)
-        {
-            BlurRadius = e;
-
-            // 强制渲染
-            BackgroundPresenter.ForceRender(this);
-        }
-
-
         /// <summary>
         /// The key needed set a read-only property
         /// </summary>
@@ -224,7 +201,7 @@ namespace PCL.Core.Controls
         /// The radius of the blur effect applied to the background.
         /// </summary>
         public static readonly DependencyProperty BlurRadiusProperty =
-            DependencyProperty.Register(nameof(BlurRadius), typeof(double), typeof(BlurBorder), new FrameworkPropertyMetadata(25.0, propertyChangedCallback: OnRenderPropertyChanged));
+            DependencyProperty.Register(nameof(BlurRadius), typeof(double), typeof(BlurBorder), new FrameworkPropertyMetadata(16.0, propertyChangedCallback: OnRenderPropertyChanged));
 
         /// <summary>
         /// The type of kernel used for the blur effect.

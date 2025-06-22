@@ -141,7 +141,6 @@
   <ItemGroup>
     <Compile Include="Controls\BlurBorder.cs" />
     <Compile Include="Helper\BackgroundPresenter.cs" />
-    <Compile Include="Helper\BlurHelper.cs" />
     <Compile Include="Helper\JavaManage.cs" />
     <Compile Include="Helper\MathHelper.cs" />
     <Compile Include="Helper\Configure\IConfigure.cs" />
