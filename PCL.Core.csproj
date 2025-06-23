@@ -142,7 +142,6 @@
   <ItemGroup>
     <Compile Include="Controls\BlurBorder.cs" />
     <Compile Include="Helper\BackgroundPresenter.cs" />
-    <Compile Include="Helper\BlurHelper.cs" />
     <Compile Include="Helper\EncryptHelper.cs" />
     <Compile Include="Helper\HashHelper.cs" />
     <Compile Include="Helper\Identify.cs" />
