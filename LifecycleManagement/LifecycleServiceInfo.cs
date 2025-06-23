@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace PCL.Core.Lifecycle;
+namespace PCL.Core.LifecycleManagement;
 
 /// <summary>
 /// 生命周期服务项的信息记录

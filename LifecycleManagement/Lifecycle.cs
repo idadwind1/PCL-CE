@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace PCL.Core.Lifecycle;
+namespace PCL.Core.LifecycleManagement;
 
 /// <summary>
 /// 启动器生命周期管理

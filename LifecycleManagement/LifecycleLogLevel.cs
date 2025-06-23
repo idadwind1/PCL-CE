@@ -1,4 +1,4 @@
-﻿namespace PCL.Core.Lifecycle;
+﻿namespace PCL.Core.LifecycleManagement;
 
 /// <summary>
 /// 日志等级。将十进制值 <c>% 100</c> 并显式转换可得到该等级默认对应的 <see cref="LifecycleActionLevel"/>

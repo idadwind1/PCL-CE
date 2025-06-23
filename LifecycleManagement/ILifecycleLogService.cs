@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace PCL.Core.Lifecycle;
+namespace PCL.Core.LifecycleManagement;
 
 /// <summary>
 /// 日志服务专用接口。整个生命周期只能有一个日志服务，若出现第二个将会报错。

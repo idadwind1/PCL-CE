@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace PCL.Core.Lifecycle;
+namespace PCL.Core.LifecycleManagement;
 
 /// <summary>
 /// 注册生命周期服务项，将由生命周期管理统一创建实例，然后在指定生命周期自动启动或加入等待手动启动列表。<br/>

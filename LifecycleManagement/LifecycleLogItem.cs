@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace PCL.Core.Lifecycle;
+namespace PCL.Core.LifecycleManagement;
 
 public record LifecycleLogItem(
     ILifecycleService? Source,

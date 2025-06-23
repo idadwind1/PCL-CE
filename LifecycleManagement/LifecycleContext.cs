@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace PCL.Core.Lifecycle;
+namespace PCL.Core.LifecycleManagement;
 
 /// <summary>
 /// 若要获取服务项自身的上下文实例，请使用 <see cref="Lifecycle.GetContext"/> 。

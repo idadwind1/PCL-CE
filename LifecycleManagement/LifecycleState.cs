@@ -1,4 +1,4 @@
-﻿namespace PCL.Core.Lifecycle;
+﻿namespace PCL.Core.LifecycleManagement;
 
 /// <summary>
 /// 生命周期状态

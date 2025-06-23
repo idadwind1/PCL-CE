@@ -1,4 +1,4 @@
-﻿namespace PCL.Core.Lifecycle;
+﻿namespace PCL.Core.LifecycleManagement;
 
 /// <summary>
 /// 用于特定生命周期的服务模型。<br/>

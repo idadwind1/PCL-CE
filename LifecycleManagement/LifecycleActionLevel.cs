@@ -1,4 +1,4 @@
-﻿namespace PCL.Core.Lifecycle;
+﻿namespace PCL.Core.LifecycleManagement;
 
 /// <summary>
 /// 事件/意外行为等级。

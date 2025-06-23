@@ -170,7 +170,7 @@ $csharpCode = @"
 
 using System;
 
-namespace PCL.Core.Lifecycle
+namespace PCL.Core.LifecycleManagement
 {
     /// <summary>
     /// 包含所有使用 LifecycleService 注解的类型，按 StartState 分类并按 Priority 降序排序
@@ -240,7 +240,7 @@ $csharpCode += @"
 "@
 
 # 将生成的代码写入文件
-$outputPath = Join-Path $ProjectPath "Lifecycle\LifecycleServiceTypes.g.cs"
+$outputPath = Join-Path $ProjectPath "LifecycleManagement\LifecycleServiceTypes.g.cs"
 $csharpCode | Out-File -FilePath $outputPath -Encoding UTF8
 
-Write-Host "Generated Lifecycle\LifecycleServiceTypes.g.cs with $($lifecycleServices.Keys.Count) different state(s)"
+Write-Host "Generated LifecycleServiceTypes.g.cs with $($lifecycleServices.Keys.Count) state(s)"
