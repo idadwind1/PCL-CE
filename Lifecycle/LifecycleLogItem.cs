@@ -3,7 +3,7 @@
 namespace PCL.Core.Lifecycle;
 
 public record LifecycleLogItem(
-    ILifecycleService Source,
+    ILifecycleService? Source,
     string Message,
     Exception? Ex = null,
     LifecycleLogLevel Level = LifecycleLogLevel.Trace,
@@ -13,7 +13,8 @@ public record LifecycleLogItem(
 
     public override string ToString()
     {
-        var basic = $"{Time:HH:mm:ss.fff} [{Level}] [{Source.Name} ({Source.Identifier})] {Message}";
+        var source = Source == null ? "" : $" [{Source.Name} ({Source.Identifier})]";
+        var basic = $"[{Time:HH:mm:ss.fff}:{Level}]{source} {Message}";
         return Ex == null ? basic : $"{basic}\n{Ex}";
     }
 }

@@ -21,7 +21,9 @@ public sealed class LifecycleService(LifecycleState startState) : Attribute
     public LifecycleState StartState { get; } = startState;
     
     /// <summary>
-    /// 启动优先级。同一个生命周期状态有多个服务项需要启动时，将会按优先级数值<b>降序</b>启动。
+    /// 启动优先级。同一个生命周期状态有多个服务项需要启动时，将会按优先级数值<b>降序</b>启动，即数值越大越优先。<br/>
+    /// 虽然这个值可以为任意 32 位整数，但是<b>非核心服务请勿使用较为极端的值，尤其是
+    /// <c>int.MaxValue</c> <c>int.MinValue</c></b>，这可能导致一些核心服务的启动时机出现问题。
     /// </summary>
     public int Priority { get; set; } = 0;
 }

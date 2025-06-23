@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace PCL.Core.Lifecycle;
@@ -24,15 +25,14 @@ public sealed class Lifecycle : ILifecycleService
     private Lifecycle() { _context = GetContext(this); }
     private static LifecycleContext Context => _context ?? LifecycleContext.Empty;
     
+    // -- 日志管理 --
+    
     private static ILifecycleLogService? _logService;
     private static readonly List<LifecycleLogItem> PendingLogs = [];
-    private static readonly Dictionary<string, LifecycleServiceInfo> RunningServiceInfoMap = [];
-    private static readonly LinkedList<ILifecycleService> RunningServiceList = [];
-    private static readonly Dictionary<string, ILifecycleService> ManualServiceMap = [];
 
     private static void _PushLog(LifecycleLogItem item, ILifecycleLogService service)
     {
-        service.OnLog(item.Source, item.Message, item.Ex, item.Level, item.ActionLevel);
+        service.OnLog(item.Time, item.Source, item.Message, item.Ex, item.Level, item.ActionLevel);
     }
 
     private static void _SavePendingLogs()
@@ -53,6 +53,12 @@ public sealed class Lifecycle : ILifecycleService
             foreach (var item in PendingLogs) Console.WriteLine(item);
         }
     }
+    
+    // -- 服务管理 --
+    
+    private static readonly Dictionary<string, LifecycleServiceInfo> RunningServiceInfoMap = [];
+    private static readonly LinkedList<ILifecycleService> RunningServiceList = [];
+    private static readonly Dictionary<string, ILifecycleService> ManualServiceMap = [];
 
     private static string _ServiceName(ILifecycleService service, LifecycleState? state = null)
     {
@@ -73,9 +79,15 @@ public sealed class Lifecycle : ILifecycleService
             if (_logService != null) throw new InvalidOperationException("日志服务只能有一个");
             logService = ls;
         }
-        // 运行服务项并添加到正在运行列表
         var state = manual ? LifecycleState.Manual : CurrentState;
         var name = _ServiceName(service, state);
+        // 确保不存在重复的标识符
+        if (ManualServiceMap.ContainsKey(service.Identifier))
+        {
+            Context.Warn($"{name} 标识符重复，已跳过");
+            return;
+        }
+        // 运行服务项并添加到正在运行列表
         try
         {
             var serviceInfo = new LifecycleServiceInfo(service, state);
@@ -96,6 +108,8 @@ public sealed class Lifecycle : ILifecycleService
             _logService = logService;
         }
     }
+
+    private static Type[] _GetServiceTypes(LifecycleState state) => LifecycleServiceTypes.GetServiceTypes(state);
 
     private static ILifecycleService _CreateService(Type type)
     {
@@ -135,49 +149,20 @@ public sealed class Lifecycle : ILifecycleService
         Context.Debug($"状态 {CurrentState} 共用时 {Math.Round(count.TotalMilliseconds)} ms");
     }
 
-    private static bool _isApplicationStarted = false;
-    private static bool _requestedExit = false;
-    private static ILifecycleService? _requestExitService;
-    
-    /// <summary>
-    /// 在整个程序启动时调用，切勿重复调用
-    /// </summary>
-    /// <exception cref="InvalidOperationException">尝试重复调用</exception>
-    public static void StartInitialize()
+    private static void _InitializeAndStartStateServices(LifecycleState state)
     {
-        // 检测重复调用
-        if (_isApplicationStarted) throw new InvalidOperationException("应用已启动");
-        _isApplicationStarted = true;
-        // 实例化并存储手动服务
-        foreach (var service in LifecycleServiceTypes.GetServiceTypes(LifecycleState.Manual))
-        {
-            var instance = _CreateService(service);
-            var identifier = instance.Identifier;
-            if (ManualServiceMap.ContainsKey(identifier))
-            {
-                Context.Warn($"{_ServiceName(instance, LifecycleState.Manual)} 标识符重复，已跳过");
-                continue;
-            }
-            ManualServiceMap[identifier] = instance;
-        }
-        // 运行预加载服务
-        _InitializeAndStartStateServices(LifecycleServiceTypes.GetServiceTypes(LifecycleState.BeforeLoading));
-        if (_requestedExit)
-        {
-            // 有服务请求退出，开始执行退出流程
-            Context.Info($"{_ServiceName(_requestExitService!)} 已请求退出程序");
-            _Exit();
-            return;
-        }
-        // 开始运行其他自启动服务
-        var index = (int)LifecycleState.Loading;
-        const int endIndex = (int)LifecycleState.WindowCreating;
+        _InitializeAndStartStateServices(LifecycleServiceTypes.GetServiceTypes(state));
+    }
+
+    private static void _StartStateFlow(LifecycleState start, LifecycleState end)
+    {
+        var index = (int)start;
+        var endIndex = (int)end;
         while (index++ <= endIndex)
         {
             var state = (LifecycleState)index;
-            CurrentState = state;
-            Context.Debug($"状态改变: {state}");
-            _InitializeAndStartStateServices(LifecycleServiceTypes.GetServiceTypes(state));
+            _NextState(state);
+            _InitializeAndStartStateServices(state);
         }
     }
 
@@ -201,7 +186,9 @@ public sealed class Lifecycle : ILifecycleService
                 // 若出错直接忽略
                 Context.Warn($"停止 {name} 时出错，已跳过", ex);
             }
-            RunningServiceInfoMap.Remove(service.Identifier); // 从正在运行列表移除，忽略是否成功
+            // 从正在运行列表移除
+            RunningServiceInfoMap.Remove(service.Identifier);
+            RunningServiceList.Remove(service);
         }
     }
 
@@ -229,10 +216,152 @@ public sealed class Lifecycle : ILifecycleService
         Environment.Exit(0);
     }
     
+    // -- 状态控制 --
+    
+    private static LifecycleState _currentState = LifecycleState.BeforeLoading;
+
+    private static void _NextState(LifecycleState? enforce = null)
+    {
+        Context.Debug($"状态改变: {CurrentState}");
+        if (enforce is { } state) CurrentState = state;
+        else CurrentState++;
+    }
+
+    /// <summary>
+    /// 生命周期状态改变时触发的事件。<br/>
+    /// <b>非异步执行，请注意自行实现必要的异步，否则会卡住生命周期管理线程。</b>
+    /// </summary>
+    public static event Action<LifecycleState>? StateChanged;
+
+    /// <summary>
+    /// 阻塞当前线程并等待到达指定生命周期状态。
+    /// </summary>
+    /// <param name="state">指定生命周期状态</param>
+    /// <returns>
+    /// 是否真正“等待”过（若调用该方法时已经到达或晚于指定状态，则为 <c>false</c>）
+    /// </returns>
+    public static bool WaitForState(LifecycleState state)
+    {
+        if (CurrentState >= state) return false; // 如果已经是目标状态，直接返回
+        using var mre = new ManualResetEventSlim(false);
+        StateChanged += TempHandler;
+        try { mre.Wait(); } // 等待 Set() 方法
+        finally { StateChanged -= TempHandler; } // 取消订阅，避免内存泄漏或重复唤醒
+        return true;
+
+        void TempHandler(LifecycleState s)
+        {
+            // ReSharper disable once AccessToDisposedClosure
+            if (s == state) mre.Set();
+        }
+    }
+
+    /// <summary>
+    /// 异步等待到达指定生命周期状态。
+    /// </summary>
+    /// <param name="state">指定生命周期状态</param>
+    /// <returns>
+    /// 结果表示是否真正“等待”过的 <see cref="Task"/> 实例（若调用该方法时已经到达或晚于指定状态，则结果为 <c>false</c>）
+    /// </returns>
+    public static Task<bool> WaitForStateAsync(LifecycleState state)
+    {
+        if (CurrentState >= state) return Task.FromResult(false); // 如果已经是目标状态，则直接返回 true
+        var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        StateChanged += TempHandler;
+        return tcs.Task;
+
+        void TempHandler(LifecycleState s)
+        {
+            if (s != state) return;
+            StateChanged -= TempHandler;
+            tcs.TrySetResult(true);
+        }
+    }
+    
+    // -- 流程触发 --
+
+    private static bool _isApplicationStarted = false;
+    private static bool _isWindowCreated = false;
+    private static bool _requestedExit = false;
+    private static ILifecycleService? _requestExitService;
+    
+    /// <summary>
+    /// [请勿调用] 程序初始化流程
+    /// </summary>
+    public static void OnInitialize()
+    {
+        // 检测重复调用
+        if (_isApplicationStarted) return;
+        _isApplicationStarted = true;
+        // 实例化并存储手动服务
+        foreach (var service in _GetServiceTypes(LifecycleState.Manual))
+        {
+            var instance = _CreateService(service);
+            var identifier = instance.Identifier;
+            if (ManualServiceMap.ContainsKey(identifier))
+            {
+                Context.Warn($"{_ServiceName(instance, LifecycleState.Manual)} 标识符重复，已跳过");
+                continue;
+            }
+            ManualServiceMap[identifier] = instance;
+        }
+        // 运行预加载服务
+        _InitializeAndStartStateServices(LifecycleState.BeforeLoading);
+        if (_requestedExit)
+        {
+            // 有服务请求退出，开始执行退出流程
+            Context.Info($"{_ServiceName(_requestExitService!)} 已请求退出程序");
+            _Exit();
+            return;
+        }
+        // 运行其他自启动服务
+        _StartStateFlow(LifecycleState.Loading, LifecycleState.WindowCreating);
+    }
+
+    /// <summary>
+    /// [请勿调用] 窗口创建结束流程
+    /// </summary>
+    public static void OnWindowCreated()
+    {
+        // 检测重复调用
+        if (_isWindowCreated) return;
+        _isWindowCreated = true;
+        // 启动 WindowCreated 生命周期服务项
+        _NextState(LifecycleState.WindowCreated);
+        _InitializeAndStartStateServices(LifecycleState.WindowCreated);
+    }
+
+    /// <summary>
+    /// [请勿调用] 尝试结束程序流程 (未实现)
+    /// </summary>
+    /// <exception cref="NotImplementedException"></exception>
+    public static void OnWindowClosing()
+    {
+        // TODO 尝试退出程序 (Closing)
+        throw new NotImplementedException();
+    }
+    
+    // -- 其余公共成员 --
+    
     /// <summary>
     /// 当前的生命周期状态，会随生命周期变化随时更新。
     /// </summary>
-    public static LifecycleState CurrentState { get; private set; } = LifecycleState.BeforeLoading;
+    public static LifecycleState CurrentState
+    {
+        get => _currentState;
+        private set
+        {
+            _currentState = value;
+            try
+            {
+                StateChanged?.Invoke(value);
+            }
+            catch (Exception ex)
+            {
+                Context.Warn($"状态更改事件出错", ex);
+            }
+        }
+    }
     
     /// <summary>
     /// 日志服务启动状态
@@ -289,6 +418,18 @@ public sealed class Lifecycle : ILifecycleService
         ManualServiceMap.TryGetValue(identifier, out var service);
         if (service == null || !IsServiceRunning(identifier)) return false;
         _StopService(service, async, true);
+        return true;
+    }
+
+    /// <summary>
+    /// 运行自定义服务项。该服务项将使用当前生命周期状态作为启动状态，若无特殊需求请尽可能不要使用，而是直接注册服务项。
+    /// </summary>
+    /// <param name="service">服务项实例</param>
+    /// <returns>是否成功请求运行，若标识符与正在运行的服务或已注册的手动服务冲突则无法运行。</returns>
+    public static bool StartCustomService(ILifecycleService service)
+    {
+        if (IsServiceRunning(service.Identifier) || ManualServiceMap.ContainsKey(service.Identifier)) return false;
+        _StartService(service);
         return true;
     }
     

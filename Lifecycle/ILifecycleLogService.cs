@@ -10,13 +10,15 @@ public interface ILifecycleLogService : ILifecycleService
     /// <summary>
     /// 记录日志的事件
     /// </summary>
+    /// <param name="time">创建该日志的时间</param>
     /// <param name="source">日志来源</param>
     /// <param name="message">日志内容</param>
     /// <param name="ex">相关异常</param>
     /// <param name="level">日志等级</param>
     /// <param name="actionLevel">行为等级</param>
     public void OnLog(
-        ILifecycleService source,
+        DateTime time,
+        ILifecycleService? source,
         string message,
         Exception? ex = null,
         LifecycleLogLevel level = LifecycleLogLevel.Trace,
