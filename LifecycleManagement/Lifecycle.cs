@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
 
 namespace PCL.Core.LifecycleManagement;
 
@@ -156,18 +157,19 @@ public sealed class Lifecycle : ILifecycleService
 
     private static void _InitializeAndStartStateServices(LifecycleState state)
     {
-        _InitializeAndStartStateServices(LifecycleServiceTypes.GetServiceTypes(state));
+        _InitializeAndStartStateServices(_GetServiceTypes(state));
     }
 
-    private static void _StartStateFlow(LifecycleState start, LifecycleState end)
+    private static void _StartStateFlow(LifecycleState start, LifecycleState? end = null)
     {
         var index = (int)start;
-        var endIndex = (int)end;
-        while (index++ <= endIndex)
+        var endIndex = end == null ? index : (int)end;
+        while (index <= endIndex)
         {
             var state = (LifecycleState)index;
             _NextState(state);
             _InitializeAndStartStateServices(state);
+            index++;
         }
     }
 
@@ -227,7 +229,6 @@ public sealed class Lifecycle : ILifecycleService
 
     private static void _NextState(LifecycleState? enforce = null)
     {
-        Context.Debug($"状态改变: {CurrentState}");
         if (enforce is { } state) CurrentState = state;
         else CurrentState++;
     }
@@ -282,13 +283,31 @@ public sealed class Lifecycle : ILifecycleService
             tcs.TrySetResult(true);
         }
     }
+
+    /// <summary>
+    /// 快速注册改变到目标生命周期状态的事件，与直接注册 <see cref="StateChanged"/> 的区别是会自动判断目标状态并自动移除事件注册。
+    /// </summary>
+    /// <param name="when">目标生命周期状态</param>
+    /// <param name="action">事件触发委托</param>
+    public static void When(LifecycleState when, Action action)
+    {
+        if (CurrentState >= when) return;
+        StateChanged += TempHandler;
+        return;
+
+        void TempHandler(LifecycleState state)
+        {
+            if (state != when) return;
+            action();
+            StateChanged -= TempHandler;
+        }
+    }
     
     // -- 流程触发 --
 
     private static bool _isApplicationStarted = false;
+    private static bool _isLoadingStarted = false;
     private static bool _isWindowCreated = false;
-    private static bool _requestedExit = false;
-    private static ILifecycleService? _requestExitService;
 
     /// <summary>
     /// [请勿调用] 处理未捕获异常流程
@@ -330,15 +349,22 @@ public sealed class Lifecycle : ILifecycleService
         }
         // 运行预加载服务
         _InitializeAndStartStateServices(LifecycleState.BeforeLoading);
-        if (_requestedExit)
-        {
-            // 有服务请求退出，开始执行退出流程
-            Context.Info($"{_ServiceName(_requestExitService!)} 已请求退出程序");
-            _Exit();
-            return;
-        }
-        // 运行其他自启动服务
+        // 运行应用程序容器
+        CurrentApplication.Run();
+    }
+
+    /// <summary>
+    /// [请勿调用] 组件加载流程
+    /// </summary>
+    public static void OnLoading()
+    {
+        // 检测重复调用
+        if (_isLoadingStarted) return;
+        _isLoadingStarted = true;
+        // 运行加载阶段服务
         _StartStateFlow(LifecycleState.Loading, LifecycleState.WindowCreating);
+        // 运行窗体
+        CurrentApplication.MainWindow.Show();
     }
 
     /// <summary>
@@ -350,8 +376,7 @@ public sealed class Lifecycle : ILifecycleService
         if (_isWindowCreated) return;
         _isWindowCreated = true;
         // 启动 WindowCreated 生命周期服务项
-        _NextState(LifecycleState.WindowCreated);
-        _InitializeAndStartStateServices(LifecycleState.WindowCreated);
+        _StartStateFlow(LifecycleState.WindowCreated);
     }
 
     /// <summary>
@@ -374,6 +399,7 @@ public sealed class Lifecycle : ILifecycleService
         get => _currentState;
         private set
         {
+            Context.Debug($"状态改变: {value}");
             _currentState = value;
             try
             {
@@ -385,6 +411,9 @@ public sealed class Lifecycle : ILifecycleService
             }
         }
     }
+
+    private static Application? _currentApplication;
+    public static Application CurrentApplication { get => _currentApplication!; set => _currentApplication = value; }
     
     /// <summary>
     /// 日志服务启动状态
@@ -465,6 +494,9 @@ public sealed class Lifecycle : ILifecycleService
         service: self,
         onLog: item =>
         {
+#if DEBUG
+                Console.WriteLine(item);
+#endif
             lock (PendingLogs)
             {
                 if (_logService == null) PendingLogs.Add(item);
@@ -475,8 +507,8 @@ public sealed class Lifecycle : ILifecycleService
         {
             if (CurrentState != LifecycleState.BeforeLoading)
                 throw new InvalidOperationException("只能在 BeforeLoading 时请求退出");
-            _requestedExit = true;
-            _requestExitService = self;
+            Context.Info($"{_ServiceName(self)} 已请求退出程序");
+            _Exit();
         }
     );
 }
