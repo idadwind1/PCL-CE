@@ -41,15 +41,18 @@ public sealed class Lifecycle : ILifecycleService
         try
         {
             // 直接写入剩余未输出日志到程序目录
-            var path = Path.Combine(Path.GetDirectoryName(Process.GetCurrentProcess().MainModule!.FileName)!, "PCL", "Log", "LastPending.log");
+            var dir = Path.Combine(Path.GetDirectoryName(Process.GetCurrentProcess().MainModule!.FileName)!, "PCL", "Log");
+            Directory.CreateDirectory(dir);
+            var path = Path.Combine(dir, "LastPending.log");
             using var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read);
             using var writer = new StreamWriter(stream, Encoding.UTF8);
             foreach (var item in PendingLogs) writer.WriteLine(item);
+            Console.WriteLine($"[Lifecycle] Pending logs saved to {path}");
         }
         catch (Exception ex)
         {
-            Console.WriteLine("保存日志时出错，临时输出所有内容到控制台");
             Console.WriteLine(ex);
+            Console.WriteLine("[Lifecycle] Error saving pending logs, writing to stdout...");
             foreach (var item in PendingLogs) Console.WriteLine(item);
         }
     }
@@ -63,7 +66,9 @@ public sealed class Lifecycle : ILifecycleService
     private static string _ServiceName(ILifecycleService service, LifecycleState? state = null)
     {
 #if DEBUG
-        state ??= CurrentState;
+        var info = GetServiceInfo(service.Identifier);
+        if (info == null) state ??= CurrentState;
+        else state = info.StartState;
         return $"{service.Name} ({state}/{service.Identifier})";
 #else
         return service.Name;
@@ -284,6 +289,16 @@ public sealed class Lifecycle : ILifecycleService
     private static bool _isWindowCreated = false;
     private static bool _requestedExit = false;
     private static ILifecycleService? _requestExitService;
+
+    /// <summary>
+    /// [请勿调用] 处理未捕获异常流程
+    /// </summary>
+    /// <param name="ex">异常对象</param>
+    public static void OnException(object ex)
+    {
+        Context.Fatal("未捕获的异常", ex as Exception);
+        _Exit();
+    }
     
     /// <summary>
     /// [请勿调用] 程序初始化流程
@@ -293,6 +308,14 @@ public sealed class Lifecycle : ILifecycleService
         // 检测重复调用
         if (_isApplicationStarted) return;
         _isApplicationStarted = true;
+        // 注册全局事件
+        AppDomain.CurrentDomain.UnhandledException += (_, e) => OnException(e.ExceptionObject);
+        AppDomain.CurrentDomain.ProcessExit += (_, _) => _Exit();
+        TaskScheduler.UnobservedTaskException += (_, e) =>
+        {
+            Context.Error("未观测到的异步任务异常", e.Exception);
+            e.SetObserved();
+        };
         // 实例化并存储手动服务
         foreach (var service in _GetServiceTypes(LifecycleState.Manual))
         {

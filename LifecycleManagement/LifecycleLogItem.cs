@@ -14,7 +14,7 @@ public record LifecycleLogItem(
     public override string ToString()
     {
         var source = Source == null ? "" : $" [{Source.Name} ({Source.Identifier})]";
-        var basic = $"[{Time:HH:mm:ss.fff}:{Level}]{source} {Message}";
+        var basic = $"[{Time:HH:mm:ss.fff}/{Level}]{source} {Message}";
         return Ex == null ? basic : $"{basic}\n{Ex}";
     }
 }
