@@ -105,7 +105,7 @@ namespace PCL.Core.Helper
 
             var parent = VisualTreeHelper.GetParent(self) as UIElement;
             while (
-                parent is { } &&
+                parent is not null &&
                 parentStackStorage.Count < maxDepth)
             {
                 // parent not visible, no need to render
@@ -224,6 +224,6 @@ namespace PCL.Core.Helper
         /// Dependency property for <see cref="MaxDepth"/>.
         /// </summary>
         public static readonly DependencyProperty MaxDepthProperty =
-            DependencyProperty.Register("MaxDepth", typeof(int), typeof(BackgroundPresenter), new FrameworkPropertyMetadata(64));
+            DependencyProperty.Register("MaxDepth", typeof(int), typeof(BackgroundPresenter), new FrameworkPropertyMetadata(16));
     }
 }
