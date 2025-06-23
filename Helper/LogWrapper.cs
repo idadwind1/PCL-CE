@@ -86,7 +86,7 @@ public static class LogWrapper
     
     public static void Error(Exception? ex, string? module, string msg, ErrorLevel level = ErrorLevel.Debug)
     {
-        CallLog($"{module} {msg}: {ex?.Message}", (LogLevel)level);
+        CallLog($"{module} {msg}: {ex?.ToString()}", (LogLevel)level);
         OnLog?.Invoke((LogLevel)level, msg, true, module, ex);
     }
     
