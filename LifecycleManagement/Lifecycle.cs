@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using PCL.Core.Utils;
 
 namespace PCL.Core.LifecycleManagement;
 
@@ -199,28 +200,34 @@ public sealed class Lifecycle : ILifecycleService
         }
     }
 
-    private static void _Exit()
+    private static readonly AtomicVariable<bool> _hasExited = new();
+    private static void _Exit(int statusCode = 0)
     {
-        Context.Debug("开始退出程序，停止正在运行的服务");
-        ILifecycleLogService? logService = null;
-        foreach (var service in RunningServiceList.ToArray())
-        {
-            if (service is ILifecycleLogService ls)
+        if (Environment.HasShutdownStarted) return;
+        lock (_hasExited) {
+            if (_hasExited.Value) return;
+            _hasExited.Value = true;
+            Context.Debug("开始退出程序，停止正在运行的服务");
+            ILifecycleLogService? logService = null;
+            foreach (var service in RunningServiceList.ToArray())
             {
-                // 跳过日志服务
-                Context.Trace($"已跳过日志服务 {_ServiceName(ls)}");
-                logService = ls;
-                continue;
+                if (service is ILifecycleLogService ls)
+                {
+                    // 跳过日志服务
+                    Context.Trace($"已跳过日志服务 {_ServiceName(ls)}");
+                    logService = ls;
+                    continue;
+                }
+                _StopService(service, true);
             }
-            _StopService(service, true);
+            if (logService != null)
+            {
+                Context.Trace($"退出过程已结束，正在停止日志服务");
+                _StopService(logService, false);
+            }
+            _SavePendingLogs();
+            Environment.Exit(statusCode);
         }
-        if (logService != null)
-        {
-            Context.Trace($"退出过程已结束，正在停止日志服务");
-            _StopService(logService, false);
-        }
-        _SavePendingLogs();
-        Environment.Exit(0);
     }
     
     // -- 状态控制 --
@@ -350,7 +357,8 @@ public sealed class Lifecycle : ILifecycleService
         // 运行预加载服务
         _InitializeAndStartStateServices(LifecycleState.BeforeLoading);
         // 运行应用程序容器
-        CurrentApplication.Run();
+        var statusCode = CurrentApplication.Run();
+        _Exit(statusCode);
     }
 
     /// <summary>
@@ -364,7 +372,7 @@ public sealed class Lifecycle : ILifecycleService
         // 运行加载阶段服务
         _StartStateFlow(LifecycleState.Loading, LifecycleState.WindowCreating);
         // 运行窗体
-        CurrentApplication.MainWindow.Show();
+        CurrentApplication.MainWindow!.Show();
     }
 
     /// <summary>
