@@ -159,7 +159,10 @@ foreach ($file in $sourceFiles) {
 # 按 Priority 降序排序每个状态的服务
 $states = @($lifecycleServices.Keys)
 foreach ($state in $states) {
-    $lifecycleServices[$state] = $lifecycleServices[$state] | Sort-Object Priority -Descending
+#    $lifecycleServices[$state] = $lifecycleServices[$state] | Sort-Object Priority -Descending
+    $lifecycleServices[$state] = @(
+        $lifecycleServices[$state] | Sort-Object { [int]$_.Priority } -Descending
+    )
 }
 
 # 生成 C# 代码
