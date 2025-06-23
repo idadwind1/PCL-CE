@@ -136,7 +136,9 @@ namespace PCL.Core.Controls
         protected override void OnRender(DrawingContext dc)
         {
             // 防止无意义渲染
-            if (BlurRadius == 0)
+            if (BlurRadius == 0
+                || Opacity == 0
+                || Visibility is Visibility.Collapsed or Visibility.Hidden)
             {
                 base.OnRender(dc);
                 return;

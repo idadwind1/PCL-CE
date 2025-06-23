@@ -66,7 +66,7 @@ public class Java(string javaFolder, Version version, JavaBrandType brand, bool 
     {
         if (!detailed)
             return ToString();
-        return $" {(IsJre ? "JRE" : "JDK")} {Version.ToString()} {Brand} {(Is64Bit ? "64 Bit" : "32 Bit")} | {JavaFolder}";
+        return $" {(IsJre ? "JRE" : "JDK")} {Version} {Brand} {(Is64Bit ? "64 Bit" : "32 Bit")} | {JavaFolder}";
     }
 
     public override bool Equals(object? obj)
