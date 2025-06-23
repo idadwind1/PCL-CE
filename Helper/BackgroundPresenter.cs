@@ -92,7 +92,7 @@ namespace PCL.Core.Helper
 
             ForceRender(this);
 
-            Debug.WriteLine("Parent layout updated, forcing render of BackgroundPresenter.");
+            // Debug.WriteLine("Parent layout updated, forcing render of BackgroundPresenter.");
         }
 
         internal static void DrawBackground(

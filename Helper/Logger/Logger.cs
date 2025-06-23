@@ -22,7 +22,6 @@ public sealed class Logger : IDisposable
     private readonly LoggerConfiguration _configuration;
     private StreamWriter? _currentStream;
     private FileStream? _currentFile;
-    private int _fileIndex = 0;
     private List<string> _files = [];
     
     private readonly ConcurrentQueue<string> _logQueue = new();
@@ -34,15 +33,8 @@ public sealed class Logger : IDisposable
     private void CreateNewFile()
     {
         var nameFormat = (_configuration.FileNameFormat ?? $"Launch-{DateTime.Now:yyyy-M-d}-{{0}}") + ".log";
-        string filename;
-        string filePath;
-        do
-        {
-            filename = nameFormat.Replace("{0}", _fileIndex++.ToString());
-            filePath = Path.Combine(_configuration.StoreFolder, filename);
-            if (_fileIndex >= int.MaxValue)
-                throw new Exception("WTF are you doing!!!");
-        } while (File.Exists(filePath));
+        string filename = nameFormat.Replace("{0}", $"{DateTime.Now:HHmmss}");
+        string filePath = Path.Combine(_configuration.StoreFolder, filename);
         _files.Add(filePath);
         var lastWriter = _currentStream;
         var lastFile = _currentFile;
