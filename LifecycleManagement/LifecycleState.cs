@@ -16,7 +16,7 @@ public enum LifecycleState
     /// <summary>
     /// <b>预加载</b><br/>
     /// 一些提前运行的无需使用基本组件的事件，如检测单例、提权进程、更新等。
-    /// 在该状态运行的服务可以使用 <see cref="LifecycleContext.RequestExit"/> 请求直接退出程序<br/>
+    /// 在该状态运行的服务可以使用 <see cref="LifecycleContext.RequestExit"/> 请求直接退出程序。<br/>
     /// 非异步启动将在 STA 线程执行。
     /// </summary>
     BeforeLoading,
@@ -31,7 +31,7 @@ public enum LifecycleState
     /// <summary>
     /// <b>加载结束</b><br/>
     /// 非基本组件初始化，大多数功能性组件如 RPC 服务端、Yggdrasil 服务端的初始化等，均应在此时运行。<br/>
-    /// 非异步启动将在新的工作线程执行。
+    /// 非异步启动将在 STA 线程执行，不建议在此状态非异步启动。
     /// </summary>
     Loaded,
     
@@ -48,6 +48,13 @@ public enum LifecycleState
     /// 非异步启动将在 STA 线程执行，耗时操作可能导致主窗体卡顿。
     /// </summary>
     WindowCreated,
+    
+    /// <summary>
+    /// <b>正在运行</b><br/>
+    /// 程序开始正常运行后的工作，如检查更新。<br/>
+    /// 非异步启动将在新的工作线程执行。
+    /// </summary>
+    Running,
     
     /// <summary>
     /// <b>尝试关闭程序</b><br/>

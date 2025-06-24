@@ -29,16 +29,19 @@ public class LifecycleContext(
     /// </summary>
     public void RequestExit() => onRequestExit();
 
-    // -- EMPTY INSTANCE --
+    // -- SYSTEM INSTANCE --
     
-    private class EmptyLifecycleService : ILifecycleService
+    private class SystemLifecycleService : ILifecycleService
     {
-        public string Name => "未定义";
-        public string Identifier => "undefined";
+        public string Name => "系统";
+        public string Identifier => "system";
         public bool SupportAsyncStart => false;
         public void Start() { }
         public void Stop() { }
     }
 
-    public static readonly LifecycleContext Empty = Lifecycle.GetContext(new EmptyLifecycleService());
+    /// <summary>
+    /// 系统默认上下文，无特殊需求请勿使用。
+    /// </summary>
+    public static readonly LifecycleContext System = Lifecycle.GetContext(new SystemLifecycleService());
 }

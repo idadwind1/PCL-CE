@@ -19,6 +19,8 @@ public record LifecycleServiceInfo
     /// </summary>
     public DateTime StartTime { get; init; } = DateTime.Now;
     
+    public string FullIdentifier => $"{StartState}/{Identifier}";
+    
     /// <summary>
     /// 本 record 应由生命周期管理自动构造，若无特殊情况，请勿手动调用。
     /// </summary>
