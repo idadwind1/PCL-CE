@@ -114,6 +114,7 @@ public sealed class Lifecycle : ILifecycleService
         lock (PendingLogs)
         {
             foreach (var item in PendingLogs) _PushLog(item, logService);
+            PendingLogs.Clear();
             _logService = logService;
         }
     }
