@@ -245,5 +245,6 @@ $csharpCode += @"
 # 将生成的代码写入文件
 $outputPath = Join-Path $ProjectPath "LifecycleManagement\LifecycleServiceTypes.g.cs"
 $csharpCode | Out-File -FilePath $outputPath -Encoding UTF8
+Write-Host "Writed to $outputPath"
 
-Write-Host "Generated LifecycleServiceTypes.g.cs with $($lifecycleServices.Keys.Count) state(s)"
+Write-Host "Generated LifecycleServiceTypes with $($lifecycleServices.Keys.Count) state(s)"

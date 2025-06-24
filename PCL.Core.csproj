@@ -208,9 +208,9 @@
       <PowerShellScript Include="$(MSBuildProjectDirectory)\LifecycleManagement\LifecycleServiceTypesGenerator.ps1" />
     </ItemGroup>
     <Exec Command="powershell.exe -ExecutionPolicy Bypass -File &quot;@(PowerShellScript)&quot; &quot;$(MSBuildProjectDirectory)&quot;" ContinueOnError="false" />
+    <ItemGroup>
+      <Compile Include="LifecycleManagement\LifecycleServiceTypes.g.cs" Condition="Exists('LifecycleManagement\LifecycleServiceTypes.g.cs')" />
+    </ItemGroup>
   </Target>
-  <ItemGroup>
-    <Compile Include="LifecycleManagement\LifecycleServiceTypes.g.cs" Condition="Exists('LifecycleManagement\LifecycleServiceTypes.g.cs')" />
-  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
