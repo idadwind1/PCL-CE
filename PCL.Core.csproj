@@ -168,6 +168,16 @@
     <Compile Include="Helper\NativeInterop.cs" />
     <Compile Include="Helper\SemVer.cs" />
     <Compile Include="Helper\VarInt.cs" />
+    <Compile Include="LifecycleManagement\ILifecycleLogService.cs" />
+    <Compile Include="LifecycleManagement\ILifecycleService.cs" />
+    <Compile Include="LifecycleManagement\Lifecycle.cs" />
+    <Compile Include="LifecycleManagement\LifecycleActionLevel.cs" />
+    <Compile Include="LifecycleManagement\LifecycleContext.cs" />
+    <Compile Include="LifecycleManagement\LifecycleLogItem.cs" />
+    <Compile Include="LifecycleManagement\LifecycleLogLevel.cs" />
+    <Compile Include="LifecycleManagement\LifecycleService.cs" />
+    <Compile Include="LifecycleManagement\LifecycleServiceInfo.cs" />
+    <Compile Include="LifecycleManagement\LifecycleState.cs" />
     <Compile Include="Model\Java.cs" />
     <Compile Include="Model\ResourceProject\Curseforge\CurseforgeAuthors.cs" />
     <Compile Include="Model\ResourceProject\Curseforge\CurseforgeCategories.cs" />
@@ -183,10 +193,12 @@
     <Compile Include="Model\ResourceProject\Modrinth\ModrinthModeratorMessage.cs" />
     <Compile Include="Model\ResourceProject\Modrinth\ModrinthProject.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Service\ApplicationService.cs" />
     <Compile Include="Service\Rpc.cs" />
     <Compile Include="Service\RoutedWebServer.cs" />
     <Compile Include="Service\System.Runtime.CompilerServices.cs" />
     <Compile Include="Service\WebServer.cs" />
+    <Compile Include="Service\MainWindowService.cs" />
     <Compile Include="Utils\AtomicVariable.cs" />
     <Compile Include="Utils\ExpandoObjectConverter.cs" />
     <Compile Include="Utils\PEHeaderReader.cs" />
@@ -195,6 +207,17 @@
   <ItemGroup>
     <None Include="App.config" />
     <None Include="packages.config" />
+  </ItemGroup>
+  <!-- 生成 LifecycleServiceTypes 类的自定义任务 -->
+  <Target Name="GenerateLifecycleServiceTypes" BeforeTargets="CoreCompile">
+    <Message Text="Generating LifecycleServiceTypes class..." Importance="normal" />
+    <ItemGroup>
+      <PowerShellScript Include="$(MSBuildProjectDirectory)\LifecycleManagement\LifecycleServiceTypesGenerator.ps1" />
+    </ItemGroup>
+    <Exec Command="powershell.exe -ExecutionPolicy Bypass -File &quot;@(PowerShellScript)&quot; &quot;$(MSBuildProjectDirectory)&quot;" ContinueOnError="false" />
+  </Target>
+  <ItemGroup>
+    <Compile Include="LifecycleManagement\LifecycleServiceTypes.g.cs" Condition="Exists('LifecycleManagement\LifecycleServiceTypes.g.cs')" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
