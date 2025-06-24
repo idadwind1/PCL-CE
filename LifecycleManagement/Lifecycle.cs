@@ -70,9 +70,9 @@ public sealed class Lifecycle : ILifecycleService
     {
 #if DEBUG
         var info = GetServiceInfo(service.Identifier);
-        if (info == null) state ??= CurrentState;
-        else state = info.StartState;
-        return $"{service.Name} ({state}/{service.Identifier})";
+        if (info != null) state = info.StartState;
+        var stateText = (state == null) ? "" : $"{state}/";
+        return $"{service.Name} ({stateText}{service.Identifier})";
 #else
         return service.Name;
 #endif
@@ -206,7 +206,18 @@ public sealed class Lifecycle : ILifecycleService
         }
     }
 
+    private static void _RunCurrentExecutable(string? arguments)
+    {
+        var fileName = Process.GetCurrentProcess().MainModule!.FileName;
+        if (arguments == null) Process.Start(fileName);
+        else Process.Start(fileName, arguments);
+    }
+    
+    private static bool _hasRequestedRestart = false;
+    private static string? _requestRestartArguments;
+    private static ILifecycleService? _requestRestartService;
     private static readonly AtomicVariable<bool> _hasExited = new();
+    
     private static void _Exit(int statusCode = 0)
     {
         if (Environment.HasShutdownStarted) return;
@@ -239,7 +250,16 @@ public sealed class Lifecycle : ILifecycleService
                 _StopService(logService, false);
             }
             _SavePendingLogs();
+            if (_hasRequestedRestart && _requestRestartService is { } s)
+            {
+                Console.WriteLine($"[Lifecycle] Requested by '{s.Identifier}', restarting the program...");
+                _RunCurrentExecutable(_requestRestartArguments);
+            }
             Environment.Exit(statusCode);
+            // 保险起见，只要运行环境正常根本不可能执行到这里，但是永远都不能假设用户的环境是正常的
+            Thread.Sleep(1000);
+            Console.WriteLine("[Lifecycle] Trying to force kill the process");
+            Process.Start("taskkill.exe", $"/PID {Process.GetCurrentProcess().Id} /F /T");
         }
     }
 
@@ -522,6 +542,27 @@ public sealed class Lifecycle : ILifecycleService
         _StartService(service);
         return true;
     }
+
+    /// <summary>
+    /// 开始关闭流程，仅可在 <see cref="LifecycleState.Loading"/> 及之后的状态调用。<br/>
+    /// 由于 WPF 和龙猫的双重石山，启动器经常面临无法直接经由 <see cref="Application.Shutdown()"/>
+    /// 等发起关闭事件的情况，此方法将尝试使用指定状态码调用 <see cref="Application.Shutdown(int)"/>
+    /// 然后等待 3 秒后直接发起关闭程序流程，并阻塞当前线程以确保不产生无法预料的行为。
+    /// </summary>
+    /// <exception cref="InvalidOperationException">尝试在 <see cref="LifecycleState.BeforeLoading"/> 时调用</exception>
+    public static void ForceShutdown(int statusCode = 0)
+    {
+        if (CurrentState < LifecycleState.Loading) throw new InvalidOperationException("应用程序容器未初始化");
+        CurrentApplication.Dispatcher.Invoke(() => CurrentApplication.Shutdown(statusCode));
+        var shutdownWait = Task.Run(async () =>
+        {
+            await Task.Delay(TimeSpan.FromSeconds(3));
+            if (CurrentState == LifecycleState.Exiting) return;
+            Context.Warn("石山发作，直接发起退出流程");
+            _Exit(statusCode);
+        });
+        shutdownWait.Wait();
+    }
     
     /// <summary>
     /// 获取指定服务项对应的上下文实例用于日志输出、多任务通信等。一般情况下只推荐获取自身上下文。
@@ -541,12 +582,18 @@ public sealed class Lifecycle : ILifecycleService
                 else _PushLog(item, _logService);
             }
         },
-        onRequestExit: () =>
+        onRequestExit: statusCode =>
         {
             if (CurrentState != LifecycleState.BeforeLoading)
                 throw new InvalidOperationException("只能在 BeforeLoading 时请求退出");
             Context.Info($"{_ServiceName(self)} 已请求退出程序");
-            _Exit();
+            _Exit(statusCode);
+        },
+        onRequestRestart: args =>
+        {
+            _hasRequestedRestart = true;
+            _requestRestartService = self;
+            _requestRestartArguments = args;
         }
     );
 }
