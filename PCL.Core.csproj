@@ -188,14 +188,14 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Service\ApplicationService.cs" />
     <Compile Include="Service\RpcService.cs" />
-    <Compile Include="Service\RoutedWebServer.cs" />
-    <Compile Include="Service\System.Runtime.CompilerServices.cs" />
-    <Compile Include="Service\WebServer.cs" />
     <Compile Include="Service\MainWindowService.cs" />
     <Compile Include="Utils\AtomicVariable.cs" />
     <Compile Include="Utils\ExpandoObjectConverter.cs" />
     <Compile Include="Utils\PEHeaderReader.cs" />
+    <Compile Include="Utils\RoutedWebServer.cs" />
     <Compile Include="Utils\StringStream.cs" />
+    <Compile Include="Utils\System.Runtime.CompilerServices.cs" />
+    <Compile Include="Utils\WebServer.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
