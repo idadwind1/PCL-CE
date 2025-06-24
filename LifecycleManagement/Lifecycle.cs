@@ -573,9 +573,6 @@ public sealed class Lifecycle : ILifecycleService
         service: self,
         onLog: item =>
         {
-#if DEBUG
-                Console.WriteLine(item);
-#endif
             lock (PendingLogs)
             {
                 if (_logService == null) PendingLogs.Add(item);

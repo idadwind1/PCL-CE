@@ -36,7 +36,7 @@ public class IniConfigure : IConfigure
                     var splitPos = line.IndexOf(':');
                     if (splitPos == -1)
                     {
-                        LogWrapper.Error($"[Config] {_filePath} 行数据找不到冒号分隔符，原始数据：{line}", ErrorLevel.Hint);
+                        LogWrapper.Warn($"[Config] {_filePath} 行数据找不到冒号分隔符，原始数据：{line}");
                         continue;
                     }
                     var key = line.Substring(0, splitPos);
@@ -46,7 +46,7 @@ public class IniConfigure : IConfigure
             }
             catch (Exception e)
             {
-                LogWrapper.Error(e, $"[Config] 初始化 {_filePath} 文件出现问题", ErrorLevel.Hint);
+                LogWrapper.Warn(e, $"[Config] 初始化 {_filePath} 文件出现问题");
                 throw;
             }
         }
@@ -81,7 +81,7 @@ public class IniConfigure : IConfigure
         }
         catch (Exception ex) when (ex is InvalidCastException || ex is FormatException)
         {
-            LogWrapper.Error(ex, $"[Config] {_filePath} 尝试将参数值 {ret} 从 string 转到 {typeof(TValue).ToString()} 失败", ErrorLevel.Hint);
+            LogWrapper.Warn(ex, $"[Config] {_filePath} 尝试将参数值 {ret} 从 string 转到 {typeof(TValue)} 失败");
             return default;
         }
     }

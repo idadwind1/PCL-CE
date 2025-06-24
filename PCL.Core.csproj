@@ -133,10 +133,6 @@
     <Compile Include="Helper\Configure\JsonConfigure.cs" />
     <Compile Include="Helper\Diff\BsDiff.cs" />
     <Compile Include="Helper\Diff\IBinaryDiff.cs" />
-    <Compile Include="Helper\JavaManage.cs" />
-    <Compile Include="Helper\Logger\Logger.cs" />
-    <Compile Include="Helper\Logger\LoggerConfiguration.cs" />
-    <Compile Include="Helper\Logger\LoggerSegmentMode.cs" />
     <Compile Include="Helper\LogWrapper.cs" />
     <Compile Include="Helper\NativeInterop.cs" />
     <Compile Include="Helper\SemVer.cs" />
@@ -167,10 +163,14 @@
     <Compile Include="Model\ResourceProject\Modrinth\ModrinthProject.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Service\ApplicationService.cs" />
+    <Compile Include="Service\LogService.cs" />
     <Compile Include="Service\RpcService.cs" />
     <Compile Include="Service\MainWindowService.cs" />
     <Compile Include="Utils\AtomicVariable.cs" />
     <Compile Include="Utils\ExpandoObjectConverter.cs" />
+    <Compile Include="Utils\Logger\Logger.cs" />
+    <Compile Include="Utils\Logger\LoggerConfiguration.cs" />
+    <Compile Include="Utils\Logger\LoggerSegmentMode.cs" />
     <Compile Include="Utils\PEHeaderReader.cs" />
     <Compile Include="Utils\RoutedWebServer.cs" />
     <Compile Include="Utils\StringStream.cs" />

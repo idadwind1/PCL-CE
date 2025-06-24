@@ -36,7 +36,7 @@ public static class NativeInterop
             }
             catch (Exception ex)
             {
-                LogWrapper.Error(ex, "Thread", $"{threadName.Value}: 抛出异常", ErrorLevel.Feedback);
+                LogWrapper.Error(ex, "Thread", $"{threadName.Value}: 抛出异常");
             }
         }) { Priority = priority };
         threadName.Value ??= $"WorkerThread@{thread.ManagedThreadId}";
@@ -144,7 +144,7 @@ public static class NativeInterop
                     }
                     else
                     {
-                        LogWrapper.Error(ex, "Pipe",  $"{identifier}: 服务端出错", ErrorLevel.Hint);
+                        LogWrapper.Warn(ex, "Pipe",  $"{identifier}: 服务端出错");
                         if (stopWhenException) hasNextLoop = false;
                     }
                 }
