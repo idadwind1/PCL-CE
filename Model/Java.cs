@@ -141,9 +141,9 @@ public class Java(string javaFolder, Version version, JavaBrandType brand, bool 
         ["Amazon"] = JavaBrandType.AmazonCorretto,
         ["Azul"] = JavaBrandType.AzulZulu,
         ["IBM"] = JavaBrandType.IBMSemeru,
-        ["Oracle"] = JavaBrandType.OpenJDK,
+        ["Oracle"] = JavaBrandType.Oracle,
         ["Tencent"] = JavaBrandType.TencentKona,
-        ["Java(TM)"] = JavaBrandType.Oracle,
+        ["Java(TM)"] = JavaBrandType.OpenJDK,
         ["Alibaba"] = JavaBrandType.Dragonwell,
     };
 
