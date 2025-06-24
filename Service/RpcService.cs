@@ -2,8 +2,11 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Pipes;
+using System.Runtime.Remoting.Contexts;
 using System.Text;
 using PCL.Core.Helper;
+using PCL.Core.LifecycleManagement;
 
 namespace PCL.Core.Service;
 
@@ -155,11 +158,15 @@ public class RpcProperty
 public delegate RpcResponse RpcFunction(string? argument, string? content, bool indent);
 
 /// <summary>
-/// Pipe RPC 相关功能的静态方法类
+/// RPC 服务项
 /// </summary>
-public static class Rpc
+[LifecycleService(LifecycleState.Loaded)]
+public sealed class RpcService : ILifecycleService
 {
-    private static void Log(string msg) => LogWrapper.Trace("RPC", msg);
+    private readonly LifecycleContext Context;
+    private RpcService() { Context = Lifecycle.GetContext(this); }
+    
+    private void Log(string msg) => Context.Trace(msg);
     
     private static readonly string EchoPipeName = $"PCLCE_RPC@{NativeInterop.CurrentProcess.Id}";
     private static readonly string[] RequestTypeArray = ["GET", "SET", "REQ"];
@@ -241,7 +248,7 @@ public static class Rpc
     
     #endregion
 
-    private static bool EchoPipeCallback(StreamReader reader, StreamWriter writer, Process? client)
+    private bool EchoPipeCallback(StreamReader reader, StreamWriter writer, Process? client)
     {
         try
         {
@@ -348,13 +355,41 @@ public static class Rpc
         }
         return true;
     }
-    
 
-    /// <summary>
-    /// 请勿调用该方法
-    /// </summary>
-    public static void Start()
+    private NamedPipeServerStream? _pipe;
+    
+    public void Start()
     {
-        NativeInterop.StartPipeServer("Echo", EchoPipeName, EchoPipeCallback);
+        _pipe = NativeInterop.StartPipeServer("Echo", EchoPipeName, EchoPipeCallback);
     }
+
+    public void Stop()
+    {
+        _pipe?.Dispose();
+    }
+
+    public string Identifier => "rpc";
+    public string Name => "远程执行服务";
+    public bool SupportAsyncStart => true;
+}
+
+public static class Rpc
+{
+    [Obsolete("请使用 RpcService.AddProperty")]
+    public static void AddProperty(RpcProperty prop) => RpcService.AddProperty(prop);
+    
+    [Obsolete("请使用 RpcService.RemoveProperty")]
+    public static bool RemoveProperty(string name) => RpcService.RemoveProperty(name);
+    
+    [Obsolete("请使用 RpcService.RemoveProperty")]
+    public static bool RemoveProperty(RpcProperty prop) => RpcService.RemoveProperty(prop);
+    
+    [Obsolete("请使用 RpcService.AddFunction")]
+    public static bool AddFunction(string name, RpcFunction func) => RpcService.AddFunction(name, func);
+    
+    [Obsolete("请使用 RpcService.RemoveFunction")]
+    public static bool RemoveFunction(string name) => RpcService.RemoveFunction(name);
+    
+    [Obsolete]
+    public static void Start() { }
 }

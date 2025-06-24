@@ -78,7 +78,7 @@ public static class NativeInterop
     /// <param name="stopCallback">服务端停止后的回调函数</param>
     /// <param name="stopWhenException">指定当回调函数抛出异常时是否停止服务端运行，使用 <c>true</c> 表示停止</param>
     /// <param name="allowedProcessId">允许连接的客户端进程 ID，如为 Nothing 则允许所有</param>
-    public static void StartPipeServer(string identifier, string pipeName, Func<StreamReader, StreamWriter, Process?, bool> loopCallback, Action? stopCallback = null, bool stopWhenException = false, int[]? allowedProcessId = null)
+    public static NamedPipeServerStream StartPipeServer(string identifier, string pipeName, Func<StreamReader, StreamWriter, Process?, bool> loopCallback, Action? stopCallback = null, bool stopWhenException = false, int[]? allowedProcessId = null)
     {
         NamedPipeServerStream pipe = new NamedPipeServerStream(pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.None, 1024, 1024);
         var threadName = $"PipeServer/{identifier}";
@@ -166,6 +166,8 @@ public static class NativeInterop
             PipeLogDebug($"{identifier}: 服务端已停止");
             stopCallback?.Invoke();
         }, threadName);
+
+        return pipe;
     }
     
     #endregion
