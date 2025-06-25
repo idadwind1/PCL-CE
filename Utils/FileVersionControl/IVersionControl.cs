@@ -61,4 +61,12 @@ public interface IVersionControl
     /// <param name="objectId"></param>
     /// <returns></returns>
     Stream? GetObjectContent(string objectId);
+
+    /// <summary>
+    /// 导出当前快照
+    /// </summary>
+    /// <param name="nodeId">Node 的 ID</param>
+    /// <param name="saveFilePath">保存到的位置，zip 文件</param>
+    /// <returns></returns>
+    Task Export(string nodeId, string saveFilePath);
 }

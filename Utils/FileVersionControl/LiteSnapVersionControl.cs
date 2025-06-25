@@ -20,9 +20,9 @@ namespace PCL.Core.Utils.FileVersionControl;
 
 public class LiteSnapVersionControl : IVersionControl , IDisposable
 {
-    private string _rootPath;
-    private LiteDatabase _database;
-    private IHashProvider _hash;
+    private readonly string _rootPath;
+    private readonly LiteDatabase _database;
+    private readonly IHashProvider _hash;
 
     private const string ConfigFolderName = ".litesnap";
     private const string DatabaseName = "index.db";
@@ -32,23 +32,31 @@ public class LiteSnapVersionControl : IVersionControl , IDisposable
     
     public LiteSnapVersionControl(string rootPath)
     {
-        _rootPath = rootPath;
-        _hash = new SHA512Provider();
-        var dbFile = Path.Combine(_rootPath, ConfigFolderName, DatabaseName);
-        var objFolder = Path.Combine(_rootPath, ConfigFolderName, ObjectsFolderName);
-        if (!Directory.Exists(objFolder))
-            Directory.CreateDirectory(objFolder);
-        _database = new LiteDatabase($"Filename={dbFile}");
+        try
+        {
+            _rootPath = rootPath;
+            _hash = new SHA512Provider();
+            var dbFile = Path.Combine(_rootPath, ConfigFolderName, DatabaseName);
+            var objFolder = Path.Combine(_rootPath, ConfigFolderName, ObjectsFolderName);
+            if (!Directory.Exists(objFolder))
+                Directory.CreateDirectory(objFolder);
+            _database = new LiteDatabase($"Filename={dbFile}");
+        }
+        catch (Exception e)
+        {
+            LogWrapper.Error(e,$"无法加载位于 {_rootPath} 处的 SnapLite 数据");
+            throw;
+        }
+
     }
 
-    public async Task<string> CreateNewVersion()
+    private async Task<FileVersionObjects[]> GetAllTrackedFiles()
     {
-        var nodeId = Guid.NewGuid().ToString("N");
         var currentFiles = DirectoryHelper.EnumerateFiles(_rootPath, [ConfigFolderName]);
         currentFiles = currentFiles
             .Where(x => ((new FileInfo(x)).Attributes | Normal | Compressed | Archive | Hidden) == (Normal | Compressed | Archive | Hidden))
             .ToList();
-        var hashComputedTasks = currentFiles.Select(currentFile => Task.Run(() =>
+        var ret = currentFiles.Select(currentFile => Task.Run(() =>
         {
             var fileInfo = new FileInfo(currentFile);
             using var fs = new FileStream(currentFile, FileMode.Open);
@@ -62,16 +70,21 @@ public class LiteSnapVersionControl : IVersionControl , IDisposable
                 LastWriteTime = fileInfo.LastWriteTime,
             };
         })).ToArray();
-        await Task.WhenAll(hashComputedTasks);
-        var allFiles = hashComputedTasks.Select(x => x.Result);
-        var changedFiles = hashComputedTasks
-            .Select(x => x.Result)
+        await Task.WhenAll(ret);
+        return ret.Select(x => x.Result).ToArray();
+    }
+
+    public async Task<string> CreateNewVersion()
+    {
+        var nodeId = Guid.NewGuid().ToString("N");
+        var allFiles = await GetAllTrackedFiles();
+        var newAddFiles = allFiles
             .Distinct(new FileVersionObjectsComparer())
             .Where(x => !HasFileObject(x.Hash));
         var nodeObjects = _database.GetCollection<FileVersionObjects>(GetNodeTableNameById(nodeId));
         nodeObjects.InsertBulk(allFiles);
 
-        var copyChangedFilesTasks = changedFiles.Select(x => Task.Run(async () =>
+        var copyNewFilesTasks = newAddFiles.Select(x => Task.Run(async () =>
         {
             using var sourceFile = new FileStream(Path.Combine(_rootPath, x.Path), FileMode.Open);
             using var targetFile =
@@ -80,7 +93,7 @@ public class LiteSnapVersionControl : IVersionControl , IDisposable
             using var compressedTarget = new DeflateStream(targetFile, CompressionMode.Compress);
             await sourceFile.CopyToAsync(compressedTarget);
         }));
-        await Task.WhenAll(copyChangedFilesTasks);
+        await Task.WhenAll(copyNewFilesTasks);
         
         var nodeList = _database.GetCollection<VersionData>(DatabaseIndexTableName);
         var currentNodeInfo = new VersionData()
@@ -95,7 +108,7 @@ public class LiteSnapVersionControl : IVersionControl , IDisposable
         return nodeId;
     }
 
-    private string GetNodeTableNameById(string nodeId)
+    private static string GetNodeTableNameById(string nodeId)
     {
         return $"node_{nodeId}";
     }
@@ -152,6 +165,30 @@ public class LiteSnapVersionControl : IVersionControl , IDisposable
     public Task CleanUnrecordObjects()
     {
         throw new NotImplementedException();
+    }
+
+    public async Task Export(string nodeId, string saveFilePath)
+    {
+        var fileObjects = GetObjects(nodeId);
+        if (File.Exists(saveFilePath))
+            File.Delete(saveFilePath);
+        using var fs = new FileStream(saveFilePath, FileMode.Create, FileAccess.ReadWrite, FileShare.Read);
+        using var targetZip = new ZipArchive(fs, ZipArchiveMode.Update);
+        foreach (var fileObject in fileObjects)
+        {
+            await Task.Run(async () =>
+            {
+                var entry = targetZip.CreateEntry(fileObject.Path);
+                entry.LastWriteTime = fileObject.LastWriteTime;
+                var writer = entry.Open();
+                using var objectReader =
+                    new FileStream(Path.Combine(_rootPath, ConfigFolderName, ObjectsFolderName, fileObject.Hash),
+                        FileMode.Open,
+                        FileAccess.Read, FileShare.Read);
+                using var reader = new DeflateStream(objectReader, CompressionMode.Decompress);
+                await reader.CopyToAsync(writer);
+            });
+        }
     }
 
     private bool _disposed;
