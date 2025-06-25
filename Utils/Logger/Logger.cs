@@ -77,44 +77,48 @@ public sealed class Logger : IDisposable
     
     private static readonly Regex PatternNewLine = new(@"\r\n|\n|\r");
 
+    private readonly object _lockLogWriter = new();
     private void ProcessLogQueue(CancellationToken token)
     {
         const int maxBatchCount = 100;
         var batch = new StringBuilder();
         long currentBatchCount = 0;
-        while (!token.IsCancellationRequested)
+        lock (_lockLogWriter)
         {
-            try
+            while (!token.IsCancellationRequested)
             {
-                _logEvent.Wait(600, token);
-                while (_logQueue.TryDequeue(out var message))
+                try
                 {
-#if DEBUG
-                    message = PatternNewLine.Replace(message, "\r\n");
-                    Console.WriteLine(message);
-#endif
-                    batch.AppendLine(message);
-                    currentBatchCount++;
-                    if (currentBatchCount >= maxBatchCount || _logQueue.IsEmpty)
+                    _logEvent.Wait(600, token);
+                    while (_logQueue.TryDequeue(out var message))
                     {
-                        DoWrite(batch.ToString());
-                        batch.Clear();
-                        currentBatchCount = 0;
+#if DEBUG
+                        message = PatternNewLine.Replace(message, "\r\n");
+                        Console.WriteLine(message);
+#endif
+                        batch.AppendLine(message);
+                        currentBatchCount++;
+                        if (currentBatchCount >= maxBatchCount || _logQueue.IsEmpty)
+                        {
+                            DoWrite(batch.ToString());
+                            batch.Clear();
+                            currentBatchCount = 0;
+                        }
                     }
+                    _logEvent.Reset();
                 }
-                _logEvent.Reset();
-            }
-            catch (OperationCanceledException) {}
-            catch (Exception e)
-            {
-                // 出错了先干到标准输出流中吧 Orz
-                Console.WriteLine($"[{GetTimeFormatted()}] [ERROR] An error occured while processing log queue: {e.Message}");
-                throw;
-            }
-            finally
-            {
-                batch.Clear();
-                currentBatchCount = 0;
+                catch (OperationCanceledException) {}
+                catch (Exception e)
+                {
+                    // 出错了先干到标准输出流中吧 Orz
+                    Console.WriteLine($"[{GetTimeFormatted()}] [ERROR] An error occured while processing log queue: {e.Message}");
+                    throw;
+                }
+                finally
+                {
+                    batch.Clear();
+                    currentBatchCount = 0;
+                }
             }
         }
     }
@@ -144,11 +148,8 @@ public sealed class Logger : IDisposable
         _disposed = true;
         if (!_logQueue.IsEmpty && !_logEvent.IsSet)
             _logEvent.Set();
-        while (!_logQueue.IsEmpty) //等待日志写入完成
-        {
-            Thread.Sleep(100);
-        }
         _cts.Cancel();
+        lock (_lockLogWriter) { };
         _logEvent.Dispose();
         _currentStream?.Dispose();
         _currentFile?.Dispose();
