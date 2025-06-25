@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using LiteDB;
 using PCL.Core.Helper;
+using PCL.Core.Helper.Hash;
 using static System.IO.FileAttributes;
 using Directory = System.IO.Directory;
 
@@ -21,6 +22,7 @@ public class LiteSnapVersionControl : IVersionControl , IDisposable
 {
     private string _rootPath;
     private LiteDatabase _database;
+    private IHashProvider _hash;
 
     private const string ConfigFolderName = ".litesnap";
     private const string DatabaseName = "index.db";
@@ -31,6 +33,7 @@ public class LiteSnapVersionControl : IVersionControl , IDisposable
     public LiteSnapVersionControl(string rootPath)
     {
         _rootPath = rootPath;
+        _hash = new SHA512Provider();
         var dbFile = Path.Combine(_rootPath, ConfigFolderName, DatabaseName);
         var objFolder = Path.Combine(_rootPath, ConfigFolderName, ObjectsFolderName);
         if (!Directory.Exists(objFolder))
@@ -49,12 +52,12 @@ public class LiteSnapVersionControl : IVersionControl , IDisposable
         {
             var fileInfo = new FileInfo(currentFile);
             using var fs = new FileStream(currentFile, FileMode.Open);
-            var fileHash = HashHelper.ComputeSHA256(fs);
+            var fileHash = _hash.ComputeHash(fs);
             return new FileVersionObjects()
             {
                 Length = fs.Length,
                 Path = currentFile.Replace(_rootPath, string.Empty).TrimStart(Path.DirectorySeparatorChar),
-                Sha256 = fileHash,
+                Hash = fileHash,
                 CreationTime = fileInfo.CreationTime,
                 LastWriteTime = fileInfo.LastWriteTime,
             };
@@ -64,7 +67,7 @@ public class LiteSnapVersionControl : IVersionControl , IDisposable
         var changedFiles = hashComputedTasks
             .Select(x => x.Result)
             .Distinct(new FileVersionObjectsComparer())
-            .Where(x => !HasFileObject(x.Sha256));
+            .Where(x => !HasFileObject(x.Hash));
         var nodeObjects = _database.GetCollection<FileVersionObjects>(GetNodeTableNameById(nodeId));
         nodeObjects.InsertBulk(allFiles);
 
@@ -72,7 +75,7 @@ public class LiteSnapVersionControl : IVersionControl , IDisposable
         {
             using var sourceFile = new FileStream(Path.Combine(_rootPath, x.Path), FileMode.Open);
             using var targetFile =
-                new FileStream(Path.Combine(_rootPath, ConfigFolderName, ObjectsFolderName, x.Sha256), FileMode.Create,
+                new FileStream(Path.Combine(_rootPath, ConfigFolderName, ObjectsFolderName, x.Hash), FileMode.Create,
                     FileAccess.ReadWrite, FileShare.Read);
             using var compressedTarget = new DeflateStream(targetFile, CompressionMode.Compress);
             await sourceFile.CopyToAsync(compressedTarget);

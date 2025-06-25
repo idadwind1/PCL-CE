@@ -129,7 +129,11 @@
     <Compile Include="Helper\ByteHelper.cs" />
     <Compile Include="Helper\DirectoryHelper.cs" />
     <Compile Include="Helper\EncryptHelper.cs" />
-    <Compile Include="Helper\HashHelper.cs" />
+    <Compile Include="Helper\Hash\IHashProvider.cs" />
+    <Compile Include="Helper\Hash\MD5Provider.cs" />
+    <Compile Include="Helper\Hash\SHA1Provider.cs" />
+    <Compile Include="Helper\Hash\SHA256Provider.cs" />
+    <Compile Include="Helper\Hash\SHA512Provider.cs" />
     <Compile Include="Helper\Identify.cs" />
     <Compile Include="Helper\JavaManage.cs" />
     <Compile Include="Helper\MathHelper.cs" />

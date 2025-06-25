@@ -7,11 +7,11 @@ public class FileVersionObjectsComparer : IEqualityComparer<FileVersionObjects>
 {
     public bool Equals(FileVersionObjects x, FileVersionObjects y)
     {
-        return x.Sha256 == y.Sha256;
+        return x.Hash == y.Hash;
     }
 
     public int GetHashCode(FileVersionObjects obj)
     {
-        return obj.Sha256.GetHashCode();
+        return obj.Hash.GetHashCode();
     }
 }
