@@ -172,7 +172,7 @@ extra block; seek forwards in oldfile by z bytes".
 		});
 	}
 
-	public async Task<byte[]> Make(byte[] originData, byte[] newData)
+	public Task<byte[]> Make(byte[] originData, byte[] newData)
 	{
 		throw new NotImplementedException();
 	}

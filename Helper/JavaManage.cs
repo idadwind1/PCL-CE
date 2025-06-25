@@ -56,7 +56,7 @@ public class JavaManage
 
                 var ret = newJavaList
                     .Where(x => !x.Split(Path.DirectorySeparatorChar).Any(part => ExcludeFolderName.Contains(part, StringComparer.OrdinalIgnoreCase)))
-                    .Select(Java.Parse)
+                    .Select(x => Java.Parse(x)!)
                     .Where(x => x != null)
                     .ToList();
                 foreach (var item in ret.Where(j => disabledJava.Contains(j!.JavaExePath)))

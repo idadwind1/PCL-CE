@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Pipes;
 using System.Text;
 using PCL.Core.Helper;
+using PCL.Core.LifecycleManagement;
 
 namespace PCL.Core.Service;
 
@@ -155,11 +157,29 @@ public class RpcProperty
 public delegate RpcResponse RpcFunction(string? argument, string? content, bool indent);
 
 /// <summary>
-/// Pipe RPC 相关功能的静态方法类
+/// RPC 服务项
 /// </summary>
-public static class Rpc
+[LifecycleService(LifecycleState.Loaded)]
+public sealed class RpcService : ILifecycleService
 {
-    private static void Log(string msg) => LogWrapper.Trace("RPC", msg);
+    public string Identifier => "rpc";
+    public string Name => "远程执行服务";
+    public bool SupportAsyncStart => true;
+    
+    private readonly LifecycleContext Context;
+    private RpcService() { Context = Lifecycle.GetContext(this); }
+
+    private NamedPipeServerStream? _pipe;
+    
+    public void Start()
+    {
+        _pipe = NativeInterop.StartPipeServer("Echo", EchoPipeName, EchoPipeCallback);
+    }
+
+    public void Stop()
+    {
+        _pipe?.Dispose();
+    }
     
     private static readonly string EchoPipeName = $"PCLCE_RPC@{NativeInterop.CurrentProcess.Id}";
     private static readonly string[] RequestTypeArray = ["GET", "SET", "REQ"];
@@ -241,14 +261,14 @@ public static class Rpc
     
     #endregion
 
-    private static bool EchoPipeCallback(StreamReader reader, StreamWriter writer, Process? client)
+    private bool EchoPipeCallback(StreamReader reader, StreamWriter writer, Process? client)
     {
         try
         {
             // GET/SET/REQ [target]
             // [content]
             var header = reader.ReadLine(); // 读入请求头
-            Log($"客户端请求: {header}");
+            Context.Info($"客户端请求: {header}");
 
             var args = header?.Split([' '], 2) ?? []; // 分离请求类型和参数
             if (args.Length < 2 || args[1].Length == 0) throw new RpcException("请求参数过少");
@@ -279,12 +299,12 @@ public static class Rpc
                         {
                             var value = prop!.Value;
                             response = new RpcResponse(RpcResponseStatus.SUCCESS, RpcResponseType.TEXT, value, target);
-                            Log($"返回值: {value}");
+                            Context.Trace($"返回值: {value}");
                         }
                         catch (RpcPropertyOperationFailedException)
                         {
                             response = RpcResponse.EmptyFailure;
-                            Log("设置失败: 只写属性或请求被拒绝");
+                            Context.Debug("设置失败: 只写属性或请求被拒绝");
                         }
                     }
                     else if (prop!.Settable)
@@ -293,18 +313,18 @@ public static class Rpc
                         {
                             prop.Value = content;
                             response = RpcResponse.EmptySuccess;
-                            Log($"设置成功: {content}");
+                            Context.Trace($"设置成功: {content}");
                         }
                         catch (RpcPropertyOperationFailedException)
                         {
                             response = RpcResponse.EmptyFailure;
-                            Log("设置失败: 请求被拒绝");
+                            Context.Debug("设置失败: 请求被拒绝");
                         }
                     }
                     else
                     {
                         response = RpcResponse.EmptyFailure;
-                        Log("设置失败: 只读属性");
+                        Context.Debug("设置失败: 只读属性");
                     }
                     response.Response(writer);
                     break;
@@ -324,10 +344,10 @@ public static class Rpc
                     string? argument = null;
                     if (targetArgs.Length > 1)
                         argument = targetArgs[1];
-                    Log($"正在调用函数 {name} {argument}");
+                    Context.Trace($"正在调用函数 {name} {argument}");
                     var response = func!(argument, content, indent);
                     response.Response(writer);
-                    Log($"函数已退出，返回状态 {response.Status}");
+                    Context.Trace($"函数已退出，返回状态 {response.Status}");
                     break;
                 }
             }
@@ -338,23 +358,35 @@ public static class Rpc
             {
                 var reason = rpcEx.Reason;
                 RpcResponse.Err(reason).Response(writer);
-                Log($"出错: {reason}");
+                Context.Info($"出错: {reason}");
             }
             else
             {
                 RpcResponse.Err(ex.ToString(), "stacktrace").Response(writer);
-                LogWrapper.Error(ex, "RPC", "处理请求时发生异常");
+                Context.Error("处理请求时发生异常", ex);
             }
         }
         return true;
     }
-    
+}
 
-    /// <summary>
-    /// 请勿调用该方法
-    /// </summary>
-    public static void Start()
-    {
-        NativeInterop.StartPipeServer("Echo", EchoPipeName, EchoPipeCallback);
-    }
+public static class Rpc
+{
+    [Obsolete("请使用 RpcService.AddProperty")]
+    public static void AddProperty(RpcProperty prop) => RpcService.AddProperty(prop);
+    
+    [Obsolete("请使用 RpcService.RemoveProperty")]
+    public static bool RemoveProperty(string name) => RpcService.RemoveProperty(name);
+    
+    [Obsolete("请使用 RpcService.RemoveProperty")]
+    public static bool RemoveProperty(RpcProperty prop) => RpcService.RemoveProperty(prop);
+    
+    [Obsolete("请使用 RpcService.AddFunction")]
+    public static bool AddFunction(string name, RpcFunction func) => RpcService.AddFunction(name, func);
+    
+    [Obsolete("请使用 RpcService.RemoveFunction")]
+    public static bool RemoveFunction(string name) => RpcService.RemoveFunction(name);
+    
+    [Obsolete]
+    public static void Start() { }
 }

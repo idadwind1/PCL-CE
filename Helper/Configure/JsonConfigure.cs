@@ -36,13 +36,13 @@ public class JsonConfigure : IConfigure
                 var jObject = JsonSerializer.Deserialize<ConcurrentDictionary<string, String>>(ctx);
                 _content = jObject ?? new ConcurrentDictionary<string, string>();
             }
-            catch (JsonException e)
+            catch (JsonException)
             {
                 _content = new ConcurrentDictionary<string, string>();
             }
             catch (Exception e)
             {
-                LogWrapper.Error(e, $"[Config] 初始化 {_filePath} 文件出现问题", ErrorLevel.Hint);
+                LogWrapper.Warn(e, $"[Config] 初始化 {_filePath} 文件出现问题");
                 throw;
             }
         }
@@ -65,7 +65,7 @@ public class JsonConfigure : IConfigure
         }
         catch (Exception ex) when (ex is InvalidCastException || ex is FormatException)
         {
-            LogWrapper.Error(ex, $"[Config] {_filePath} 尝试将参数值 {ret} 从 string 转到 {typeof(TValue).ToString()} 失败", ErrorLevel.Hint);
+            LogWrapper.Warn(ex, $"[Config] {_filePath} 尝试将参数值 {ret} 从 string 转到 {typeof(TValue)} 失败");
             return default;
         }
     }

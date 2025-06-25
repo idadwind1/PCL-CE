@@ -27,7 +27,7 @@ public record LifecycleLogItem(
     /// <summary>
     /// 创建该日志项的线程名
     /// </summary>
-    public string ThreadName = Thread.CurrentThread.Name ?? $"Thread@{Thread.CurrentThread.ManagedThreadId}";
+    public string ThreadName = Thread.CurrentThread.Name ?? $"#{Thread.CurrentThread.ManagedThreadId}";
 
     public override string ToString()
     {

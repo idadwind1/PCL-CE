@@ -1,4 +1,4 @@
-﻿namespace PCL.Core.Helper.Logger;
+﻿namespace PCL.Core.Utils.Logger;
 
 public enum LoggerSegmentMode
 {

@@ -8,7 +8,8 @@ namespace PCL.Core.LifecycleManagement;
 public class LifecycleContext(
     ILifecycleService service,
     Action<LifecycleLogItem> onLog,
-    Action onRequestExit)
+    Action<int> onRequestExit,
+    Action<string?> onRequestRestart)
 {
     public void CustomLog(
         string message,
@@ -27,7 +28,14 @@ public class LifecycleContext(
     /// <summary>
     /// 请求退出程序。仅可在 <see cref="LifecycleState.BeforeLoading"/> 时使用。
     /// </summary>
-    public void RequestExit() => onRequestExit();
+    /// <param name="statusCode">程序返回的状态码</param>
+    public void RequestExit(int statusCode = 0) => onRequestExit(statusCode);
+    
+    /// <summary>
+    /// 请求在程序退出时重启。调用该方法后，程序将在正常退出流程中自动执行重启，通常与退出程序结合使用。
+    /// </summary>
+    /// <param name="arguments">重启进程时使用的命令行参数</param>
+    public void RequestRestartOnExit(string? arguments = null) => onRequestRestart(arguments);
 
     // -- SYSTEM INSTANCE --
     
