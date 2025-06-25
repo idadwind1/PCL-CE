@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 
-namespace PCL.Core.Helper.FileVersionControl;
+namespace PCL.Core.Utils.FileVersionControl;
 
 public interface IVersionControl
 {
@@ -18,6 +18,8 @@ public interface IVersionControl
     /// <param name="nodeId">Node ID</param>
     /// <returns></returns>
     VersionData GetVersion(string nodeId);
+    
+    List<FileVersionObjects> GetObjects(string nodeId);
     
     /// <summary>
     /// 创建一个新的节点
@@ -58,5 +60,5 @@ public interface IVersionControl
     /// </summary>
     /// <param name="objectId"></param>
     /// <returns></returns>
-    Stream GetObjects(string objectId);
+    Stream GetObjectContent(string objectId);
 }

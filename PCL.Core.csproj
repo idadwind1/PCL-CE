@@ -90,6 +90,9 @@
     <ErrorReport>prompt</ErrorReport>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="LiteDB">
+      <HintPath>..\packages\LiteDB.5.0.21\lib\net45\LiteDB.dll</HintPath>
+    </Reference>
     <Reference Include="mscorlib" />
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
@@ -125,10 +128,6 @@
     <Compile Include="Helper\BackgroundPresenter.cs" />
     <Compile Include="Helper\ByteHelper.cs" />
     <Compile Include="Helper\EncryptHelper.cs" />
-    <Compile Include="Helper\FileVersionControl\FileVersionRecord.cs" />
-    <Compile Include="Helper\FileVersionControl\IVersionControl.cs" />
-    <Compile Include="Helper\FileVersionControl\LiteSnapVersionControl.cs" />
-    <Compile Include="Helper\FileVersionControl\VersionData.cs" />
     <Compile Include="Helper\HashHelper.cs" />
     <Compile Include="Helper\Identify.cs" />
     <Compile Include="Helper\JavaManage.cs" />
@@ -173,6 +172,10 @@
     <Compile Include="Service\MainWindowService.cs" />
     <Compile Include="Utils\AtomicVariable.cs" />
     <Compile Include="Utils\ExpandoObjectConverter.cs" />
+    <Compile Include="Utils\FileVersionControl\FileVersionObjects.cs" />
+    <Compile Include="Utils\FileVersionControl\IVersionControl.cs" />
+    <Compile Include="Utils\FileVersionControl\LiteSnapVersionControl.cs" />
+    <Compile Include="Utils\FileVersionControl\VersionData.cs" />
     <Compile Include="Utils\Logger\Logger.cs" />
     <Compile Include="Utils\Logger\LoggerConfiguration.cs" />
     <Compile Include="Utils\Logger\LoggerSegmentMode.cs" />

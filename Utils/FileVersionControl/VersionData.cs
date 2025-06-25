@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace PCL.Core.Helper.FileVersionControl;
+namespace PCL.Core.Utils.FileVersionControl;
 
 public struct VersionData
 {
@@ -10,7 +10,6 @@ public struct VersionData
     /// </summary>
     public string NodeId {get;set;}
     public DateTime Created {get;set;}
-    public List<FileVersionRecord> Records {get;set;}
     public string Name {get;set;}
     public string Desc {get;set;}
 }

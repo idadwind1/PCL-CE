@@ -1,6 +1,6 @@
-namespace PCL.Core.Helper.FileVersionControl;
+namespace PCL.Core.Utils.FileVersionControl;
 
-public struct FileVersionRecord
+public struct FileVersionObjects
 {
     public string Path {get;set;}
     public string Sha256 {get;set;}
