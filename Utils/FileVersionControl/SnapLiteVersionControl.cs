@@ -18,7 +18,7 @@ namespace PCL.Core.Utils.FileVersionControl;
 */
 
 
-public class LiteSnapVersionControl : IVersionControl , IDisposable
+public class SnapLiteVersionControl : IVersionControl , IDisposable
 {
     private readonly string _rootPath;
     private readonly LiteDatabase _database;
@@ -30,7 +30,7 @@ public class LiteSnapVersionControl : IVersionControl , IDisposable
     private const string ObjectsFolderName = "objects";
     private const string TempFolderName = "temp";
     
-    public LiteSnapVersionControl(string rootPath)
+    public SnapLiteVersionControl(string rootPath)
     {
         try
         {
