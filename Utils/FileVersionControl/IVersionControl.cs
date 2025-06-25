@@ -10,14 +10,14 @@ public interface IVersionControl
     /// 获取全部的 Node 的 ID 信息
     /// </summary>
     /// <returns></returns>
-    List<string> GetVersions();
+    List<VersionData> GetVersions();
     
     /// <summary>
     /// 获取指定的 Node 信息
     /// </summary>
     /// <param name="nodeId">Node ID</param>
     /// <returns></returns>
-    VersionData GetVersion(string nodeId);
+    VersionData? GetVersion(string nodeId);
     
     List<FileVersionObjects> GetObjects(string nodeId);
     
@@ -39,7 +39,7 @@ public interface IVersionControl
     /// </summary>
     /// <param name="nodeId"></param>
     /// <returns></returns>
-    Task DeleteVersion(string nodeId);
+    void DeleteVersion(string nodeId);
 
     /// <summary>
     /// 检查指定的 Node 是否损坏
@@ -60,5 +60,5 @@ public interface IVersionControl
     /// </summary>
     /// <param name="objectId"></param>
     /// <returns></returns>
-    Stream GetObjectContent(string objectId);
+    Stream? GetObjectContent(string objectId);
 }

@@ -127,6 +127,7 @@
     <Compile Include="Controls\BlurBorder.cs" />
     <Compile Include="Helper\BackgroundPresenter.cs" />
     <Compile Include="Helper\ByteHelper.cs" />
+    <Compile Include="Helper\DirectoryHelper.cs" />
     <Compile Include="Helper\EncryptHelper.cs" />
     <Compile Include="Helper\HashHelper.cs" />
     <Compile Include="Helper\Identify.cs" />
@@ -173,6 +174,7 @@
     <Compile Include="Utils\AtomicVariable.cs" />
     <Compile Include="Utils\ExpandoObjectConverter.cs" />
     <Compile Include="Utils\FileVersionControl\FileVersionObjects.cs" />
+    <Compile Include="Utils\FileVersionControl\FileVersionObjectsComparer.cs" />
     <Compile Include="Utils\FileVersionControl\IVersionControl.cs" />
     <Compile Include="Utils\FileVersionControl\LiteSnapVersionControl.cs" />
     <Compile Include="Utils\FileVersionControl\VersionData.cs" />
