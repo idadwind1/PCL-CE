@@ -180,7 +180,7 @@ public class LiteSnapVersionControl : IVersionControl , IDisposable
             {
                 var entry = targetZip.CreateEntry(fileObject.Path);
                 entry.LastWriteTime = fileObject.LastWriteTime;
-                var writer = entry.Open();
+                using var writer = entry.Open();
                 using var objectReader =
                     new FileStream(Path.Combine(_rootPath, ConfigFolderName, ObjectsFolderName, fileObject.Hash),
                         FileMode.Open,
