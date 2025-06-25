@@ -130,7 +130,7 @@ public class LiteSnapVersionControl : IVersionControl , IDisposable
         return nodeList.Query().ToList();
     }
 
-    public List<FileVersionObjects> GetObjects(string nodeId)
+    public List<FileVersionObjects> GetNodeObjects(string nodeId)
     {
         var objectList = _database.GetCollection<FileVersionObjects>(GetNodeTableNameById(nodeId));
         return objectList.Query().ToList();
@@ -169,7 +169,7 @@ public class LiteSnapVersionControl : IVersionControl , IDisposable
 
     public async Task Export(string nodeId, string saveFilePath)
     {
-        var fileObjects = GetObjects(nodeId);
+        var fileObjects = GetNodeObjects(nodeId);
         if (File.Exists(saveFilePath))
             File.Delete(saveFilePath);
         using var fs = new FileStream(saveFilePath, FileMode.Create, FileAccess.ReadWrite, FileShare.Read);

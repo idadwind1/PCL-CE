@@ -19,7 +19,7 @@ public interface IVersionControl
     /// <returns></returns>
     VersionData? GetVersion(string nodeId);
     
-    List<FileVersionObjects> GetObjects(string nodeId);
+    List<FileVersionObjects> GetNodeObjects(string nodeId);
     
     /// <summary>
     /// 创建一个新的节点
