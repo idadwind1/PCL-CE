@@ -33,7 +33,7 @@ public sealed class Logger : IDisposable
     private void CreateNewFile()
     {
         var nameFormat = (_configuration.FileNameFormat ?? $"Launch-{DateTime.Now:yyyy-M-d}-{{0}}") + ".log";
-        string filename = nameFormat.Replace("{0}", $"{DateTime.Now:HHmmss}");
+        string filename = nameFormat.Replace("{0}", $"{DateTime.Now:HHmmssfff}");
         string filePath = Path.Combine(_configuration.StoreFolder, filename);
         _files.Add(filePath);
         var lastWriter = _currentStream;
