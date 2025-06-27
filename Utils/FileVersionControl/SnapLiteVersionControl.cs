@@ -143,9 +143,10 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
         var currentNodeInfo = new VersionData()
         {
             Created = DateTime.Now,
-            Desc = desc ?? "A backup made by Plain Craft Launcher Community Edition",
+            Desc = desc ?? "Backup made by SnapLite",
             Name = name ?? $"{DateTime.Now:yyyy/dd/MM-HH:mm:ss}",
             NodeId = nodeId,
+            Version = 1
         };
         nodeList.Insert(currentNodeInfo);
         _database.Commit();
@@ -183,8 +184,17 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
 
     public void DeleteVersion(string nodeId)
     {
-        var nodeList = _database.GetCollection<VersionData>(DatabaseIndexTableName);
-        nodeList.DeleteMany(x => x.NodeId == nodeId);
+        try
+        {
+            var nodeList = _database.GetCollection<VersionData>(DatabaseIndexTableName);
+            nodeList.DeleteMany(x => x.NodeId == nodeId);
+            _database.DropCollection(GetNodeTableNameById(nodeId));
+        }
+        catch (Exception e)
+        {
+            LogWrapper.Error(e,$"[SnapLite] 删除 {nodeId} 时出现错误");
+            throw;
+        }
     }
 
     public Stream? GetObjectContent(string objectId)
@@ -193,7 +203,10 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
         {
             var filePath = Path.Combine(_rootPath, ConfigFolderName, ObjectsFolderName, objectId);
             if (!HasFileObject(objectId))
+            {
+                LogWrapper.Warn($"[SnapLite] 预获取的对象 {objectId} 不存在，{filePath} 不存在此文件");
                 return null;
+            }
             var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
             return new DeflateStream(fs, CompressionMode.Decompress);
         }
@@ -206,8 +219,10 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
 
     public async Task ApplyPastVersion(string nodeId)
     {
+        LogWrapper.Info($"[SnapLite] 开始应用 {nodeId} 的快照数据");
         var applyObjects = GetNodeObjects(nodeId) ?? throw new NullReferenceException("无法获取记录");
         var currentObjects = await GetAllTrackedFiles();
+        LogWrapper.Info($"[SnapLite] 获取到 {nodeId} 的对象数为 {applyObjects.Count}，当前文件夹对象数为 {currentObjects.Length}");
         var curDict = currentObjects.ToDictionary(x => x.Path);
 
         List<FileVersionObjects> toDelete = [];
@@ -233,46 +248,66 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
             let existsInApply = applyObjects.Any(x => x.Path == currentObject.Path)
             where !existsInApply
             select currentObject);
+        LogWrapper.Info($"[SnapLite] 统计出总共需要删除文件 {toDelete.Count} 个，修改/新增文件 {toAdd.Count} 个");
 
         var addTasks = toAdd.Select(addFile => Task.Run(async () =>
         {
-            if (addFile.ObjectType == ObjectType.File)
+            try
             {
-                var curFile = new FileInfo(Path.Combine(_rootPath, addFile.Path));
-                if (curFile.Exists) curFile.Delete();
-                using var ctx = GetObjectContent(addFile.Hash) ?? throw new NullReferenceException("获取记录文件信息出现错误");
-                using (var fs = curFile.Create()) {
-                    await ctx.CopyToAsync(fs);
+                if (addFile.ObjectType == ObjectType.File)
+                {
+                    var curFile = new FileInfo(Path.Combine(_rootPath, addFile.Path));
+                    if (curFile.Exists) curFile.Delete();
+                    using var ctx = GetObjectContent(addFile.Hash) ?? throw new NullReferenceException("获取记录文件信息出现错误");
+                    using (var fs = curFile.Create()) {
+                        await ctx.CopyToAsync(fs);
+                    }
+                    curFile.CreationTime = addFile.CreationTime;
+                    curFile.LastWriteTime = addFile.LastWriteTime;
                 }
-                curFile.CreationTime = addFile.CreationTime;
-                curFile.LastWriteTime = addFile.LastWriteTime;
+                else if (addFile.ObjectType == ObjectType.Directory)
+                {
+                    var curDir = new DirectoryInfo(Path.Combine(_rootPath, addFile.Path));
+                    if (!curDir.Exists) curDir.Create();
+                    curDir.CreationTime = addFile.CreationTime;
+                    curDir.LastWriteTime = addFile.LastWriteTime;
+                }
             }
-            else if (addFile.ObjectType == ObjectType.Directory)
+            catch (Exception e)
             {
-                var curDir = new DirectoryInfo(Path.Combine(_rootPath, addFile.Path));
-                if (!curDir.Exists) curDir.Create();
-                curDir.CreationTime = addFile.CreationTime;
-                curDir.LastWriteTime = addFile.LastWriteTime;
+                LogWrapper.Error(e, $"[SnapLite] 修改/增添 {addFile.Path} 对象时出现错误，对象类型: {addFile.ObjectType}，对象 SHA512: {addFile.Hash}，对象大小: {addFile.Length}");
+                throw;
             }
+            
         })).ToArray();
 
         await Task.WhenAll(addTasks);
+        LogWrapper.Info($"[SnapLite] 已完成文件的增添/修改");
 
         var deleteTasks = toDelete.Select(deleteFile => Task.Run(() =>
         {
-            if (deleteFile.ObjectType == ObjectType.File)
+            try
             {
-                var curFile = new FileInfo(Path.Combine(_rootPath, deleteFile.Path));
-                if (curFile.Exists) curFile.Delete();
+                if (deleteFile.ObjectType == ObjectType.File)
+                {
+                    var curFile = new FileInfo(Path.Combine(_rootPath, deleteFile.Path));
+                    if (curFile.Exists) curFile.Delete();
+                }
+                else if (deleteFile.ObjectType == ObjectType.Directory)
+                {
+                    var curDir = new DirectoryInfo(Path.Combine(_rootPath, deleteFile.Path));
+                    if (curDir.Exists) curDir.Delete();
+                }
             }
-            else if (deleteFile.ObjectType == ObjectType.Directory)
+            catch (Exception e)
             {
-                var curDir = new DirectoryInfo(Path.Combine(_rootPath, deleteFile.Path));
-                if (curDir.Exists) curDir.Delete();
+                LogWrapper.Error(e, $"[SnapLite] 删除 {deleteFile.Path} 对象时出现错误，对象类型: {deleteFile.ObjectType}，对象 SHA512: {deleteFile.Hash}，对象大小: {deleteFile.Length}");
+                throw;
             }
         })).ToArray();
         
         await Task.WhenAll(deleteTasks);
+        LogWrapper.Info($"[SnapLite] 已完成文件的删除");
     }
 
     public async Task<bool> CheckVersion(string nodeId, bool deepCheck = false)
