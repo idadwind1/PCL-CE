@@ -25,7 +25,6 @@ public sealed class Lifecycle : ILifecycleService
     
     private static LifecycleContext? _context;
     private Lifecycle() { _context = GetContext(this); }
-    private static LifecycleContext System => LifecycleContext.System;
     private static LifecycleContext Context => _context ?? System;
     
     // -- 日志管理 --
@@ -65,6 +64,7 @@ public sealed class Lifecycle : ILifecycleService
     private static readonly Dictionary<string, LifecycleServiceInfo> RunningServiceInfoMap = [];
     private static readonly LinkedList<ILifecycleService> RunningServiceList = [];
     private static readonly Dictionary<string, ILifecycleService> ManualServiceMap = [];
+    private static readonly HashSet<ILifecycleService> DeclaredStoppedServices = [];
 
     private static string _ServiceName(ILifecycleService service, LifecycleState? state = null)
     {
@@ -90,10 +90,14 @@ public sealed class Lifecycle : ILifecycleService
         var state = manual ? LifecycleState.Manual : CurrentState;
         var name = _ServiceName(service, state);
         // 确保不存在重复的标识符
-        if (ManualServiceMap.ContainsKey(service.Identifier))
-        {
-            Context.Warn($"{name} 标识符重复，已跳过");
-            return;
+        lock (ManualServiceMap) {
+            if (ManualServiceMap.ContainsKey(service.Identifier) && IsServiceRunning(service.Identifier))
+            {
+                Context.Warn($"{name} 标识符重复，已跳过");
+                return;
+            }
+            // 先找个东西占着防止异步加载中检测逻辑失效
+            RunningServiceInfoMap[service.Identifier] = SystemServiceInfo;
         }
         // 运行服务项并添加到正在运行列表
         try
@@ -101,8 +105,17 @@ public sealed class Lifecycle : ILifecycleService
             Context.Trace($"正在启动 {name}");
             var serviceInfo = new LifecycleServiceInfo(service, state);
             Context.Debug($"{name} 启动成功");
-            RunningServiceList.AddFirst(service);
-            RunningServiceInfoMap[service.Identifier] = serviceInfo;
+            if (DeclaredStoppedServices.Contains(service))
+            {
+                DeclaredStoppedServices.Remove(service);
+                Context.Trace($"{name} 主动停止");
+            }
+            else
+            {
+                // 若该服务未声明自己已结束运行，将其添加到正在运行列表
+                RunningServiceList.AddFirst(service);
+                RunningServiceInfoMap[service.Identifier] = serviceInfo;
+            }
         }
         catch (Exception ex)
         {
@@ -181,6 +194,12 @@ public sealed class Lifecycle : ILifecycleService
         }
     }
 
+    private static void _RemoveRunningInstance(ILifecycleService service)
+    {
+        RunningServiceInfoMap.Remove(service.Identifier);
+        RunningServiceList.Remove(service);
+    }
+
     private static void _StopService(ILifecycleService service, bool async, bool manual = false)
     {
         var name = _ServiceName(service, manual ? LifecycleState.Manual : CurrentState);
@@ -202,8 +221,7 @@ public sealed class Lifecycle : ILifecycleService
                 Context.Warn($"停止 {name} 时出错，已跳过", ex);
             }
             // 从正在运行列表移除
-            RunningServiceInfoMap.Remove(service.Identifier);
-            RunningServiceList.Remove(service);
+            _RemoveRunningInstance(service);
         }
     }
 
@@ -390,6 +408,8 @@ public sealed class Lifecycle : ILifecycleService
             Context.Error("未观测到的异步任务异常", e.Exception);
             e.SetObserved();
         };
+        // 添加系统服务
+        RunningServiceInfoMap["system"] = SystemServiceInfo;
         // 实例化并存储手动服务
         foreach (var service in _GetServiceTypes(LifecycleState.Manual))
         {
@@ -592,6 +612,27 @@ public sealed class Lifecycle : ILifecycleService
             _hasRequestedRestart = true;
             _requestRestartService = self;
             _requestRestartArguments = args;
+        },
+        onDeclareStopped: () =>
+        {
+            DeclaredStoppedServices.Add(self);
         }
     );
+
+    private class SystemLifecycleService : ILifecycleService
+    {
+        public string Name => "系统";
+        public string Identifier => "system";
+        public bool SupportAsyncStart => false;
+        public void Start() { }
+        public void Stop() { }
+    }
+
+    private static readonly ILifecycleService SystemService = new SystemLifecycleService();
+    private static readonly LifecycleServiceInfo SystemServiceInfo = new(SystemService, LifecycleState.BeforeLoading);
+
+    /// <summary>
+    /// 系统默认上下文，无特殊需求请勿使用。
+    /// </summary>
+    public static readonly LifecycleContext System = GetContext(SystemService);
 }

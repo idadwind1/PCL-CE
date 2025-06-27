@@ -9,7 +9,8 @@ public class LifecycleContext(
     ILifecycleService service,
     Action<LifecycleLogItem> onLog,
     Action<int> onRequestExit,
-    Action<string?> onRequestRestart)
+    Action<string?> onRequestRestart,
+    Action onDeclareStopped)
 {
     public void CustomLog(
         string message,
@@ -36,20 +37,9 @@ public class LifecycleContext(
     /// </summary>
     /// <param name="arguments">重启进程时使用的命令行参数</param>
     public void RequestRestartOnExit(string? arguments = null) => onRequestRestart(arguments);
-
-    // -- SYSTEM INSTANCE --
     
-    private class SystemLifecycleService : ILifecycleService
-    {
-        public string Name => "系统";
-        public string Identifier => "system";
-        public bool SupportAsyncStart => false;
-        public void Start() { }
-        public void Stop() { }
-    }
-
     /// <summary>
-    /// 系统默认上下文，无特殊需求请勿使用。
+    /// 标记自身已经结束运行。调用该方法将会直接从正在运行列表中移除该服务项，后续的 <c>Stop</c> 等均不会触发。仅可在 <c>Start</c> 方法中使用。
     /// </summary>
-    public static readonly LifecycleContext System = Lifecycle.GetContext(new SystemLifecycleService());
+    public void DeclareStopped() => onDeclareStopped();
 }
