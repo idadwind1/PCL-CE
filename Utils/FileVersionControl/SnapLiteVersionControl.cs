@@ -105,25 +105,39 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
         
         // 获取当前的文件信息
         var allFiles = await GetAllTrackedFiles();
+        LogWrapper.Info($"[SnapLite] 已获取到全部文件，总数量为 {allFiles.Length}");
         var newAddFiles = allFiles
             .Distinct(FileVersionObjectsComparer.Instance)
             .Where(x => !HasFileObject(x.Hash));
         // 存入数据库中
+        LogWrapper.Info($"[SnapLite] 新增对象总数量为 {newAddFiles.Count()}");
         var nodeObjects = _database.GetCollection<FileVersionObjects>(GetNodeTableNameById(nodeId));
         nodeObjects.InsertBulk(allFiles);
+        LogWrapper.Info($"[SnapLite] 记录已压入数据库么，开始复制文件");
         // 复制到 objects 文件夹中
         var copyNewFilesTasks = newAddFiles
             .Where(x => x.ObjectType == ObjectType.File)
             .Select(x => Task.Run(async () =>
         {
-            using var sourceFile = new FileStream(Path.Combine(_rootPath, x.Path), FileMode.Open);
-            using var targetFile =
-                new FileStream(Path.Combine(_rootPath, ConfigFolderName, ObjectsFolderName, x.Hash), FileMode.Create,
-                    FileAccess.ReadWrite, FileShare.Read);
-            using var compressedTarget = new DeflateStream(targetFile, CompressionMode.Compress);
-            await sourceFile.CopyToAsync(compressedTarget);
+            var filePath = Path.Combine(_rootPath, x.Path);
+            try
+            {
+                using var sourceFile = new FileStream(filePath, FileMode.Open);
+                using var targetFile =
+                    new FileStream(Path.Combine(_rootPath, ConfigFolderName, ObjectsFolderName, x.Hash), FileMode.Create,
+                        FileAccess.ReadWrite, FileShare.Read);
+                using var compressedTarget = new DeflateStream(targetFile, CompressionMode.Compress);
+                LogWrapper.Info($"[SnapLite] 开始复制 {filePath}");
+                await sourceFile.CopyToAsync(compressedTarget);
+                LogWrapper.Info($"[SnapLite] 已完成 {filePath} 的复制");
+            }
+            catch(Exception e)
+            {
+                LogWrapper.Error(e, $"[SnapLite] 复制 {filePath} 文件过程中出现错误");
+            }
         }));
         await Task.WhenAll(copyNewFilesTasks);
+        LogWrapper.Info($"[SnapLite] 文件复制任务完成");
         // 创建最终记录
         var nodeList = _database.GetCollection<VersionData>(DatabaseIndexTableName);
         var currentNodeInfo = new VersionData()
@@ -135,6 +149,7 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
         };
         nodeList.Insert(currentNodeInfo);
         _database.Commit();
+        LogWrapper.Info($"[SnapLite] 数据库记录更新完成");
         return nodeId;
     }
 
@@ -206,7 +221,7 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
                               && existingObject.Hash == applyObject.Hash
                               && existingObject.CreationTime == applyObject.CreationTime
                               && existingObject.LastWriteTime == applyObject.LastWriteTime;
-                if (!isSame) toAdd.Add(existingObject);
+                if (!isSame) toAdd.Add(applyObject);
             }
             else
             {
@@ -221,19 +236,40 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
 
         var addTasks = toAdd.Select(addFile => Task.Run(async () =>
         {
-            var curFile = new FileInfo(Path.Combine(_rootPath, addFile.Path));
-            if (curFile.Exists) curFile.Delete();
-            using var ctx = GetObjectContent(addFile.Hash) ?? throw new NullReferenceException("获取记录文件信息出现错误");
-            using var fs = curFile.Create();
-            await ctx.CopyToAsync(fs);
+            if (addFile.ObjectType == ObjectType.File)
+            {
+                var curFile = new FileInfo(Path.Combine(_rootPath, addFile.Path));
+                if (curFile.Exists) curFile.Delete();
+                using var ctx = GetObjectContent(addFile.Hash) ?? throw new NullReferenceException("获取记录文件信息出现错误");
+                using (var fs = curFile.Create()) {
+                    await ctx.CopyToAsync(fs);
+                }
+                curFile.CreationTime = addFile.CreationTime;
+                curFile.LastWriteTime = addFile.LastWriteTime;
+            }
+            else if (addFile.ObjectType == ObjectType.Directory)
+            {
+                var curDir = new DirectoryInfo(Path.Combine(_rootPath, addFile.Path));
+                if (!curDir.Exists) curDir.Create();
+                curDir.CreationTime = addFile.CreationTime;
+                curDir.LastWriteTime = addFile.LastWriteTime;
+            }
         })).ToArray();
 
         await Task.WhenAll(addTasks);
 
         var deleteTasks = toDelete.Select(deleteFile => Task.Run(() =>
         {
-            var curFile = new FileInfo(Path.Combine(_rootPath, deleteFile.Path));
-            if (curFile.Exists) curFile.Delete();
+            if (deleteFile.ObjectType == ObjectType.File)
+            {
+                var curFile = new FileInfo(Path.Combine(_rootPath, deleteFile.Path));
+                if (curFile.Exists) curFile.Delete();
+            }
+            else if (deleteFile.ObjectType == ObjectType.Directory)
+            {
+                var curDir = new DirectoryInfo(Path.Combine(_rootPath, deleteFile.Path));
+                if (curDir.Exists) curDir.Delete();
+            }
         })).ToArray();
         
         await Task.WhenAll(deleteTasks);
