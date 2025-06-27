@@ -19,13 +19,13 @@ public interface IVersionControl
     /// <returns></returns>
     VersionData? GetVersion(string nodeId);
     
-    List<FileVersionObjects> GetNodeObjects(string nodeId);
+    List<FileVersionObjects>? GetNodeObjects(string nodeId);
     
     /// <summary>
     /// 创建一个新的节点
     /// </summary>
     /// <returns>Node ID</returns>
-    Task<string> CreateNewVersion();
+    Task<string> CreateNewVersion(string? name = null, string? desc = null);
     
     /// <summary>
     /// 回到过去的一个 Node

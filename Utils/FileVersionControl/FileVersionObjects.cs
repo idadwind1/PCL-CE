@@ -9,6 +9,7 @@ public struct FileVersionObjects
     /// 默认请使用 SHA512
     /// </summary>
     public string Hash {get;set;}
+    public ObjectType ObjectType {get;set;}
     public long Length {get;set;}
     public DateTime CreationTime {get;set;}
     public DateTime LastWriteTime {get;set;}
