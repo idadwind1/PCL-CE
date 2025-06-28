@@ -101,57 +101,69 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
 
     public async Task<string> CreateNewVersion(string? name = null, string? desc = null)
     {
-        var nodeId = Guid.NewGuid().ToString("N");
-        
-        // 获取当前的文件信息
-        var allFiles = await GetAllTrackedFiles();
-        LogWrapper.Info($"[SnapLite] 已获取到全部文件，总数量为 {allFiles.Length}");
-        var newAddFiles = allFiles
-            .Distinct(FileVersionObjectsComparer.Instance)
-            .Where(x => !HasFileObject(x.Hash));
-        // 存入数据库中
-        LogWrapper.Info($"[SnapLite] 新增对象总数量为 {newAddFiles.Count()}");
-        var nodeObjects = _database.GetCollection<FileVersionObjects>(GetNodeTableNameById(nodeId));
-        nodeObjects.InsertBulk(allFiles);
-        LogWrapper.Info($"[SnapLite] 记录已压入数据库么，开始复制文件");
-        // 复制到 objects 文件夹中
-        var copyNewFilesTasks = newAddFiles
-            .Where(x => x.ObjectType == ObjectType.File)
-            .Select(x => Task.Run(async () =>
+        try
         {
-            var filePath = Path.Combine(_rootPath, x.Path);
-            try
+            var nodeId = Guid.NewGuid().ToString("N");
+
+            // 获取当前的文件信息
+            var allFiles = await GetAllTrackedFiles();
+            LogWrapper.Info($"[SnapLite] 已获取到全部文件，总数量为 {allFiles.Length}");
+            var newAddFiles = allFiles
+                .Distinct(FileVersionObjectsComparer.Instance)
+                .Where(x => !HasFileObject(x.Hash));
+            // 存入数据库中
+            LogWrapper.Info($"[SnapLite] 新增对象总数量为 {newAddFiles.Count()}");
+            _database.BeginTrans();
+            var nodeObjects = _database.GetCollection<FileVersionObjects>(GetNodeTableNameById(nodeId));
+            nodeObjects.InsertBulk(allFiles);
+            LogWrapper.Info($"[SnapLite] 记录已压入数据库么，开始复制文件");
+            // 复制到 objects 文件夹中
+            var copyNewFilesTasks = newAddFiles
+                .Where(x => x.ObjectType == ObjectType.File)
+                .Select(x => Task.Run(async () =>
+                {
+                    var filePath = Path.Combine(_rootPath, x.Path);
+                    try
+                    {
+                        using var sourceFile = new FileStream(filePath, FileMode.Open);
+                        using var targetFile =
+                            new FileStream(Path.Combine(_rootPath, ConfigFolderName, ObjectsFolderName, x.Hash),
+                                FileMode.Create,
+                                FileAccess.ReadWrite, FileShare.Read);
+                        using var compressedTarget = new DeflateStream(targetFile, CompressionMode.Compress);
+                        LogWrapper.Info($"[SnapLite] 开始复制 {filePath}");
+                        await sourceFile.CopyToAsync(compressedTarget);
+                        LogWrapper.Info($"[SnapLite] 已完成 {filePath} 的复制");
+                    }
+                    catch (Exception e)
+                    {
+                        LogWrapper.Error(e, $"[SnapLite] 复制 {filePath} 文件过程中出现错误");
+                        throw;
+                    }
+                }));
+            await Task.WhenAll(copyNewFilesTasks);
+            LogWrapper.Info($"[SnapLite] 文件复制任务完成");
+            // 创建最终记录
+            var nodeList = _database.GetCollection<VersionData>(DatabaseIndexTableName);
+            var currentNodeInfo = new VersionData()
             {
-                using var sourceFile = new FileStream(filePath, FileMode.Open);
-                using var targetFile =
-                    new FileStream(Path.Combine(_rootPath, ConfigFolderName, ObjectsFolderName, x.Hash), FileMode.Create,
-                        FileAccess.ReadWrite, FileShare.Read);
-                using var compressedTarget = new DeflateStream(targetFile, CompressionMode.Compress);
-                LogWrapper.Info($"[SnapLite] 开始复制 {filePath}");
-                await sourceFile.CopyToAsync(compressedTarget);
-                LogWrapper.Info($"[SnapLite] 已完成 {filePath} 的复制");
-            }
-            catch(Exception e)
-            {
-                LogWrapper.Error(e, $"[SnapLite] 复制 {filePath} 文件过程中出现错误");
-            }
-        }));
-        await Task.WhenAll(copyNewFilesTasks);
-        LogWrapper.Info($"[SnapLite] 文件复制任务完成");
-        // 创建最终记录
-        var nodeList = _database.GetCollection<VersionData>(DatabaseIndexTableName);
-        var currentNodeInfo = new VersionData()
+                Created = DateTime.Now,
+                Desc = desc ?? "Backup made by SnapLite",
+                Name = name ?? $"{DateTime.Now:yyyy/dd/MM-HH:mm:ss}",
+                NodeId = nodeId,
+                Version = 1
+            };
+            nodeList.Insert(currentNodeInfo);
+            _database.Commit();
+            LogWrapper.Info($"[SnapLite] 数据库记录更新完成");
+            return nodeId;
+        }
+        catch (Exception e)
         {
-            Created = DateTime.Now,
-            Desc = desc ?? "Backup made by SnapLite",
-            Name = name ?? $"{DateTime.Now:yyyy/dd/MM-HH:mm:ss}",
-            NodeId = nodeId,
-            Version = 1
-        };
-        nodeList.Insert(currentNodeInfo);
-        _database.Commit();
-        LogWrapper.Info($"[SnapLite] 数据库记录更新完成");
-        return nodeId;
+            _database.Rollback();
+            LogWrapper.Error(e, $"[SnapLite] 创建快照出错");
+            throw;
+        }
     }
 
     private static string GetNodeTableNameById(string nodeId)
