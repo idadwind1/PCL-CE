@@ -113,7 +113,6 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
                 .Where(x => !HasFileObject(x.Hash));
             // 存入数据库中
             LogWrapper.Info($"[SnapLite] 新增对象总数量为 {newAddFiles.Count()}");
-            _database.BeginTrans();
             var nodeObjects = _database.GetCollection<FileVersionObjects>(GetNodeTableNameById(nodeId));
             nodeObjects.InsertBulk(allFiles);
             LogWrapper.Info($"[SnapLite] 记录已压入数据库么，开始复制文件");
@@ -154,13 +153,11 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
                 Version = 1
             };
             nodeList.Insert(currentNodeInfo);
-            _database.Commit();
             LogWrapper.Info($"[SnapLite] 数据库记录更新完成");
             return nodeId;
         }
         catch (Exception e)
         {
-            _database.Rollback();
             LogWrapper.Error(e, $"[SnapLite] 创建快照出错");
             throw;
         }
@@ -262,13 +259,18 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
             select currentObject);
         LogWrapper.Info($"[SnapLite] 统计出总共需要删除文件 {toDelete.Count} 个，修改/新增文件 {toAdd.Count} 个");
 
-        var addTasks = toAdd.Select(addFile => Task.Run(async () =>
+        // 先应用文件夹，再应用文件
+        var addTasks = toAdd.OrderByDescending(x => (int)(x.ObjectType)).Select(addFile => Task.Run(async () =>
         {
             try
             {
                 if (addFile.ObjectType == ObjectType.File)
                 {
-                    var curFile = new FileInfo(Path.Combine(_rootPath, addFile.Path));
+                    var curFilePath = Path.Combine(_rootPath, addFile.Path);
+                    var fileFolder = Path.GetDirectoryName(curFilePath);
+                    if (fileFolder == null) throw new NullReferenceException($"无法获取 {curFilePath} 的目录信息");
+                    if (!Directory.Exists(fileFolder)) Directory.CreateDirectory(fileFolder);
+                    var curFile = new FileInfo(curFilePath);
                     if (curFile.Exists) curFile.Delete();
                     using var ctx = GetObjectContent(addFile.Hash) ?? throw new NullReferenceException("获取记录文件信息出现错误");
                     using (var fs = curFile.Create()) {
@@ -296,7 +298,8 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
         await Task.WhenAll(addTasks);
         LogWrapper.Info($"[SnapLite] 已完成文件的增添/修改");
 
-        var deleteTasks = toDelete.Select(deleteFile => Task.Run(() =>
+        // 先删除文件，再删除文件夹
+        var deleteTasks = toDelete.OrderBy(x => (int)(x.ObjectType)).Select(deleteFile => Task.Run(() =>
         {
             try
             {
@@ -308,7 +311,7 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
                 else if (deleteFile.ObjectType == ObjectType.Directory)
                 {
                     var curDir = new DirectoryInfo(Path.Combine(_rootPath, deleteFile.Path));
-                    if (curDir.Exists) curDir.Delete();
+                    if (curDir.Exists) curDir.Delete(true);
                 }
             }
             catch (Exception e)
