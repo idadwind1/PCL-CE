@@ -360,6 +360,7 @@ public class SnapLiteVersionControl : IVersionControl , IDisposable
             var nodeTable = GetNodeTableNameById(node.NodeId);
             objectsInRecord.AddRange(_database.GetCollection<FileVersionObjects>(nodeTable).Query().ToEnumerable().Select(x => x.Hash));
         }
+        objectsInRecord = [..objectsInRecord.Distinct()];
         
         // 获取目前存档的 objects
         var allObjects = Directory.EnumerateFiles(Path.Combine(_rootPath, ConfigFolderName, ObjectsFolderName))
