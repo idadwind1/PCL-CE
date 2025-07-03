@@ -189,6 +189,7 @@
     <Compile Include="Utils\RoutedWebServer.cs" />
     <Compile Include="Utils\StringStream.cs" />
     <Compile Include="Utils\System.Runtime.CompilerServices.cs" />
+    <Compile Include="Utils\VersionRange.cs" />
     <Compile Include="Utils\WebServer.cs" />
   </ItemGroup>
   <!-- 生成 LifecycleServiceTypes 类的自定义任务 -->

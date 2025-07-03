@@ -106,8 +106,12 @@ public class JavaManage
     {
         if (_javas.Count == 0)
             await ScanJava();
+        var minMajorVersion = minVersion.Major == 1 ? minVersion.Minor : minVersion.Major;
+        var maxMajorVersion = maxVersion.Major == 1 ? maxVersion.Minor : maxVersion.Major;
         return (from j in _javas
-            where j.IsStillAvailable && j.IsEnabled && j.Version >= minVersion && j.Version <= maxVersion
+            where j.IsStillAvailable && j.IsEnabled
+                                     && j.JavaMajorVersion >= minMajorVersion && j.JavaMajorVersion <= maxMajorVersion
+                                     && j.Version >= minVersion && j.Version <= maxVersion
             orderby j.Version, j.IsJre, j.Brand
             select j).ToList();
     }
