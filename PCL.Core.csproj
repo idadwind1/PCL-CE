@@ -90,9 +90,6 @@
     <ErrorReport>prompt</ErrorReport>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="LiteDB">
-      <HintPath>..\packages\LiteDB.5.0.21\lib\net45\LiteDB.dll</HintPath>
-    </Reference>
     <Reference Include="mscorlib" />
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
