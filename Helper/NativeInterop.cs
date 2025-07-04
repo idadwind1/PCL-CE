@@ -25,7 +25,7 @@ public static class NativeInterop
     public static readonly string ExecutablePath = Path.GetFullPath(CurrentProcess.MainModule!.FileName);
     
     /// <summary>
-    /// 当前进程可执行文件所在的目录。
+    /// 当前进程可执行文件所在的目录。若有需求，请使用 <see cref="Path.Combine(string[])"/> 而不是自行拼接路径。
     /// </summary>
     public static readonly string ExecutableDirectory = Path.GetDirectoryName(ExecutablePath) ?? Path.GetPathRoot(ExecutablePath);
     

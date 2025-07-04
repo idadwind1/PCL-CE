@@ -7,7 +7,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using PCL.Core.Utils;
 
 namespace PCL.Core.LifecycleManagement;
 
@@ -379,6 +378,8 @@ public sealed class Lifecycle : ILifecycleService
     private static bool _isLoadingStarted = false;
     private static bool _isWindowCreated = false;
 
+    private static bool _requestedStopLoading = false;
+
     /// <summary>
     /// [请勿调用] 处理未捕获异常流程
     /// </summary>
@@ -423,6 +424,7 @@ public sealed class Lifecycle : ILifecycleService
         }
         // 运行预加载服务
         _StartStateFlow(LifecycleState.BeforeLoading);
+        if (_requestedStopLoading) return;
         // 运行应用程序容器
         var statusCode = CurrentApplication.Run();
         if (!HasShutdownStarted) _Exit(statusCode);
@@ -582,7 +584,6 @@ public sealed class Lifecycle : ILifecycleService
     public static void Shutdown(int statusCode = 0, bool force = false)
     {
         if (HasShutdownStarted) return;
-        if (CurrentState < LifecycleState.Loading) throw new InvalidOperationException("应用程序尚未初始化");
         Context.Info(force ? "开始强制关闭程序" : "正在关闭程序");
         IsForceShutdown = force;
         if (force) _Exit(statusCode);
@@ -626,7 +627,16 @@ public sealed class Lifecycle : ILifecycleService
         },
         onDeclareStopped: () =>
         {
+            if (IsServiceRunning(self.Identifier))
+                throw new InvalidOperationException("只能在服务启动阶段调用");
             DeclaredStoppedServices.Add(self);
+        },
+        onRequestStopLoading: () =>
+        {
+            if (CurrentState != LifecycleState.BeforeLoading)
+                throw new InvalidOperationException("只能在 BeforeLoading 时请求停止加载");
+            Context.Info($"{_ServiceName(self)} 已请求停止继续加载");
+            _requestedStopLoading = true;
         }
     );
 
