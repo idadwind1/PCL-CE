@@ -37,6 +37,8 @@ public sealed class Lifecycle : ILifecycleService
         service.OnLog(item);
     }
 
+    public static string PendingLogFileName { get; set; } = "LastPending.log";
+
     private static void _SavePendingLogs()
     {
         if (PendingLogs.Count == 0) return;
@@ -45,7 +47,7 @@ public sealed class Lifecycle : ILifecycleService
             // 直接写入剩余未输出日志到程序目录
             var dir = Path.Combine(Path.GetDirectoryName(Process.GetCurrentProcess().MainModule!.FileName)!, "PCL", "Log");
             Directory.CreateDirectory(dir);
-            var path = Path.Combine(dir, "LastPending.log");
+            var path = Path.Combine(dir, PendingLogFileName);
             using var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read);
             using var writer = new StreamWriter(stream, Encoding.UTF8);
             foreach (var item in PendingLogs) writer.WriteLine(item.ComposeMessage());
