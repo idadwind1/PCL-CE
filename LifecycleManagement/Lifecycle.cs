@@ -629,7 +629,8 @@ public sealed class Lifecycle : ILifecycleService
         },
         onDeclareStopped: () =>
         {
-            if (IsServiceRunning(self.Identifier))
+            var identifier = self.Identifier;
+            if (GetServiceInfo(identifier)?.Identifier == identifier)
                 throw new InvalidOperationException("只能在服务启动阶段调用");
             DeclaredStoppedServices.Add(self);
         },
