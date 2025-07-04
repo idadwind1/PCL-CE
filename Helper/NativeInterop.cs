@@ -12,7 +12,50 @@ namespace PCL.Core.Helper;
 
 public static class NativeInterop
 {
+    #region 进程和线程
+    
+    /// <summary>
+    /// 当前进程实例。
+    /// </summary>
     public static readonly Process CurrentProcess = Process.GetCurrentProcess();
+    
+    /// <summary>
+    /// 当前进程可执行文件的绝对路径。
+    /// </summary>
+    public static readonly string ExecutablePath = Path.GetFullPath(CurrentProcess.MainModule!.FileName);
+    
+    /// <summary>
+    /// 当前进程可执行文件所在的目录。
+    /// </summary>
+    public static readonly string ExecutableDirectory = Path.GetDirectoryName(ExecutablePath) ?? Path.GetPathRoot(ExecutablePath);
+    
+    /// <summary>
+    /// 实时获取的当前目录。若要在可执行文件目录中存放文件等内容，请使用更准确的 <see cref="ExecutableDirectory"/> 而不是这个目录。
+    /// </summary>
+    public static string CurrentDirectory => Environment.CurrentDirectory;
+
+    /// <summary>
+    /// 从本地可执行文件启动新的进程。
+    /// </summary>
+    /// <param name="path">可执行文件路径</param>
+    /// <param name="arguments">程序参数</param>
+    /// <param name="runAsAdmin">指定是否以管理员身份启动该进程</param>
+    /// <returns>新的进程实例</returns>
+    public static Process? Start(string path, string? arguments = null, bool runAsAdmin = false)
+    {
+        var psi = new ProcessStartInfo(path);
+        if (arguments != null) psi.Arguments = arguments;
+        if (runAsAdmin) psi.Verb = "runas";
+        return Process.Start(psi);
+    }
+
+    /// <summary>
+    /// 从本地可执行文件以管理员身份启动新的进程。<see cref="Start"/> 的套壳。
+    /// </summary>
+    /// <param name="path">可执行文件路径</param>
+    /// <param name="arguments">程序参数</param>
+    /// <returns></returns>
+    public static Process? StartAsAdmin(string path, string? arguments = null) => Start(path, arguments, true);
 
     /// <summary>
     /// 在新的工作线程运行指定委托
@@ -44,6 +87,8 @@ public static class NativeInterop
         thread.Start();
         return thread;
     }
+
+    #endregion
 
     #region 命名管道通信
     
