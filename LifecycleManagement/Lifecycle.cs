@@ -170,6 +170,7 @@ public sealed class Lifecycle : ILifecycleService
             var instance = _CreateService(service);
             if (instance.SupportAsyncStart) asyncInstances.Add(instance);
             else _StartService(instance);
+            if (_requestedStopLoading) return; // 若请求停止加载则提前结束
         }
         // 运行异步启动服务并等待所有服务启动完成
         var taskList = asyncInstances.Select(
