@@ -184,7 +184,7 @@ public class JavaManage
     private static readonly string[] PossibleKeyWords =
     [
         "environment", "env", "runtime", "x86_64", "amd64", "arm64",
-        "pcl", "hmcl", "baka", "minecraft", "microsoft"
+        "pcl", "hmcl", "baka", "minecraft"
     ];
 
     private static readonly string[] TotalKeyWords = [..MostPossibleKeyWords.Concat(PossibleKeyWords)];
