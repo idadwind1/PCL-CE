@@ -231,7 +231,14 @@ public sealed class PromoteService : ILifecycleService
             createNoWindow = true;
         }
         var psi = new ProcessStartInfo(split[0]);
-        if (createNoWindow) psi.CreateNoWindow = true;
+        if (createNoWindow)
+        {
+            psi.CreateNoWindow = true;
+            psi.UseShellExecute = false;
+            psi.RedirectStandardInput = true;
+            psi.RedirectStandardOutput = true;
+            psi.RedirectStandardError = true;
+        }
         if (split.Length > 1) psi.Arguments = split[1];
         return _StartProcessWithInfo(psi);
     }
