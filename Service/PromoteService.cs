@@ -43,8 +43,10 @@ public sealed class PromoteService : ILifecycleService
         return $"Test: {command}";
     };
     
-    private void PerformAsPromoteProcess(string pid)
+    // 提权进程: 连接管道开始通信
+    private static void PerformAsPromoteProcess(string pid)
     {
+        Context.Info("正在连接提权通信管道");
         var process = Process.GetProcessById(int.Parse(pid));
         // 验证来源
         var mainProcessPath = Path.GetFullPath(process.MainModule!.FileName);
@@ -57,26 +59,42 @@ public sealed class PromoteService : ILifecycleService
         var pipeName = GetPromotePipeName(process.Id);
         var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut);
         pipe.Connect(10000);
+        Context.Info("已连接，开始通信");
         var reader = new StreamReader(pipe);
-        var writer = new StreamWriter(pipe) { AutoFlush = true };
+        var writer = new StreamWriter(pipe);
         while (true)
         {
             var command = reader.ReadLine();
+            Context.Debug($"正在执行: {command}");
             var result = Operate(command);
+            Context.Trace($"返回结果: {result}");
             writer.WriteLine(result.Replace("\r\n", " ").Replace('\n', ' ').Replace('\r', ' '));
+            writer.Flush();
+            Context.Trace("返回成功");
         }
     }
+    
+    private static readonly AutoResetEvent ActivateEvent = new(false);
 
+    // 主进程: 管道连接回调
     private static bool PromotePipeCallback(StreamReader reader, StreamWriter writer, Process? client)
     {
         while (IsPromoteProcessRunning) lock (PendingOperations)
         {
-            Monitor.Wait(PendingOperations);
+            ActivateEvent.WaitOne();
             foreach (var operation in PendingOperations.ToArray())
             {
-                writer.WriteLine(operation.Key.Replace("\r\n", " ").Replace('\n', ' ').Replace('\r', ' '));
+                var command = operation.Key.Replace("\r\n", " ").Replace('\n', ' ').Replace('\r', ' ');
+                Context.Debug($"正在执行: {command}");
+                writer.WriteLine(command);
+                writer.Flush();
                 var result = reader.ReadLine();
-                if (result == null) break;
+                if (result == null)
+                {
+                    Context.Warn("管道输入流已结束");
+                    break;
+                }
+                Context.Debug($"执行结果: {result}");
                 operation.Value(result);
                 PendingOperations.RemoveFirst();
             }
@@ -84,6 +102,7 @@ public sealed class PromoteService : ILifecycleService
         return false;
     }
 
+    // 主进程: 初始化提权后台服务
     private static bool StartPromoteProcess()
     {
         // 启动提权进程
@@ -109,7 +128,10 @@ public sealed class PromoteService : ILifecycleService
     /// <param name="callback">结果返回后的回调</param>
     public static void AppendOperation(string command, Action<string> callback)
     {
-        PendingOperations.AddLast(new KeyValuePair<string, Action<string>>(command, callback));
+        lock (PendingOperations)
+        {
+            PendingOperations.AddLast(new KeyValuePair<string, Action<string>>(command, callback));
+        }
     }
 
     /// <summary>
@@ -119,7 +141,7 @@ public sealed class PromoteService : ILifecycleService
     public static bool Activate()
     {
         if (!IsPromoteProcessRunning && !StartPromoteProcess()) return false;
-        Monitor.Pulse(PendingOperations);
+        ActivateEvent.Set();
         return true;
     }
     
@@ -141,15 +163,15 @@ public sealed class PromoteService : ILifecycleService
 
     public void Stop()
     {
-        if (_promoteProcess != null)
-        {
-            Context.Debug("正在结束提权进程");
-            NativeInterop.Kill(_promoteProcess, 0, true);
-        }
         if (_promotePipeServer != null)
         {
             Context.Debug("正在结束提权管道服务");
             _promotePipeServer.Dispose();
+        }
+        if (_promoteProcess != null && !_promoteProcess.WaitForExit(3000))
+        {
+            Context.Debug("正在结束提权进程");
+            NativeInterop.Kill(_promoteProcess, 0, true);
         }
     }
 }
