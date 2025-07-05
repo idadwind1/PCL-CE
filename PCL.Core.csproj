@@ -169,8 +169,10 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Service\ApplicationService.cs" />
     <Compile Include="Service\LogService.cs" />
+    <Compile Include="Service\PromoteService.cs" />
     <Compile Include="Service\RpcService.cs" />
     <Compile Include="Service\MainWindowService.cs" />
+    <Compile Include="Service\TestService.cs" Condition="Exists('Service\TestService.cs')" />
     <Compile Include="Utils\AtomicVariable.cs" />
     <Compile Include="Utils\ExpandoObjectConverter.cs" />
     <Compile Include="Utils\FileVersionControl\FileVersionObjects.cs" />
