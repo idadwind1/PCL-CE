@@ -25,6 +25,6 @@ public static class Identify
 
     public static string GetMachineId(string randomId)
     {
-        return new SHA512Provider().ComputeHash($"{randomId}|{GetCpuId()}");
+        return SHA512Provider.Instance.ComputeHash($"{randomId}|{GetCpuId()}").ToUpper();
     }
 }
