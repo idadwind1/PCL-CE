@@ -65,6 +65,11 @@ public sealed class PromoteService : ILifecycleService
         while (true)
         {
             var command = reader.ReadLine();
+            if (string.IsNullOrEmpty(command))
+            {
+                Context.Info("管道已关闭，正在退出");
+                break;
+            }
             Context.Debug($"正在执行: {command}");
             var result = Operate(command);
             Context.Trace($"返回结果: {result}");
@@ -94,7 +99,7 @@ public sealed class PromoteService : ILifecycleService
                     Context.Warn("管道输入流已结束");
                     break;
                 }
-                Context.Debug($"执行结果: {result}");
+                Context.Trace($"执行结果: {result}");
                 operation.Value(result);
                 PendingOperations.RemoveFirst();
             }
@@ -115,8 +120,8 @@ public sealed class PromoteService : ILifecycleService
         }
         _promoteProcess.Exited += (_, _) => _promoteProcess = null;
         // 启动提权通信管道服务端
-        _promotePipeServer = NativeInterop.StartPipeServer("Promote",
-            GetPromotePipeName(NativeInterop.CurrentProcessId), PromotePipeCallback,
+        _promotePipeServer ??= NativeInterop.StartPipeServer(
+            "Promote", GetPromotePipeName(NativeInterop.CurrentProcessId), PromotePipeCallback,
             () => _promotePipeServer = null, true, [_promoteProcess.Id]);
         return true;
     }
