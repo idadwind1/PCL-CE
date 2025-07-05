@@ -10,7 +10,7 @@ using PCL.Core.LifecycleManagement;
 
 namespace PCL.Core.Service;
 
-[LifecycleService(LifecycleState.BeforeLoading)]
+[LifecycleService(LifecycleState.BeforeLoading, Priority = -10)]
 public sealed class PromoteService : ILifecycleService
 {
     public string Identifier => "promote";
@@ -31,16 +31,51 @@ public sealed class PromoteService : ILifecycleService
     /// </summary>
     public static bool IsPromoteProcessRunning => _promoteProcess != null;
     
+    /// <summary>
+    /// 当前进程是否是提权进程。
+    /// </summary>
+    public static bool IsCurrentProcessPromoted { get; private set; }
+    
     private static string GetPromotePipeName(int processId) => $"PCLCE_PM@{processId}";
 
+    private static readonly Dictionary<string, Func<string?, string?>> OperationFunctions = new();
+
+    /// <summary>
+    /// 添加提权操作。仅在提权进程中有效。
+    /// </summary>
+    /// <param name="name">操作名</param>
+    /// <param name="operation">操作实现，接收参数并返回结果，返回值会被自动压缩为单行</param>
+    /// <returns>是否添加成功，若在主进程中调用或已存在相同操作名，则为 <c>false</c></returns>
+    public static bool AddOperationFunction(string name, Func<string?, string?> operation)
+    {
+        if (!IsCurrentProcessPromoted || OperationFunctions.ContainsKey(name)) return false;
+        OperationFunctions[name] = operation;
+        return true;
+    }
+    
+    private const string OperationErrNotFound = "ERR_OPERATION_NOT_FOUND";
+    private const string OperationErrInvalidArgument = "ERR_ILLEGAL_ARGUMENT";
+    private const string OperationErrExceptionThrown = "ERR_UNHANDLED_EXCEPTION";
+    private const string OperationErrEmpty = "EMPTY";
+    
     /// <summary>
     /// 提权进程接收到操作请求时触发的事件，接收一个字符串作为操作命令并返回一个字符串作为结果。<br/>
-    /// <b>注意：接收和返回的字符串均为单行</b>
+    /// <b>注意：如果你不知道这是做什么的，请勿覆盖默认实现。</b>请使用 <see cref="AddOperationFunction"/>。
     /// </summary>
     public static Func<string, string> Operate { private get; set; } = command =>
     {
-        // TODO
-        return $"Test: {command}";
+        var split = command.Split([' '], 2);
+        OperationFunctions.TryGetValue(split[0], out var operation);
+        if (operation == null) return OperationErrNotFound;
+        try
+        {
+            return operation(split.Length > 1 ? split[1] : null) ?? OperationErrEmpty;
+        }
+        catch (Exception ex)
+        {
+            Context.Warn("操作出错", ex);
+            return OperationErrExceptionThrown;
+        }
     };
     
     // 提权进程: 连接管道开始通信
@@ -142,12 +177,23 @@ public sealed class PromoteService : ILifecycleService
     /// <summary>
     /// 开始执行操作。
     /// </summary>
-    /// <returns>是否执行成功</returns>
+    /// <returns>是否成功开始执行</returns>
     public static bool Activate()
     {
         if (!IsPromoteProcessRunning && !StartPromoteProcess()) return false;
         ActivateEvent.Set();
         return true;
+    }
+
+    // name: start
+    // arg: path\to\executable ; argument
+    private static string? _StartProcess(string? arg)
+    {
+        if (arg == null) return OperationErrInvalidArgument;
+        var split = arg.Split([" ; "], 2, StringSplitOptions.RemoveEmptyEntries);
+        var psi = new ProcessStartInfo(split[0]);
+        if (split.Length > 1) psi.Arguments = split[1];
+        return Process.Start(psi)?.Id.ToString();
     }
     
     public void Start()
@@ -156,14 +202,21 @@ public sealed class PromoteService : ILifecycleService
         if (args is [_, "promote", _])
         {
             Context.Info("当前进程为提权进程");
+            IsCurrentProcessPromoted = true;
+            // 预定义操作
+            AddOperationFunction("start", _StartProcess);
+            // 结束生命周期管理，启动提权操作线程
             Lifecycle.PendingLogFileName = "LastPending_Promote.log";
             new Thread(() => PerformAsPromoteProcess(args[2])) { Name = "Promote" }.Start();
             Context.RequestStopLoading();
             Context.DeclareStopped();
-            return;
         }
-        Context.Info("当前进程为主进程");
-        // TODO 自动启动提权进程
+        else
+        {
+            Context.Info("当前进程为主进程");
+            IsCurrentProcessPromoted = false;
+            // TODO 提权进程自动启动
+        }
     }
 
     public void Stop()
