@@ -19,14 +19,10 @@ public static class HttpRequest
         {
             try
             {
-                using (HttpRequestMessage request = options.GetRequestMessage())
-                {
-                    using (CancellationTokenSource cts = new CancellationTokenSource(options.Timeout))
-                    {
-                        return await HttpClientManager.GetClient()
-                            .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cts.Token);
-                    }
-                }
+                using (HttpRequestMessage request = options.GetRequestMessage());
+                using (CancellationTokenSource cts = new CancellationTokenSource(options.Timeout));
+                return await HttpClientManager.GetClient()
+                    .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cts.Token);
             }
             catch (HttpRequestException ex)
             {
