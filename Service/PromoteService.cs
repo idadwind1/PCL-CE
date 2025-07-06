@@ -1,9 +1,9 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
-using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using PCL.Core.Helper;
@@ -25,7 +25,7 @@ public sealed class PromoteService : ILifecycleService
     private static Process? _promoteProcess;
     private static NamedPipeServerStream? _promotePipeServer;
     
-    private static readonly LinkedList<PromoteOperation> PendingOperations = [];
+    private static readonly ConcurrentQueue<PromoteOperation> PendingOperations = [];
     
     private record PromoteOperation(string Command, Action<string>? Callback, bool DetailLog);
     
@@ -150,26 +150,27 @@ public sealed class PromoteService : ILifecycleService
     // 主进程: 管道连接回调
     private static bool PromotePipeCallback(StreamReader reader, StreamWriter writer, Process? client)
     {
-        while (IsPromoteProcessRunning) lock (PendingOperations)
+        while (IsPromoteProcessRunning)
         {
-            ActivateEvent.WaitOne();
-            foreach (var operation in PendingOperations.ToArray())
+            if (!PendingOperations.TryDequeue(out var operation))
             {
-                var command = operation.Command.Replace("\r\n", " ").Replace('\n', ' ').Replace('\r', ' ');
-                var detail = operation.DetailLog ? command : ShortenString(command);
-                Context.Debug($"正在执行: {detail}");
-                writer.WriteLine(command);
-                writer.Flush();
-                var result = reader.ReadLine();
-                if (result == null)
-                {
-                    Context.Warn("管道输入流已结束");
-                    break;
-                }
-                Context.Trace($"执行结果: {result}");
-                operation.Callback?.Invoke(result);
-                PendingOperations.RemoveFirst();
+                ActivateEvent.WaitOne();
+                continue;
             }
+            var command = operation.Command.Replace("\r\n", " ").Replace('\n', ' ').Replace('\r', ' ');
+            var commandLog = operation.DetailLog ? command : ShortenString(command);
+            Context.Debug($"正在执行: {commandLog}");
+            writer.WriteLine(command);
+            writer.Flush();
+            var result = reader.ReadLine();
+            if (result == null)
+            {
+                Context.Warn("管道输入流已结束");
+                break;
+            }
+            var resultLog = operation.DetailLog ? result : ShortenString(result);
+            Context.Trace($"执行结果: {resultLog}");
+            operation.Callback?.Invoke(result);
         }
         return false;
     }
@@ -199,23 +200,36 @@ public sealed class PromoteService : ILifecycleService
     /// <param name="command">操作命令</param>
     /// <param name="callback">结果返回后的回调</param>
     /// <param name="detailLog">指定是否打印详细日志，若为 <c>false</c>，则日志仅保留前 40 或 15 字符（取决于是否为调试构建）</param>
-    public static void AppendOperation(string command, Action<string>? callback = null, bool detailLog = true)
+    public static void Append(string command, Action<string>? callback = null, bool detailLog = true)
     {
-        lock (PendingOperations)
-        {
-            PendingOperations.AddLast(new PromoteOperation(command, callback, detailLog));
-        }
+        PendingOperations.Enqueue(new PromoteOperation(command, callback, detailLog));
     }
+    
+    [Obsolete("请使用 Append()")]
+    public static void AppendOperation(string command, Action<string>? callback = null, bool detailLog = true) => Append(command, callback, detailLog);
 
     /// <summary>
-    /// 开始执行操作。
+    /// 尝试启动提权进程并开始执行操作。
     /// </summary>
-    /// <returns>是否成功开始执行</returns>
+    /// <returns>是否成功开始执行，若提权进程启动失败则为 <c>false</c></returns>
     public static bool Activate()
     {
         if (!IsPromoteProcessRunning && !StartPromoteProcess()) return false;
         ActivateEvent.Set();
         return true;
+    }
+
+    /// <summary>
+    /// 向等待区添加操作并开始执行。即使未成功开始执行，添加的操作也不会自动移除。
+    /// </summary>
+    /// <param name="command">操作命令</param>
+    /// <param name="callback">结果返回后的回调</param>
+    /// <param name="detailLog">指定是否打印详细日志，若为 <c>false</c>，则日志仅保留前 40 或 15 字符（取决于是否为调试构建）</param>
+    /// <returns>是否成功开始执行，若提权进程启动失败则为 <c>false</c></returns>
+    public static bool AppendAndActivate(string command, Action<string>? callback = null, bool detailLog = true)
+    {
+        Append(command, callback, detailLog);
+        return Activate();
     }
 
     private static readonly Dictionary<string, Process> RunningProcesses = new();
