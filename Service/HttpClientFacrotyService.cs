@@ -22,21 +22,13 @@ public class HttpClientFactory : ILifecycleService
     {
         Context.Trace("正在初始化 HttpClientFactory");
         NativeInterop.RunInNewThread(() =>
+        {
+            while (true)
             {
-                try
-                {
-                    while (true)
-                    {
-                        Thread.Sleep(TimeSpan.FromHours(4));
-                        HttpClientManager.RefreshClient();
-                    }
-                }
-                catch (ThreadInterruptedException ex)
-                {
-                    return;
-                }
+                Thread.Sleep(TimeSpan.FromHours(4));
+                HttpClientManager.RefreshClient();
             }
-        );
+        });
     }
 
     public void Stop()
