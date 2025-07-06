@@ -6,7 +6,7 @@ namespace PCL.Core.Utils.Net;
 
 public class HttpProxyManager : IWebProxy
 {
-    private object _operationLock = new object();
+    private readonly object _operationLock = new();
     private ICredentials? _credentials;
 
     private string? _proxyAddress;
@@ -70,7 +70,7 @@ public class HttpProxyManager : IWebProxy
 
     public bool DisableProxy { get; set; }
 
-    private WebProxy _systemProxy = new WebProxy()
+    private readonly WebProxy _systemProxy = new()
     {
         BypassProxyOnLocal = true
     };

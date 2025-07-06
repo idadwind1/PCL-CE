@@ -130,6 +130,7 @@
     <Compile Include="Helper\Hash\SHA1Provider.cs" />
     <Compile Include="Helper\Hash\SHA256Provider.cs" />
     <Compile Include="Helper\Hash\SHA512Provider.cs" />
+    <Compile Include="Helper\HttpRequest.cs" />
     <Compile Include="Helper\Identify.cs" />
     <Compile Include="Helper\JavaManage.cs" />
     <Compile Include="Helper\MathHelper.cs" />
@@ -168,6 +169,7 @@
     <Compile Include="Model\ResourceProject\Modrinth\ModrinthProject.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Service\ApplicationService.cs" />
+    <Compile Include="Service\HttpClientService.cs" />
     <Compile Include="Service\LogService.cs" />
     <Compile Include="Service\PromoteService.cs" />
     <Compile Include="Service\RpcService.cs" />
@@ -184,6 +186,8 @@
     <Compile Include="Utils\Logger\Logger.cs" />
     <Compile Include="Utils\Logger\LoggerConfiguration.cs" />
     <Compile Include="Utils\Logger\LoggerSegmentMode.cs" />
+    <Compile Include="Utils\Net\HttpProxyManager.cs" />
+    <Compile Include="Utils\Net\HttpRequestOptions.cs" />
     <Compile Include="Utils\PEHeaderReader.cs" />
     <Compile Include="Utils\RoutedWebServer.cs" />
     <Compile Include="Utils\StringStream.cs" />

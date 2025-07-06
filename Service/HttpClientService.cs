@@ -1,10 +1,8 @@
 ﻿using System;
-using System.IO;
 using System.Net.Http;
 using System.Threading;
 using PCL.Core.Helper;
 using PCL.Core.LifecycleManagement;
-using PCL.Core.Utils.Logger;
 using PCL.Core.Utils.Net;
 
 namespace PCL.Core.Service;
@@ -19,22 +17,22 @@ public class HttpClientService : ILifecycleService
     private readonly LifecycleContext Context;
     private HttpClientService() { Context = Lifecycle.GetContext(this); }
 
-    private static readonly HttpProxyManager ProxyManager = new HttpProxyManager();
-    private static HttpClientHandler CurrentHandler = new HttpClientHandler()
+    private static readonly HttpProxyManager ProxyManager = new();
+    private static HttpClientHandler _currentHandler = new()
     {
         UseProxy = true,
         Proxy = ProxyManager
     };
-    private static HttpClient CurrentClient = new HttpClient(CurrentHandler);
-    private static HttpClientHandler? PreviousHandler = null;
-    private static HttpClient? PreviousClient = null;
-    private static readonly object OperationLock = new object();
+    private static HttpClient _currentClient = new(_currentHandler);
+    private static HttpClientHandler? _previousHandler;
+    private static HttpClient? _previousClient;
+    private static readonly object OperationLock = new();
 
     public static HttpClient GetClient()
     {
         lock (OperationLock)
         {
-            return CurrentClient;
+            return _currentClient;
         }
     }
 
@@ -42,38 +40,38 @@ public class HttpClientService : ILifecycleService
     {
         lock (OperationLock)
         {
-            PreviousClient?.Dispose();
-            PreviousHandler?.Dispose();
-            PreviousClient = CurrentClient;
-            PreviousHandler = CurrentHandler;
-            CurrentHandler = new HttpClientHandler();
-            CurrentClient = new HttpClient(CurrentHandler);
+            _previousClient?.Dispose();
+            _previousHandler?.Dispose();
+            _previousClient = _currentClient;
+            _previousHandler = _currentHandler;
+            _currentHandler = new HttpClientHandler();
+            _currentClient = new HttpClient(_currentHandler);
         }
     }
+    
+    private static readonly ManualResetEventSlim StopEvent = new(false);
 
     public void Start()
     {
         Context.Trace("正在初始化 HttpClient 服务");
-        NativeInterop.RunInNewThread(() =>
+        NativeInterop.RunInNewThread(() => {
+            while (true)
             {
-
-                while (true)
-                {
-                    Thread.Sleep(TimeSpan.FromHours(4));
-                    RefreshClient();
-                }
+                if (StopEvent.Wait(TimeSpan.FromHours(4))) break;
+                RefreshClient();
             }
-        );
+        });
     }
 
     public void Stop()
     {
         lock (OperationLock)
         {
-            CurrentClient?.Dispose();
-            CurrentHandler?.Dispose();
-            PreviousClient?.Dispose();
-            PreviousHandler?.Dispose();
+            StopEvent.Set();
+            _currentClient.Dispose();
+            _currentHandler.Dispose();
+            _previousClient?.Dispose();
+            _previousHandler?.Dispose();
         }
     }
 }
