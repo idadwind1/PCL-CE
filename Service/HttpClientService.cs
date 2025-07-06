@@ -12,7 +12,7 @@ namespace PCL.Core.Service;
 [LifecycleService(LifecycleState.Loading, Priority = int.MaxValue)]
 public class HttpClientService : ILifecycleService
 {
-    public string Identifier => "Network";
+    public string Identifier => "network";
     public string Name => "网络服务";
     public bool SupportAsyncStart => true;
     
