@@ -31,7 +31,7 @@ public static class Identify
         }
 
         if (res is null)
-            LogWrapper.Warn("获取 cpu id 失败");
+            LogWrapper.Warn("Identify", "获取 cpu id 失败");
         return res;
     }
 
