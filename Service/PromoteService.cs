@@ -82,7 +82,7 @@ public sealed class PromoteService : ILifecycleService
     /// 提权进程接收到操作请求时触发的事件，接收一个字符串作为操作命令并返回一个字符串作为结果。<br/>
     /// <b>注意：如果你不知道这是做什么的，请勿覆盖默认实现。</b>请使用 <see cref="AddOperationFunction"/>。
     /// </summary>
-    public static Func<string, string> Operate { private get; set; } = command =>
+    public static Func<string, string?> Operate { private get; set; } = command =>
     {
         var split = command.Split([' '], 2);
         OperationFunctions.TryGetValue(split[0], out var operation);
@@ -218,8 +218,29 @@ public sealed class PromoteService : ILifecycleService
         return true;
     }
 
+    private static readonly Dictionary<string, Process> RunningProcesses = new();
+    
+    // name: kill
+    // arg: process-id [timeout]
+    // return: kill result (false over timeout)
+    private static string? _KillProcess(string? arg)
+    {
+        if (arg == null) return OperationErrInvalidArgument;
+        var split = arg.Split(' ');
+        if (!RunningProcesses.TryGetValue(split[0], out var process)) return null;
+        process.Kill();
+        if (split.Length > 1)
+        {
+            int.TryParse(split[1], out var timeout);
+            return process.WaitForExit(timeout).ToString();
+        }
+        process.WaitForExit();
+        return true.ToString();
+    }
+
     // name: start
-    // arg: path\to\executable[.] ; argument
+    // arg: path\to\executable[.] ; arguments
+    // return: process id
     private static string? _StartProcess(string? arg)
     {
         if (arg == null) return OperationErrInvalidArgument;
@@ -245,11 +266,16 @@ public sealed class PromoteService : ILifecycleService
 
     // name: start-json
     // arg: {...}
+    // return: process id
     private static string? _StartProcessWithInfo(ProcessStartInfo? info)
     {
         if (info == null) return OperationErrInvalidArgument;
         var process = Process.Start(info);
-        return process?.Id.ToString();
+        if (process == null) return null;
+        var id = process.Id.ToString();
+        process.Exited += (_, _) => RunningProcesses.Remove(id);
+        RunningProcesses[id] = process;
+        return id;
     }
     
     public void Start()
@@ -262,6 +288,7 @@ public sealed class PromoteService : ILifecycleService
             // 预定义操作
             AddOperationFunction("start", _StartProcess);
             AddJsonOperationFunction<ProcessStartInfo>("start-json", _StartProcessWithInfo);
+            AddOperationFunction("kill", _KillProcess);
             // 结束生命周期管理，启动提权操作线程
             Lifecycle.PendingLogFileName = "LastPending_Promote.log";
             new Thread(() => PerformAsPromoteProcess(args[2])) { Name = "Promote" }.Start();
