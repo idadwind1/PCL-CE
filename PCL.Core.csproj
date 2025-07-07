@@ -183,11 +183,11 @@
     <Compile Include="Utils\FileVersionControl\ObjectType.cs" />
     <Compile Include="Utils\FileVersionControl\SnapLiteVersionControl.cs" />
     <Compile Include="Utils\FileVersionControl\VersionData.cs" />
+    <Compile Include="Utils\HttpProxyManager.cs" />
+    <Compile Include="Utils\HttpRequestOptions.cs" />
     <Compile Include="Utils\Logger\Logger.cs" />
     <Compile Include="Utils\Logger\LoggerConfiguration.cs" />
     <Compile Include="Utils\Logger\LoggerSegmentMode.cs" />
-    <Compile Include="Utils\Net\HttpProxyManager.cs" />
-    <Compile Include="Utils\Net\HttpRequestOptions.cs" />
     <Compile Include="Utils\PEHeaderReader.cs" />
     <Compile Include="Utils\RoutedWebServer.cs" />
     <Compile Include="Utils\StringStream.cs" />
