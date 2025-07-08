@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Runtime.InteropServices;
 using System.Threading;
+using PCL.Core.Extension;
 using PCL.Core.Utils;
 
 namespace PCL.Core.Helper;
@@ -236,5 +237,23 @@ public static class NativeInterop
         return pipe;
     }
     
+    #endregion
+
+    #region 环境信息
+    
+    private const string ModuleEnvironment = "Environment";
+    
+    public static bool ReadEnvironmentVariable<TValue>(string key, ref TValue target, bool detailLog = true)
+    {
+        var envValue = Environment.GetEnvironmentVariable(key);
+        if (envValue == null) return false;
+        if (detailLog) LogWrapper.Trace(ModuleEnvironment, $"环境变量 {key} 值: {envValue}");
+        var value = key.Convert<TValue>();
+        if (value == null) return false;
+        target = value;
+        LogWrapper.Debug(ModuleEnvironment, $"成功读取环境变量 {key}");
+        return true;
+    }
+
     #endregion
 }
