@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using PCL.Core.Helper;
 
 namespace PCL.Core.LifecycleManagement;
 
@@ -37,6 +38,7 @@ public sealed class Lifecycle : ILifecycleService
         service.OnLog(item);
     }
 
+    public static string PendingLogDirectory { get; set; } = @"PCL\Log";
     public static string PendingLogFileName { get; set; } = "LastPending.log";
 
     private static void _SavePendingLogs()
@@ -45,9 +47,9 @@ public sealed class Lifecycle : ILifecycleService
         try
         {
             // 直接写入剩余未输出日志到程序目录
-            var dir = Path.Combine(Path.GetDirectoryName(Process.GetCurrentProcess().MainModule!.FileName)!, "PCL", "Log");
-            Directory.CreateDirectory(dir);
-            var path = Path.Combine(dir, PendingLogFileName);
+            var path = Path.Combine(PendingLogDirectory, PendingLogFileName);
+            if (!Path.IsPathRooted(path)) path = Path.Combine(NativeInterop.ExecutableDirectory, path);
+            Directory.CreateDirectory(Path.GetDirectoryName(path) ?? Path.GetPathRoot(path));
             using var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read);
             using var writer = new StreamWriter(stream, Encoding.UTF8);
             foreach (var item in _PendingLogs) writer.WriteLine(item.ComposeMessage());

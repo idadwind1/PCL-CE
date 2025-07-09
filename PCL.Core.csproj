@@ -145,6 +145,7 @@
     <Compile Include="Helper\NativeInterop.cs" />
     <Compile Include="Helper\SemVer.cs" />
     <Compile Include="Helper\ToastNotification.cs" />
+    <Compile Include="Helper\UpdateHelper.cs" />
     <Compile Include="Helper\VarInt.cs" />
     <Compile Include="LifecycleManagement\ILifecycleLogService.cs" />
     <Compile Include="LifecycleManagement\ILifecycleService.cs" />
@@ -183,6 +184,7 @@
     <Compile Include="Service\RpcService.cs" />
     <Compile Include="Service\MainWindowService.cs" />
     <Compile Include="Service\TestService.cs" Condition="Exists('Service\TestService.cs')" />
+    <Compile Include="Service\UpdateService.cs" />
     <Compile Include="Utils\AnyType.cs" />
     <Compile Include="Utils\AtomicVariable.cs" />
     <Compile Include="Utils\ExpandoObjectConverter.cs" />
