@@ -191,7 +191,6 @@
     <Compile Include="Utils\PEHeaderReader.cs" />
     <Compile Include="Utils\RoutedWebServer.cs" />
     <Compile Include="Utils\StringStream.cs" />
-    <Compile Include="Utils\System.Runtime.CompilerServices.cs" />
     <Compile Include="Utils\VersionRange.cs" />
     <Compile Include="Utils\WebServer.cs" />
   </ItemGroup>

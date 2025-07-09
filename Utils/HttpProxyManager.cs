@@ -49,7 +49,7 @@ public class HttpProxyManager : IWebProxy
 
     private WebProxy? _proxy;
 
-    private WebProxy? CurrentProxy
+    private WebProxy? _CurrentProxy
     {
         get
         {
@@ -83,21 +83,21 @@ public class HttpProxyManager : IWebProxy
 
     public WebProxy? GetWebProxy(Uri? uri)
     {
-        if (CurrentProxy is not null && !RequireRefresh) return CurrentProxy;
+        if (_CurrentProxy is not null && !RequireRefresh) return _CurrentProxy;
         RequireRefresh = false;
         if (!string.IsNullOrWhiteSpace(_proxyAddress))
         {
-            CurrentProxy = new WebProxy(_proxyAddress, true);
-            return CurrentProxy;
+            _CurrentProxy = new WebProxy(_proxyAddress, true);
+            return _CurrentProxy;
         }
 
-        CurrentProxy = _systemProxy;
-        return CurrentProxy;
+        _CurrentProxy = _systemProxy;
+        return _CurrentProxy;
     }
 
     public bool IsBypassed(Uri? uri)
     {
         if (DisableProxy) return true;
-        return CurrentProxy?.IsBypassed(uri ?? new Uri("http://127.0.0.1")) ?? true;
+        return _CurrentProxy?.IsBypassed(uri ?? new Uri("http://127.0.0.1")) ?? true;
     }
 }

@@ -28,11 +28,11 @@ public class HttpClientService : ILifecycleService
 
     private static HttpClient _currentClient = new(_currentHandler);
 
-    private static readonly object OperationLock = new();
+    private static readonly object _OperationLock = new();
 
     public static HttpClient GetClient()
     {
-        lock (OperationLock)
+        lock (_OperationLock)
         {
             return _currentClient;
         }
@@ -57,16 +57,16 @@ public class HttpClientService : ILifecycleService
         Context.Trace("已刷新 HttpClient");
     }
 
-    private static readonly AutoResetEvent RefreshEvent = new(false);
-    private static readonly AutoResetEvent RefreshFinishedEvent = new(false);
+    private static readonly AutoResetEvent _RefreshEvent = new(false);
+    private static readonly AutoResetEvent _RefreshFinishedEvent = new(false);
 
     public static void RefreshClient()
     {
-        lock (OperationLock)
+        lock (_OperationLock)
         {
             _manualRefresh = true;
-            RefreshEvent.Set();
-            RefreshFinishedEvent.WaitOne();
+            _RefreshEvent.Set();
+            _RefreshFinishedEvent.WaitOne();
         }
     }
 
@@ -79,13 +79,13 @@ public class HttpClientService : ILifecycleService
         NativeInterop.RunInNewThread(() => {
             while (true)
             {
-                RefreshEvent.WaitOne(TimeSpan.FromHours(4));
+                _RefreshEvent.WaitOne(TimeSpan.FromHours(4));
                 if (_stopped) break;
                 _RefreshClient();
                 if (_manualRefresh)
                 {
                     _manualRefresh = false;
-                    RefreshFinishedEvent.Set();
+                    _RefreshFinishedEvent.Set();
                 }
             }
         }, "HttpClient Refresh");
@@ -93,10 +93,10 @@ public class HttpClientService : ILifecycleService
 
     public void Stop()
     {
-        lock (OperationLock)
+        lock (_OperationLock)
         {
             _stopped = true;
-            RefreshEvent.Set();
+            _RefreshEvent.Set();
             _currentClient.Dispose();
             _currentHandler.Dispose();
             _previousClient?.Dispose();

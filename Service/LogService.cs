@@ -13,9 +13,10 @@ public class LogService : ILifecycleLogService
     public string Identifier => "log";
     public string Name => "日志服务";
     public bool SupportAsyncStart => true;
-    
-    private readonly LifecycleContext Context;
-    private LogService() { Context = Lifecycle.GetContext(this); }
+
+    private static LifecycleContext? _context;
+    private static LifecycleContext Context => _context!;
+    private LogService() { _context = Lifecycle.GetContext(this); }
     
     private static Logger? _logger;
     public static Logger Logger { get => _logger!; private set => _logger = value; }

@@ -113,8 +113,8 @@ public static class NativeInterop
 
     #region 命名管道通信
     
-    private static void PipeLog(string message) => LogWrapper.Trace("Pipe", message);
-    private static void PipeLogDebug(string message) => LogWrapper.Debug("Pipe", message);
+    private static void _PipeLog(string message) => LogWrapper.Trace("Pipe", message);
+    private static void _PipeLogDebug(string message) => LogWrapper.Debug("Pipe", message);
 
     /// <summary>
     /// 获取指定命名管道当前连接的客户端进程 ID
@@ -175,7 +175,7 @@ public static class NativeInterop
                             {
                                 hasNextLoop = true;
                                 pipe.Disconnect();
-                                PipeLog($"[Pipe] {identifier}: 已拒绝 {clientProcessId}");
+                                _PipeLog($"[Pipe] {identifier}: 已拒绝 {clientProcessId}");
                                 continue;
                             }
                         }
@@ -205,7 +205,7 @@ public static class NativeInterop
                 {
                     if (!pipe.IsConnected && connected && ex is IOException)
                     {
-                        PipeLogDebug($"{identifier}: 客户端连接已丢失");
+                        _PipeLogDebug($"{identifier}: 客户端连接已丢失");
                         hasNextLoop = true;
                     }
                     else
@@ -224,12 +224,12 @@ public static class NativeInterop
                     // 如果已经断开会抛出 InvalidOperationException 这里直接忽略掉
                 }
                 connected = false;
-                PipeLogDebug($"{identifier}: 已断开连接");
+                _PipeLogDebug($"{identifier}: 已断开连接");
             }
 
             // 释放资源并执行停止回调
             pipe.Dispose();
-            PipeLogDebug($"{identifier}: 服务端已停止");
+            _PipeLogDebug($"{identifier}: 服务端已停止");
             stopCallback?.Invoke();
         }, threadName);
 

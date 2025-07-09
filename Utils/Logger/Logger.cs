@@ -15,8 +15,8 @@ public sealed class Logger : IDisposable
     public Logger(LoggerConfiguration configuration)
     {
         _configuration = configuration;
-        CreateNewFile();
-        _processingThread = new Thread(() => ProcessLogQueue(_cts.Token));
+        _CreateNewFile();
+        _processingThread = new Thread(() => _ProcessLogQueue(_cts.Token));
         _processingThread.Start();
     }
 
@@ -32,7 +32,7 @@ public sealed class Logger : IDisposable
 
     public List<string> LogFiles => [.._files];
     
-    private void CreateNewFile()
+    private void _CreateNewFile()
     {
         var nameFormat = (_configuration.FileNameFormat ?? $"Launch-{DateTime.Now:yyyy-M-d}-{{0}}") + ".log";
         string filename = nameFormat.Replace("{0}", $"{DateTime.Now:HHmmssfff}");
@@ -61,14 +61,14 @@ public sealed class Logger : IDisposable
         });
     }
 
-    public void Trace(string message) => Log($"[{GetTimeFormatted()}] [TRA] {message}");
-    public void Debug(string message) => Log($"[{GetTimeFormatted()}] [DBG] {message}");
-    public void Info(string message) => Log($"[{GetTimeFormatted()}] [INFO] {message}");
-    public void Warn(string message) => Log($"[{GetTimeFormatted()}] [WARN] {message}");
-    public void Error(string message) => Log($"[{GetTimeFormatted()}] [ERR!] {message}");
-    public void Fatal(string message) => Log($"[{GetTimeFormatted()}] [FTL!] {message}");
+    public void Trace(string message) => Log($"[{_GetTimeFormatted()}] [TRA] {message}");
+    public void Debug(string message) => Log($"[{_GetTimeFormatted()}] [DBG] {message}");
+    public void Info(string message) => Log($"[{_GetTimeFormatted()}] [INFO] {message}");
+    public void Warn(string message) => Log($"[{_GetTimeFormatted()}] [WARN] {message}");
+    public void Error(string message) => Log($"[{_GetTimeFormatted()}] [ERR!] {message}");
+    public void Fatal(string message) => Log($"[{_GetTimeFormatted()}] [FTL!] {message}");
     
-    private static string GetTimeFormatted() => $"{DateTime.Now:HH:mm:ss.fff}";
+    private static string _GetTimeFormatted() => $"{DateTime.Now:HH:mm:ss.fff}";
     
     public void Log(string message)
     {
@@ -77,9 +77,9 @@ public sealed class Logger : IDisposable
         _logEvent.Set();
     }
     
-    private static readonly Regex PatternNewLine = new(@"\r\n|\n|\r");
+    private static readonly Regex _PatternNewLine = new(@"\r\n|\n|\r");
 
-    private void ProcessLogQueue(CancellationToken token)
+    private void _ProcessLogQueue(CancellationToken token)
     {
         const int maxBatchCount = 100;
         try
@@ -102,14 +102,14 @@ public sealed class Logger : IDisposable
                         continue; // 否则 => 接着等待下一次 Log() 调用
                     }
 #if DEBUG
-                    message = PatternNewLine.Replace(message, "\r\n");
+                    message = _PatternNewLine.Replace(message, "\r\n");
                     Console.WriteLine(message);
 #endif
                     batch.AppendLine(message);
                     if (++currentBatchCount >= maxBatchCount) // 行数达到缓冲上限 => 写入一次
                         break;
                 }
-                DoWrite(batch.ToString());
+                _DoWrite(batch.ToString());
                 batch.Clear();
                 currentBatchCount = 0;
             }
@@ -118,25 +118,25 @@ public sealed class Logger : IDisposable
         catch (Exception e)
         {
             // 出错了先干到标准输出流中吧 Orz
-            Console.WriteLine($"[{GetTimeFormatted()}] [ERROR] An error occured while processing log queue: {e.Message}");
+            Console.WriteLine($"[{_GetTimeFormatted()}] [ERROR] An error occured while processing log queue: {e.Message}");
             throw;
         }
     }
 
-    private void DoWrite(string ctx)
+    private void _DoWrite(string ctx)
     {
         try
         {
             if (_configuration.SegmentMode == LoggerSegmentMode.BySize && _currentFile?.Length >= _configuration.MaxFileSize)
             {
-                CreateNewFile();
+                _CreateNewFile();
             }
             _currentStream?.Write(ctx);
             _currentStream?.Flush();
         }
         catch (Exception e)
         {
-            Console.WriteLine($"[{GetTimeFormatted()}] [ERROR] An error occured while writing log file: {e.Message}");
+            Console.WriteLine($"[{_GetTimeFormatted()}] [ERROR] An error occured while writing log file: {e.Message}");
             throw;
         }
     }
