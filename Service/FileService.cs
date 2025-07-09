@@ -163,7 +163,7 @@ public sealed class FileService : GeneralService
             {
                 var process = task.GetProcess(item) ?? _MatchDefaultProcess(item);
                 var targetPath = item.TargetPath;
-                if (File.Exists(targetPath)) PushProcess(targetPath);
+                if (!item.ForceTransfer && File.Exists(targetPath)) PushProcess(targetPath);
                 else
                 {
                     var transfer = task.GetTransfer(item) ?? _MatchDefaultTransfer(item);

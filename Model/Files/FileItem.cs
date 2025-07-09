@@ -41,10 +41,12 @@ public enum FileType
 /// <param name="Name">The file name, including extension.</param>
 /// <param name="Type">The special type of the file, or <see cref="FileType.Plain"/> as the default value.</param>
 /// <param name="Sources">Transfer sources, such as a web URL or a local path.</param>
+/// <param name="ForceTransfer">Trigger transfer regardless of whether <see cref="TargetPath"/> exists</param>
 public record FileItem(
     string Name,
     FileType Type = FileType.Plain,
-    IEnumerable<string>? Sources = null)
+    IEnumerable<string>? Sources = null,
+    bool ForceTransfer = false)
 {
     
     private string? _targetDirectory;
