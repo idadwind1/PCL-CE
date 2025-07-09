@@ -112,6 +112,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.Toolkit.Uwp.Notifications" Version="7.1.3" />
     <PackageReference Include="PolySharp" Version="1.15.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -142,6 +143,7 @@
     <Compile Include="Helper\LogWrapper.cs" />
     <Compile Include="Helper\NativeInterop.cs" />
     <Compile Include="Helper\SemVer.cs" />
+    <Compile Include="Helper\ToastNotification.cs" />
     <Compile Include="Helper\VarInt.cs" />
     <Compile Include="LifecycleManagement\ILifecycleLogService.cs" />
     <Compile Include="LifecycleManagement\ILifecycleService.cs" />
