@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using PCL.Core.Helper;
 using PCL.Core.Service;
 
@@ -84,5 +85,14 @@ public record FileItem(
             _targetPath = value;
             return value;
         }
+    }
+    
+    public override int GetHashCode() => TargetPath.GetHashCode();
+
+    public override string ToString()
+    {
+        var str = TargetPath;
+        if (Sources != null) str += $" [{string.Join(", ", Sources)}]";
+        return str;
     }
 }

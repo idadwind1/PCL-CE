@@ -12,5 +12,5 @@ public interface IFileTask
     
     public FileProcess? GetProcess(FileItem item);
 
-    public void OnProcessFinished(FileItem item, object? result);
+    public bool OnProcessFinished(FileItem item, object? result);
 }

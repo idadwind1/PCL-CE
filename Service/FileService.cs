@@ -7,6 +7,7 @@ using System.Threading;
 using PCL.Core.Helper;
 using PCL.Core.LifecycleManagement;
 using PCL.Core.Model.Files;
+using PCL.Core.Utils;
 using PCL.Core.Utils.Threading;
 using Special = System.Environment.SpecialFolder;
 
@@ -132,6 +133,8 @@ public sealed class FileService : GeneralService
     private static readonly ConcurrentQueue<IFileTask> _PendingTasks = [
     ];
     
+    private static readonly ConcurrentDictionary<FileItem, AtomicVariable<object>> _ProcessResults = [];
+    private static readonly ConcurrentDictionary<FileItem, ManualResetEventSlim> _WaitForResultEvents = [];
     private static readonly AutoResetEvent _ContinueEvent = new(false);
     private static bool _running = true;
 
@@ -140,7 +143,7 @@ public sealed class FileService : GeneralService
         int? threadLimit = null;
         NativeInterop.ReadEnvironmentVariable("PCL_FILE_THREAD_LIMIT", ref threadLimit);
         
-        // CPU 密集工作线程应使用性能内核的数量限制，防止跑到能效内核上
+        // CPU 密集工作线程应使用性能内核的数量限制（超线程一并计入），防止跑到能效内核上
         // 如果这个死人调度还给往能效内核上扔就没法了，砍掉 Windows 即可解决
         threadLimit ??= NativeInterop.GetPerformanceLogicalProcessorCount();
         
@@ -174,17 +177,81 @@ public sealed class FileService : GeneralService
                     threadPool.QueueCpu(() =>
                     {
                         var result = process(item, path);
-                        task.OnProcessFinished(item, result);
+                        var atomicResult = new AtomicVariable<object>(result, true, true);
+                        _ProcessResults.AddOrUpdate(item, atomicResult, (_, _) => atomicResult);
+                        var handled = task.OnProcessFinished(item, result);
+                        if (handled) _ProcessResults.TryRemove(item, out _);
                     });
                 }
             }
         }
     }
 
+    /// <summary>
+    /// Add a task to the loading queue.
+    /// </summary>
+    /// <param name="task">the task to add</param>
     public static void QueueTask(IFileTask task)
     {
         _PendingTasks.Enqueue(task);
         _ContinueEvent.Set();
+    }
+
+    /// <summary>
+    /// Add tasks to the loading queue.
+    /// </summary>
+    /// <param name="tasks">the tasks to add</param>
+    public static void QueueTask(params IFileTask[] tasks)
+    {
+        foreach (var task in tasks) _PendingTasks.Enqueue(task);
+        _ContinueEvent.Set();
+    }
+
+    /// <param name="item">which file to get the result</param>
+    /// <param name="result">a <b>nullable</b> value, also <c>null</c> if not succeed</param>
+    /// <param name="remove">whether remove from the temp dictionary after successfully get the value</param>
+    /// <returns><c>true</c> if succeeded, or <c>false</c> if no result</returns>
+    public static bool TryGetResult(FileItem item, out AnyType? result, bool remove = true)
+    {
+        _ProcessResults.TryGetValue(item, out var atomicResult);
+        if (atomicResult == null)
+        {
+            result = null;
+            return false;
+        }
+        var value = atomicResult.Value;
+        result = (value == null) ? null : new AnyType(value);
+        if (remove) _ProcessResults.TryRemove(item, out _);
+        return true;
+    }
+    
+    /// <param name="item">which file to get the result</param>
+    /// <param name="remove">whether remove from the temp dictionary after successfully get the value</param>
+    /// <returns>a <b>nullable</b> value</returns>
+    /// <exception cref="KeyNotFoundException">no result</exception>
+    public static AnyType? GetResult(FileItem item, bool remove = true)
+    {
+        if (TryGetResult(item, out var result, remove)) return result;
+        throw new KeyNotFoundException($"No result yet: {item}");
+    }
+
+    /// <param name="item">which file to wait for the result</param>
+    /// <param name="timeout">the maximum waiting time</param>
+    /// <returns>
+    /// a value, or <c>null</c> if the result is really <c>null</c>, or else, something is boom -
+    /// I don't know what is wrong but in a word there is something wrong :D
+    /// </returns>
+    public static AnyType? WaitForResult(FileItem item, TimeSpan? timeout = null)
+    {
+        var success = TryGetResult(item, out var result);
+        if (success) return result;
+        var waitEvent = _WaitForResultEvents.GetOrAdd(item, _ => new ManualResetEventSlim(false));
+        bool waitResult = true;
+        if (timeout is { } t) waitResult = waitEvent.Wait(t);
+        else waitEvent.Wait();
+        if (!waitResult) return null;
+        TryGetResult(item, out result);
+        return result;
     }
 
     #endregion
