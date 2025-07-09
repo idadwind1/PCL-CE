@@ -90,7 +90,7 @@ public static class StringExtension
         {
             // ConvertToString(ITypeDescriptorContext? context, CultureInfo? culture, object value)
             // — 返回 object?（具体 Converter 决定是否可为 null）
-            object? o = converter.ConvertToString(null, CultureInfo.InvariantCulture, obj);
+            object? o = converter.ConvertToInvariantString(obj);
             return o as string;
         }
 

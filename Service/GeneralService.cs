@@ -3,7 +3,7 @@
 namespace PCL.Core.Service;
 
 /// <summary>
-/// General service class for construct a <see cref="ILifecycleService"/> more conveniently.
+/// General service class for constructing <see cref="ILifecycleService"/> in a more convenient way.
 /// </summary>
 public abstract class GeneralService : ILifecycleService
 {
@@ -12,14 +12,14 @@ public abstract class GeneralService : ILifecycleService
     public bool SupportAsyncStart { get; }
 
     /// <summary>
-    /// The context of current service instance,
+    /// The context of the service instance,
     /// used for declaration, logging, lifecycle operation, etc.
     /// </summary>
     protected LifecycleContext ServiceContext => Lifecycle.GetContext(this);
     
     /// <summary>
     /// Initialize a general service instance.
-    /// This constructor should only be extended, rather than invoked directly.
+    /// This constructor should only be extended rather than invoked directly.
     /// </summary>
     /// <param name="identifier">see <see cref="Identifier"/></param>
     /// <param name="name">see <see cref="Name"/></param>

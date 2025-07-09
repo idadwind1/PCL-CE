@@ -154,6 +154,9 @@
     <Compile Include="LifecycleManagement\LifecycleService.cs" />
     <Compile Include="LifecycleManagement\LifecycleServiceInfo.cs" />
     <Compile Include="LifecycleManagement\LifecycleState.cs" />
+    <Compile Include="Model\Files\FileItem.cs" />
+    <Compile Include="Model\Files\FileLoading.cs" />
+    <Compile Include="Model\Files\IFileTask.cs" />
     <Compile Include="Model\Java.cs" />
     <Compile Include="Model\ResourceProject\Curseforge\CurseforgeAuthors.cs" />
     <Compile Include="Model\ResourceProject\Curseforge\CurseforgeCategories.cs" />
@@ -194,6 +197,8 @@
     <Compile Include="Utils\PEHeaderReader.cs" />
     <Compile Include="Utils\RoutedWebServer.cs" />
     <Compile Include="Utils\StringStream.cs" />
+    <Compile Include="Utils\Threading\DualThreadPool.cs" />
+    <Compile Include="Utils\Threading\LimitedConcurrencyLevelTaskScheduler.cs" />
     <Compile Include="Utils\VersionRange.cs" />
     <Compile Include="Utils\WebServer.cs" />
   </ItemGroup>
