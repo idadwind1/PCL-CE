@@ -90,6 +90,7 @@ public sealed class FileService : GeneralService
         NativeInterop.ReadEnvironmentVariable("PCL_PATH_TEMP", ref _tempPath);
 #endif
         // start load thread
+        Context.Debug("正在启动文件加载守护线程");
         NativeInterop.RunInNewThread(_FileLoadCallback, "Daemon/FileLoading");
     }
 
