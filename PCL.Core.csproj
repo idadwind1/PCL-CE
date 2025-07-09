@@ -123,6 +123,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Controls\BlurBorder.cs" />
+    <Compile Include="Extension\StringExtension.cs" />
     <Compile Include="Helper\BackgroundPresenter.cs" />
     <Compile Include="Helper\ByteHelper.cs" />
     <Compile Include="Helper\EncryptHelper.cs" />
@@ -155,6 +156,9 @@
     <Compile Include="LifecycleManagement\LifecycleService.cs" />
     <Compile Include="LifecycleManagement\LifecycleServiceInfo.cs" />
     <Compile Include="LifecycleManagement\LifecycleState.cs" />
+    <Compile Include="Model\Files\FileItem.cs" />
+    <Compile Include="Model\Files\FileLoading.cs" />
+    <Compile Include="Model\Files\IFileTask.cs" />
     <Compile Include="Model\Java.cs" />
     <Compile Include="Model\ResourceProject\Curseforge\CurseforgeAuthors.cs" />
     <Compile Include="Model\ResourceProject\Curseforge\CurseforgeCategories.cs" />
@@ -171,12 +175,15 @@
     <Compile Include="Model\ResourceProject\Modrinth\ModrinthProject.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Service\ApplicationService.cs" />
+    <Compile Include="Service\FileService.cs" />
+    <Compile Include="Service\GeneralService.cs" />
     <Compile Include="Service\HttpClientService.cs" />
     <Compile Include="Service\LogService.cs" />
     <Compile Include="Service\PromoteService.cs" />
     <Compile Include="Service\RpcService.cs" />
     <Compile Include="Service\MainWindowService.cs" />
     <Compile Include="Service\TestService.cs" Condition="Exists('Service\TestService.cs')" />
+    <Compile Include="Utils\AnyType.cs" />
     <Compile Include="Utils\AtomicVariable.cs" />
     <Compile Include="Utils\ExpandoObjectConverter.cs" />
     <Compile Include="Utils\FileVersionControl\FileVersionObjects.cs" />
@@ -193,6 +200,8 @@
     <Compile Include="Utils\PEHeaderReader.cs" />
     <Compile Include="Utils\RoutedWebServer.cs" />
     <Compile Include="Utils\StringStream.cs" />
+    <Compile Include="Utils\Threading\DualThreadPool.cs" />
+    <Compile Include="Utils\Threading\LimitedConcurrencyLevelTaskScheduler.cs" />
     <Compile Include="Utils\VersionRange.cs" />
     <Compile Include="Utils\WebServer.cs" />
   </ItemGroup>
