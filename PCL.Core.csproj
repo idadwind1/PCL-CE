@@ -158,7 +158,10 @@
     <Compile Include="LifecycleManagement\LifecycleServiceInfo.cs" />
     <Compile Include="LifecycleManagement\LifecycleState.cs" />
     <Compile Include="Model\Files\FileItem.cs" />
-    <Compile Include="Model\Files\FileLoading.cs" />
+    <Compile Include="Model\Files\FileMatchPair.cs" />
+    <Compile Include="Model\Files\FileMatch.cs" />
+    <Compile Include="Model\Files\FileProcess.cs" />
+    <Compile Include="Model\Files\FileTransfer.cs" />
     <Compile Include="Model\Files\IFileTask.cs" />
     <Compile Include="Model\Java.cs" />
     <Compile Include="Model\ResourceProject\Curseforge\CurseforgeAuthors.cs" />
@@ -188,6 +191,8 @@
     <Compile Include="Utils\AnyType.cs" />
     <Compile Include="Utils\AtomicVariable.cs" />
     <Compile Include="Utils\ExpandoObjectConverter.cs" />
+    <Compile Include="Utils\FileTask\FileTask.cs" />
+    <Compile Include="Utils\FileTask\MatchableFileTask.cs" />
     <Compile Include="Utils\FileVersionControl\FileVersionObjects.cs" />
     <Compile Include="Utils\FileVersionControl\FileVersionObjectsComparer.cs" />
     <Compile Include="Utils\FileVersionControl\IVersionControl.cs" />
