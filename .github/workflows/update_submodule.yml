@@ -35,5 +35,5 @@ jobs:
             echo "The submodule is already at the latest commit"
           else
             git commit -S -m "chore(submodule): update to ${{ github.sha }}"
-            git push origin HEAD:main
+            git push origin dev
           fi
