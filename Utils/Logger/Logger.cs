@@ -146,10 +146,11 @@ public sealed class Logger : IDisposable
     public void Dispose()
     {
         if (_disposed) return;
+        GC.SuppressFinalize(this);
         _disposed = true;
         _cts.Cancel();
         _logEvent.Set();
-        _processingThread.Join();
+        _processingThread.Join(5000);
         _logEvent.Dispose();
         _currentStream?.Dispose();
         _currentFile?.Dispose();

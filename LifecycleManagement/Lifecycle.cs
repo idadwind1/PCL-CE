@@ -43,7 +43,11 @@ public sealed class Lifecycle : ILifecycleService
 
     private static void _SavePendingLogs()
     {
-        if (_PendingLogs.Count == 0) return;
+        if (_PendingLogs.Count == 0)
+        {
+            Console.WriteLine("[LifeCycle] No pending logs found, returned.");
+            return;
+        }
         try
         {
             // 直接写入剩余未输出日志到程序目录
@@ -278,7 +282,12 @@ public sealed class Lifecycle : ILifecycleService
             Console.WriteLine($"[Lifecycle] Requested by '{s.Identifier}', restarting the program..."); 
             _RunCurrentExecutable(_requestRestartArguments);
         }
-        Environment.Exit(statusCode); 
+        foreach (ProcessThread processThread in  Process.GetCurrentProcess().Threads)
+        {
+            Console.WriteLine($"[LifeCycle] Thread still in working: {processThread.Id}({processThread.ThreadState})(Start from {processThread.StartTime})");
+        }
+        Environment.Exit(statusCode);
+        Console.WriteLine("[LifeCycle] Warning! Abnormal behaviour, try to kill process 1s later.");
         // 保险起见，只要运行环境正常根本不可能执行到这里，但是永远都不能假设用户的环境是正常的
         Thread.Sleep(1000);
         Console.WriteLine("[Lifecycle] Trying to force kill the process");
