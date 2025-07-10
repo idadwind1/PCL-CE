@@ -14,16 +14,15 @@ public sealed class Logger : IDisposable
 {
     public Logger(LoggerConfiguration configuration)
     {
-        _configuration = configuration;
+        Configuration = configuration;
         _CreateNewFile();
         _processingThread = new Thread(() => _ProcessLogQueue(_cts.Token));
         _processingThread.Start();
     }
 
-    private readonly LoggerConfiguration _configuration;
     private StreamWriter? _currentStream;
     private FileStream? _currentFile;
-    private List<string> _files = [];
+    private readonly List<string> _files = [];
     
     private readonly Thread _processingThread;
     private readonly ConcurrentQueue<string> _logQueue = new();
@@ -31,16 +30,18 @@ public sealed class Logger : IDisposable
     private readonly CancellationTokenSource _cts = new();
 
     public List<string> LogFiles => [.._files];
-    
+
+    public LoggerConfiguration Configuration { get; }
+
     private void _CreateNewFile()
     {
-        var nameFormat = (_configuration.FileNameFormat ?? $"Launch-{DateTime.Now:yyyy-M-d}-{{0}}") + ".log";
+        var nameFormat = (Configuration.FileNameFormat ?? $"Launch-{DateTime.Now:yyyy-M-d}-{{0}}") + ".log";
         string filename = nameFormat.Replace("{0}", $"{DateTime.Now:HHmmssfff}");
-        string filePath = Path.Combine(_configuration.StoreFolder, filename);
+        string filePath = Path.Combine(Configuration.StoreFolder, filename);
         _files.Add(filePath);
         var lastWriter = _currentStream;
         var lastFile = _currentFile;
-        Directory.CreateDirectory(_configuration.StoreFolder);
+        Directory.CreateDirectory(Configuration.StoreFolder);
         _currentFile = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.Read);
         _currentStream = new StreamWriter(_currentFile);
         Task.Run(() =>
@@ -49,12 +50,12 @@ public sealed class Logger : IDisposable
             lastWriter?.Dispose();
             lastFile?.Close();
             lastFile?.Dispose();
-            if (!_configuration.AutoDeleteOldFile)
+            if (!Configuration.AutoDeleteOldFile)
                 return;
-            var logFiles = Directory.GetFiles(_configuration.StoreFolder);
+            var logFiles = Directory.GetFiles(Configuration.StoreFolder);
             var needToDelete = logFiles.Select(x => new FileInfo(x))
                 .OrderBy(x => x.CreationTime)
-                .Take(logFiles.Length - _configuration.MaxKeepOldFile)
+                .Take(logFiles.Length - Configuration.MaxKeepOldFile)
                 .ToList();
             foreach (var logFile in needToDelete)
                 logFile.Delete();
@@ -127,7 +128,7 @@ public sealed class Logger : IDisposable
     {
         try
         {
-            if (_configuration.SegmentMode == LoggerSegmentMode.BySize && _currentFile?.Length >= _configuration.MaxFileSize)
+            if (Configuration.SegmentMode == LoggerSegmentMode.BySize && _currentFile?.Length >= Configuration.MaxFileSize)
             {
                 _CreateNewFile();
             }
