@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,7 +9,7 @@ namespace PCL.Core.Helper;
 
 public static class HttpRequest
 {
-    public static async Task<HttpResponseMessage> GetServerResponse(HttpRequestOptions options)
+    public static async Task<HttpResponseMessage> TryGetServerResponse(HttpRequestOptions options)
     {
         Exception? lastException = null;
         while (options.Retry >0)
@@ -30,5 +30,25 @@ public static class HttpRequest
         }
 
         throw new HttpRequestException("发送网络请求失败", lastException);
+    }
+
+    public static async Task<HttpResponseMessage> GetServerResponse(HttpRequestOptions options)
+    {
+        HttpResponseMessage response = await TryGetServerResponse(options);
+        response.EnsureSuccessStatusCode();
+        return response;
+    }
+
+    public static async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request)
+    {
+        return await HttpClientService.GetClient().SendAsync(request);
+    }
+    public static async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,HttpCompletionOption options)
+    {
+        return await HttpClientService.GetClient().SendAsync(request, options);
+    }
+    public static async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,HttpCompletionOption options,CancellationToken token)
+    {
+        return await HttpClientService.GetClient().SendAsync(request, options,token);
     }
 }
