@@ -72,6 +72,8 @@ public sealed class FileService : GeneralService
     private static LifecycleContext Context => _context!;
 
     private FileService() : base("file", "文件管理") { _context = ServiceContext; }
+
+    private static Thread? _fileLoadingThread;
     
     public override void Start()
     {
@@ -91,13 +93,14 @@ public sealed class FileService : GeneralService
 #endif
         // start load thread
         Context.Debug("正在启动文件加载守护线程");
-        NativeInterop.RunInNewThread(_FileLoadCallback, "Daemon/FileLoading");
+        _fileLoadingThread = NativeInterop.RunInNewThread(_FileLoadCallback, "Daemon/FileLoading");
     }
 
     public override void Stop()
     {
-        Context.Debug("尝试停止文件处理工作");
+        Context.Debug("正在停止文件处理工作");
         _running = false;
+        _fileLoadingThread?.Join();
     }
 
     #endregion
@@ -186,6 +189,9 @@ public sealed class FileService : GeneralService
                 }
             }
         }
+        
+        Context.Debug("尝试取消所有正在运行的工作");
+        threadPool.CancelAll();
     }
 
     /// <summary>
