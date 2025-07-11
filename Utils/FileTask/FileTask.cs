@@ -38,6 +38,11 @@ public class FileTask(IEnumerable<FileItem> items, bool ignoreResult = false) : 
     /// Event invoked after a process finished
     /// </summary>
     public event Action<FileItem, object?>? ProcessFinished;
+    
+    /// <summary>
+    /// Event invoked after the task finished
+    /// </summary>
+    public event Action? TaskFinished;
 
     #region Implementation
 
@@ -51,6 +56,11 @@ public class FileTask(IEnumerable<FileItem> items, bool ignoreResult = false) : 
         if (ProcessFinished == null) return false;
         ProcessFinished.Invoke(item, result);
         return true;
+    }
+
+    public virtual void OnTaskFinished()
+    {
+        TaskFinished?.Invoke();
     }
 
     #endregion

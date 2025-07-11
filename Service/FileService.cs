@@ -188,6 +188,8 @@ public sealed class FileService : GeneralService
                     });
                 }
             }
+
+            threadPool.QueueCpu(task.OnTaskFinished);
         }
         
         Context.Debug("尝试取消所有正在运行的工作");
