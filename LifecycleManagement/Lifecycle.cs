@@ -45,7 +45,7 @@ public sealed class Lifecycle : ILifecycleService
     {
         if (_PendingLogs.Count == 0)
         {
-            Console.WriteLine("[LifeCycle] No pending logs found, returned.");
+            Console.WriteLine("[Lifecycle] No pending logs");
             return;
         }
         try
@@ -251,17 +251,17 @@ public sealed class Lifecycle : ILifecycleService
         HasShutdownStarted = true;
         // 结束 Running 计时
         if (_countRunningStart is { } start)
-        { 
+        {
             var countSpan = DateTime.Now - start; 
             _LogStateCount(countSpan, LifecycleState.Running);
         }
         // 开始 Exiting 状态
         _StartStateFlow(LifecycleState.Exiting, count: false);
-        // 停止服务并退出
+        // 停止服务
         Context.Debug("正在停止运行中的服务"); 
         ILifecycleLogService? logService = null; 
         foreach (var service in _RunningServiceList.ToArray()) 
-        { 
+        {
             if (service is ILifecycleLogService ls) 
             {
                 // 跳过日志服务
@@ -272,26 +272,49 @@ public sealed class Lifecycle : ILifecycleService
             _StopService(service, service.SupportAsyncStart);
         }
         if (logService != null)
-        { 
-            Context.Trace($"退出过程已结束，正在停止日志服务"); 
-            _StopService(logService, false);
+        {
+            Context.Trace($"退出过程已结束，正在停止日志服务");
+            // 直接调用 Stop() 不使用常规停止实现 以保证正常情况下不会向等待区输出日志
+            logService.Stop();
+            Console.WriteLine("[Lifecycle] Log service stopped");
         }
         _SavePendingLogs();
+#if DEBUG || DEBUGCI
+        // 输出仍在运行的线程
+        Console.WriteLine("[Lifecycle] Thread(s) still in working:");
+        var currentThreadId = NativeInterop.GetCurrentOsThreadId();
+        foreach (ProcessThread processThread in Process.GetCurrentProcess().Threads)
+        {
+            var threadId = processThread.Id;
+            if (threadId == currentThreadId) continue;
+            Console.WriteLine($" - {threadId}({processThread.ThreadState}) (Start from {processThread.StartTime})");
+        }
+#endif
         if (_hasRequestedRestart && _requestRestartService is { } s)
         { 
             Console.WriteLine($"[Lifecycle] Requested by '{s.Identifier}', restarting the program..."); 
             _RunCurrentExecutable(_requestRestartArguments);
         }
-        foreach (ProcessThread processThread in  Process.GetCurrentProcess().Threads)
-        {
-            Console.WriteLine($"[LifeCycle] Thread still in working: {processThread.Id}({processThread.ThreadState})(Start from {processThread.StartTime})");
-        }
+        // 退出程序
+        Console.WriteLine($"[Lifecycle] Exiting program with status: {statusCode}");
+        // 执行正常退出
         Environment.Exit(statusCode);
-        Console.WriteLine("[LifeCycle] Warning! Abnormal behaviour, try to kill process 1s later.");
         // 保险起见，只要运行环境正常根本不可能执行到这里，但是永远都不能假设用户的环境是正常的
+        Console.WriteLine("[Lifecycle] Warning! Abnormal behaviour, try to kill process 1s later.");
         Thread.Sleep(1000);
-        Console.WriteLine("[Lifecycle] Trying to force kill the process");
-        Process.Start("taskkill.exe", $"/PID {Process.GetCurrentProcess().Id} /F /T");
+        _KillCurrentProcess();
+    }
+
+    private static void _KillCurrentProcess()
+    {
+        var psi = new ProcessStartInfo
+        {
+            FileName = "taskkill.exe",
+            Arguments = $"/f /t /pid {Process.GetCurrentProcess().Id}",
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+        Process.Start(psi);
     }
 
     private static void _StartWorker(LifecycleState state, LifecycleState? wait = null, bool count = true)
@@ -590,13 +613,15 @@ public sealed class Lifecycle : ILifecycleService
     }
 
     /// <summary>
-    /// 发起关闭程序流程。
+    /// 发起关闭程序流程。<br/>
+    /// <see cref="LifecycleState.BeforeLoading"/> 状态请使用 <see cref="LifecycleContext.RequestExit"/>。
     /// </summary>
     /// <param name="statusCode">退出状态码 (返回值)</param>
     /// <param name="force">指定是否强制关闭，即不执行 WPF 标准关闭流程</param>
-    /// <exception cref="InvalidOperationException">尝试在 <see cref="LifecycleState.BeforeLoading"/> 时调用</exception>
+    /// <exception cref="InvalidOperationException">尝试在 <see cref="LifecycleState.BeforeLoading"/> 状态调用</exception>
     public static void Shutdown(int statusCode = 0, bool force = false)
     {
+        if (CurrentState == LifecycleState.BeforeLoading) throw new InvalidOperationException();
         if (HasShutdownStarted) return;
         Context.Info(force ? "开始强制关闭程序" : "正在关闭程序");
         IsForceShutdown = force;

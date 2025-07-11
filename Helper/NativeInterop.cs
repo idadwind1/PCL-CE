@@ -41,6 +41,23 @@ public static class NativeInterop
     /// </summary>
     public static string CurrentDirectory => Environment.CurrentDirectory;
 
+    [DllImport("kernel32.dll")]
+    private static extern uint GetCurrentThreadId();
+
+    [DllImport("kernel32.dll", SetLastError = false)]
+    private static extern void ExitProcess(uint statusCode);
+
+    /// <summary>
+    /// 获取当前线程的 Win32 Thread ID。若无特殊情况请用 <see cref="Thread.ManagedThreadId"/> 而不是这个方法。
+    /// </summary>
+    public static uint GetCurrentOsThreadId() => GetCurrentThreadId();
+
+    /// <summary>
+    /// 直接结束当前进程。若无特殊情况请使用 <see cref="PCL.Core.LifecycleManagement.Lifecycle.Shutdown"/>
+    /// </summary>
+    /// <param name="statusCode">退出状态码 (返回值)</param>
+    public static void Exit(int statusCode = -1) => ExitProcess((uint)statusCode);
+
     /// <summary>
     /// 从本地可执行文件启动新的进程。
     /// </summary>

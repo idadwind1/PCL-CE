@@ -32,12 +32,8 @@ public class LogService : ILifecycleLogService
 
     public void Stop()
     {
-        Context.Trace("正在取消注册日志事件");
         LogWrapper.OnLog -= OnWrapperLog;
-        Context.Trace("正在结束 Logger 实例");
-        Console.WriteLine("[LifeCycle] Stopping LogService.");
         Logger.Dispose();
-        Console.WriteLine("[LifeCycle] LogService has been stopped.");
     }
 
     private void OnWrapperLog(LogLevel level, string msg, string? module, Exception? ex)
