@@ -1,7 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using PCL.Core.Helper;
 using PCL.Core.Service;
 
 namespace PCL.Core.Model.Files;
@@ -57,15 +55,16 @@ public record FileItem(
     public string? TargetDirectory
     {
         get => _targetDirectory;
-        set => _targetDirectory = (value == null) ? null : Path.GetFullPath(Path.Combine(FileService.DefaultDirectory, value));
+        set => _targetDirectory = (value == null) ? null : Path.Combine(FileService.DefaultDirectory, value);
     }
     
     private string? _targetPath;
 
     /// <summary>
     /// The path to storage the file.<br/>
-    /// If <see cref="TargetDirectory"/> has been set, return the path relative to it,
-    /// otherwise return a combined path by <see cref="Type"/> and <see cref="Name"/>
+    /// If <see cref="TargetDirectory"/> has been set, return the path with <see cref="Name"/> relative to it;
+    /// if the value has been set manually, return the value directly;
+    /// otherwise return a combined path depends on <see cref="Type"/> and <see cref="Name"/>.
     /// </summary>
     public string TargetPath
     {
@@ -87,6 +86,7 @@ public record FileItem(
             _targetPath = value;
             return value;
         }
+        set => _targetPath = Path.Combine(FileService.DefaultDirectory, value);
     }
     
     public override int GetHashCode() => TargetPath.GetHashCode();

@@ -194,6 +194,7 @@
     <Compile Include="Utils\ExpandoObjectConverter.cs" />
     <Compile Include="Utils\FileTask\FileTask.cs" />
     <Compile Include="Utils\FileTask\MatchableFileTask.cs" />
+    <Compile Include="Utils\FileTask\ZipFileTask.cs" />
     <Compile Include="Utils\FileVersionControl\FileVersionObjects.cs" />
     <Compile Include="Utils\FileVersionControl\FileVersionObjectsComparer.cs" />
     <Compile Include="Utils\FileVersionControl\IVersionControl.cs" />
