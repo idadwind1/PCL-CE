@@ -162,8 +162,11 @@ public sealed class FileService : GeneralService
                 continue;
             }
 
-            foreach (var item in task.Items)
+            var items = task.Items.ToList();
+            var count = items.Count;
+            foreach (var item in items)
             {
+                var finishedCount = 0;
                 var process = task.GetProcess(item) ?? _MatchDefaultProcess(item);
                 var targetPath = item.TargetPath;
                 if (!item.ForceTransfer && File.Exists(targetPath)) PushProcess(targetPath);
@@ -171,39 +174,71 @@ public sealed class FileService : GeneralService
                 {
                     var transfer = task.GetTransfer(item) ?? _MatchDefaultTransfer(item);
                     if (transfer == null) PushProcess(null);
-                    else threadPool.QueueIo(() => transfer(item, PushProcess));
+                    else threadPool.QueueIo(() =>
+                    {
+                        try
+                        {
+                            transfer(item, PushProcess);
+                        }
+                        catch (Exception ex)
+                        {
+                            Context.Warn($"文件传输出错: {item}", ex);
+                            OnProcessFinished(item, ex);
+                        }
+                    });
                 }
                 continue;
 
                 void PushProcess(string? path)
                 {
-                    if (process == null) return;
                     threadPool.QueueCpu(() =>
                     {
-                        var result = process(item, path);
-                        var atomicResult = new AtomicVariable<object>(result, true, true);
-                        _ProcessResults.AddOrUpdate(item, atomicResult, (_, _) => atomicResult);
-                        var handled = task.OnProcessFinished(item, result);
-                        if (handled) _ProcessResults.TryRemove(item, out _);
+                        object? result;
+                        if (process == null) result = null;
+                        else
+                        {
+                            try { result = process(item, path); }
+                            catch (Exception ex)
+                            {
+                                Context.Warn($"文件处理出错: {item}", ex);
+                                result = ex;
+                            }
+                            var atomicResult = new AtomicVariable<object>(result, true, true);
+                            _ProcessResults.AddOrUpdate(item, atomicResult, (_, _) => atomicResult);
+                        }
+                        OnProcessFinished(item, result);
+                    });
+                }
+
+                void OnProcessFinished(FileItem finishedItem, object? result, bool removeHandled = true)
+                {
+                    threadPool.QueueCpu(() =>
+                    {
+                        try
+                        {
+                            var handled = task.OnProcessFinished(finishedItem, result);
+                            if (removeHandled && handled) _ProcessResults.TryRemove(finishedItem, out _);
+                        }
+                        catch (Exception ex)
+                        {
+                            Context.Error($"文件处理完成出错: {finishedItem}", ex);
+                        }
+                        if (++finishedCount != count) return;
+                        try
+                        {
+                            task.OnTaskFinished(null);
+                        }
+                        catch (Exception ex)
+                        {
+                            Context.Error($"任务完成出错", ex);
+                        }
                     });
                 }
             }
-
-            threadPool.QueueCpu(task.OnTaskFinished);
         }
         
         Context.Debug("尝试取消所有正在运行的工作");
         threadPool.CancelAll();
-    }
-
-    /// <summary>
-    /// Add a task to the loading queue.
-    /// </summary>
-    /// <param name="task">the task to add</param>
-    public static void QueueTask(IFileTask task)
-    {
-        _PendingTasks.Enqueue(task);
-        _ContinueEvent.Set();
     }
 
     /// <summary>
