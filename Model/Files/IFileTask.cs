@@ -2,8 +2,6 @@
 
 namespace PCL.Core.Model.Files;
 
-public delegate void FileProcessFinishedEvent(FileItem item, object? result);
-
 public interface IFileTask
 {
     public IEnumerable<FileItem> Items { get; }
