@@ -34,6 +34,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "The submodule is already at the latest commit"
           else
-            git commit -S -m "chore(submodule): update to ${{ github.sha }}"
+            git commit -S -m "submodule: update to PCL-Community/PCL.Core@${{ github.sha }}"
             git push origin dev
           fi
