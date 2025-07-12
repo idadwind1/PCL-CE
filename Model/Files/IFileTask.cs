@@ -6,7 +6,7 @@ public interface IFileTask
 {
     public IEnumerable<FileItem> Items { get; }
 
-    public FileTransfer? GetTransfer(FileItem item);
+    public IEnumerable<FileTransfer> GetTransfer(FileItem item);
     
     public FileProcess? GetProcess(FileItem item);
 

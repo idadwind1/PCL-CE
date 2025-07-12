@@ -80,7 +80,7 @@ public sealed class FileService : GeneralService
         // correct paths
         const string name = "PCLCE";
         Context.Debug($"正在替换存储路径，目录名 {name}");
-        DataPath = Path.Combine(DefaultDirectory, "PCL\\CE");
+        DataPath = Path.Combine(DefaultDirectory, "PCL");
         SharedDataPath = GetSpecialPath(Special.ApplicationData, name);
         LocalDataPath = GetSpecialPath(Special.LocalApplicationData, name);
         TempPath = GetSpecialPath(Special.LocalApplicationData, $"Temp\\{name}");
@@ -94,6 +94,8 @@ public sealed class FileService : GeneralService
         // start load thread
         Context.Debug("正在启动文件加载守护线程");
         _fileLoadingThread = NativeInterop.RunInNewThread(_FileLoadCallback, "Daemon/FileLoading");
+        // initialize cache
+        _InitializeCache();
     }
 
     public override void Stop()
@@ -122,20 +124,7 @@ public sealed class FileService : GeneralService
     public static void RegisterDefaultProcess(FileMatch match, FileProcess process)
         => _DefaultProcesses.Add(match.Pair(process));
 
-    private static FileTransfer? _MatchDefaultTransfer(FileItem item)
-    {
-        try { return _DefaultTransfers.First(pair => pair.Match(item)).Value; }
-        catch { return null; }
-    }
-    
-    private static FileProcess? _MatchDefaultProcess(FileItem item)
-    {
-        try { return _DefaultProcesses.First(pair => pair.Match(item)).Value; }
-        catch { return null; }
-    }
-
-    private static readonly ConcurrentQueue<IFileTask> _PendingTasks = [
-    ];
+    private static readonly ConcurrentQueue<IFileTask> _PendingTasks = [];
     
     private static readonly ConcurrentDictionary<FileItem, AtomicVariable<object>> _ProcessResults = [];
     private static readonly ConcurrentDictionary<FileItem, ManualResetEventSlim> _WaitForResultEvents = [];
@@ -167,24 +156,33 @@ public sealed class FileService : GeneralService
             foreach (var item in items)
             {
                 var finishedCount = 0;
-                var process = task.GetProcess(item) ?? _MatchDefaultProcess(item);
+                var process = task.GetProcess(item) ?? _DefaultProcesses.MatchFirst(item);
                 var targetPath = item.TargetPath;
                 if (!item.ForceTransfer && File.Exists(targetPath)) PushProcess(targetPath);
                 else
                 {
-                    var transfer = task.GetTransfer(item) ?? _MatchDefaultTransfer(item);
-                    if (transfer == null) PushProcess(null);
-                    else threadPool.QueueIo(() =>
+                    var transfers = task.GetTransfer(item).Concat(_DefaultTransfers.MatchAll(item));
+                    threadPool.QueueIo(() =>
                     {
-                        try
+                        foreach (var transfer in transfers)
                         {
-                            transfer(item, PushProcess);
+                            try
+                            {
+                                transfer(item, PushProcess);
+                                break;
+                            }
+                            catch (TransferFailedException ex)
+                            {
+                                Context.Info("文件传输失败，将尝试其它传输实现", ex);
+                            }
+                            catch (Exception ex)
+                            {
+                                Context.Warn($"文件传输出错: {item}", ex);
+                                OnProcessFinished(item, ex);
+                            }
                         }
-                        catch (Exception ex)
-                        {
-                            Context.Warn($"文件传输出错: {item}", ex);
-                            OnProcessFinished(item, ex);
-                        }
+                        Context.Warn($"无支持的传输实现或全部失败: {item}");
+                        OnProcessFinished(item, null);
                     });
                 }
                 continue;
@@ -296,6 +294,17 @@ public sealed class FileService : GeneralService
         if (!waitResult) return null;
         TryGetResult(item, out result);
         return result;
+    }
+
+    #endregion
+
+    #region Cache
+
+    public static string CachePath { get; private set; } = @"PCL\CE\_Cache";
+
+    private static void _InitializeCache()
+    {
+        CachePath = Path.Combine(TempPath, "Cache");
     }
 
     #endregion

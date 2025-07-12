@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using PCL.Core.Model.Files;
 
 namespace PCL.Core.Utils.FileTask;
@@ -29,6 +28,6 @@ public class MatchableFileTask : FileTask
         if (processes != null) MatchProcesses.AddRange(processes);
     }
 
-    public override FileProcess? GetProcess(FileItem item) => MatchProcesses.FirstOrDefault(pair => pair.Match(item))?.Value;
-    public override FileTransfer? GetTransfer(FileItem item) => MatchTransfers.FirstOrDefault(pair => pair.Match(item))?.Value;
+    public override FileProcess? GetProcess(FileItem item) => MatchProcesses.MatchFirst(item);
+    public override IEnumerable<FileTransfer> GetTransfer(FileItem item) => MatchTransfers.MatchAll(item);
 }

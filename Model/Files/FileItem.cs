@@ -97,4 +97,13 @@ public record FileItem(
         if (Sources != null) str += $" [{string.Join(", ", Sources)}]";
         return str;
     }
+
+    public static FileItem FromLocalFile(string name, FileType fileType = FileType.Plain, string? path = null)
+        => new FileItem(name, fileType, (path == null) ? null : [path]);
+
+    public static FileItem FromLocalPath(string path, FileType fileType = FileType.Plain)
+    {
+        var name = Path.GetFileName(path);
+        return FromLocalFile(name, fileType, path);
+    }
 }
