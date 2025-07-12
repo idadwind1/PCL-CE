@@ -8,6 +8,7 @@ using PCL.Core.Helper;
 using PCL.Core.LifecycleManagement;
 using PCL.Core.Model.Files;
 using PCL.Core.Utils;
+using PCL.Core.Utils.FileTask;
 using PCL.Core.Utils.Threading;
 using Special = System.Environment.SpecialFolder;
 
@@ -94,8 +95,8 @@ public sealed class FileService : GeneralService
         // start load thread
         Context.Debug("正在启动文件加载守护线程");
         _fileLoadingThread = NativeInterop.RunInNewThread(_FileLoadCallback, "Daemon/FileLoading");
-        // initialize cache
-        _InitializeCache();
+        // invoke initialize
+        _Initialize();
     }
 
     public override void Stop()
@@ -109,7 +110,9 @@ public sealed class FileService : GeneralService
 
     #region Process
 
-    private static readonly List<FileMatchPair<FileTransfer>> _DefaultTransfers = [];
+    private static readonly List<FileMatchPair<FileTransfer>> _DefaultTransfers = [
+    ];
+    
     private static readonly List<FileMatchPair<FileProcess>> _DefaultProcesses = [];
 
     /// <summary>
@@ -155,6 +158,7 @@ public sealed class FileService : GeneralService
             var count = items.Count;
             foreach (var item in items)
             {
+                Context.Trace($"正在加载文件: {item}");
                 var finishedCount = 0;
                 var process = task.GetProcess(item) ?? _DefaultProcesses.MatchFirst(item);
                 var targetPath = item.TargetPath;
@@ -298,15 +302,25 @@ public sealed class FileService : GeneralService
 
     #endregion
 
-    #region Cache
-
-    public static string CachePath { get; private set; } = @"PCL\CE\_Cache";
-
-    private static void _InitializeCache()
+    private static void _Initialize()
     {
-        CachePath = Path.Combine(TempPath, "Cache");
+        // processes
+        RegisterDefaultProcess(FileMatches.WithNameExtension("txt"), FileProcesses.ReadText);
+        
+        // transfers
+        // TODO
+        
+        // preload tasks
+        QueueTask(new MatchableFileTask([
+            PredefinedFileItems.CacheInformation
+        ], [
+            FileMatches.Any.Pair(FileTransfers.Empty)
+        ]));
     }
 
-    #endregion
+}
 
+internal static class PredefinedFileItems
+{
+    internal static readonly FileItem CacheInformation = FileItem.FromLocalFile("cache.txt", FileType.Temporary);
 }

@@ -21,3 +21,8 @@ public class TransferFailedException(string reason, FileItem item, Exception? in
     public FileItem FileItem { get; } = item;
     public string Reason { get; } = reason;
 }
+
+public static class FileTransfers
+{
+    public static readonly FileTransfer Empty = ((item, callback) => callback(item.TargetPath));
+}
