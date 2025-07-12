@@ -144,6 +144,7 @@
     <Compile Include="Helper\LogWrapper.cs" />
     <Compile Include="Helper\MsgBoxWrapper.cs" />
     <Compile Include="Helper\NativeInterop.cs" />
+    <Compile Include="Helper\PortHelper.cs" />
     <Compile Include="Helper\SemVer.cs" />
     <Compile Include="Helper\ToastNotification.cs" />
     <Compile Include="Helper\UpdateHelper.cs" />
