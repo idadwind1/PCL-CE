@@ -91,8 +91,40 @@ public static class StringExtension
 
     public static string FromB36ToB10(this string input)
     {
-        var ns = input.Select(c => c >= '0' && c <= '9' ? c - '0' : c - 'A' + 10).ToArray();
+        var ns = input.Select(c => (c is >= '0' and <= '9') ? c - '0' : c - 'A' + 10).ToArray();
         var nb = ns.Aggregate(new BigInteger(0), (n, i) => n * 36 + i);
         return nb.ToString();
+    }
+    
+    private static readonly char[] _B32Map = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ".ToCharArray();
+
+    public static string FromB10ToB32(this string input)
+    {
+        var n = BigInteger.Parse(input);
+        var s = new List<char>();
+        while (n > 0)
+        {
+            var i = (n % 32).ToByteArray()[0];
+            s.Add(_B32Map[i]);
+            n /= 32;
+        }
+        s.Reverse();
+        return string.Join("", s);
+    }
+    
+    public static string FromB32ToB10(this string input)
+    {
+        var ns = input.Select(Parse).ToArray();
+        var nb = ns.Aggregate(new BigInteger(0), (n, i) => n * 32 + i);
+        return nb.ToString();
+
+        int Parse(char c) => c switch
+        {
+            >= '2' and <= '9' => c - '2',
+            >= 'A' and <= 'H' => c - 'A' + 8,
+            >= 'J' and <= 'N' => c - 'J' + 16,
+            >= 'P' and <= 'Z' => c - 'P' + 21,
+            _ => throw new ArgumentOutOfRangeException(nameof(input), $"Character '{c}' out of Base32 range")
+        };
     }
 }
