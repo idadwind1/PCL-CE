@@ -2,13 +2,17 @@ using System;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using PCL.Core.Service;
-using PCL.Core.Utils;
+using PCL.Core.Model.Net;
 
 namespace PCL.Core.Helper;
 
 public static class HttpRequest
 {
+    private static readonly HttpClient _Client = new(new HttpClientHandler()
+    {
+        UseProxy = true,
+        Proxy = HttpProxyManager.Instance
+    }); 
     public static async Task<HttpResponseMessage> TryGetServerResponse(HttpRequestOptions options)
     {
         Exception? lastException = null;
@@ -18,7 +22,7 @@ public static class HttpRequest
             {
                 using var request = options.GetRequestMessage();
                 using var cts = new CancellationTokenSource(options.Timeout);
-                return await HttpClientService.GetClient()
+                return await _Client
                     .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cts.Token);
             }
             catch (HttpRequestException ex)
@@ -41,14 +45,14 @@ public static class HttpRequest
 
     public static async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request)
     {
-        return await HttpClientService.GetClient().SendAsync(request);
+        return await _Client.SendAsync(request);
     }
     public static async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,HttpCompletionOption options)
     {
-        return await HttpClientService.GetClient().SendAsync(request, options);
+        return await _Client.SendAsync(request, options);
     }
     public static async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,HttpCompletionOption options,CancellationToken token)
     {
-        return await HttpClientService.GetClient().SendAsync(request, options,token);
+        return await _Client.SendAsync(request, options,token);
     }
 }
