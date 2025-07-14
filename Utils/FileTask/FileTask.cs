@@ -46,7 +46,7 @@ public class FileTask(IEnumerable<FileItem> items, bool ignoreResult = false) : 
 
     #region Implementation
 
-    public virtual FileTransfer? GetTransfer(FileItem item) => null;
+    public virtual IEnumerable<FileTransfer> GetTransfer(FileItem item) => [];
     
     public virtual FileProcess? GetProcess(FileItem item) => null;
     
@@ -61,6 +61,19 @@ public class FileTask(IEnumerable<FileItem> items, bool ignoreResult = false) : 
     {
         TaskFinished?.Invoke(result);
     }
+
+    #endregion
+
+    #region Static Methods
+
+    private class SingleFileTask(FileItem item, FileTransfer? transfer, FileProcess? process) : FileTask(item)
+    {
+        public override IEnumerable<FileTransfer> GetTransfer(FileItem item) => (transfer == null) ? [] : [transfer];
+        public override FileProcess? GetProcess(FileItem item) => process;
+    }
+
+    public static FileTask FromSingleFile(FileItem item, FileTransfer? transfer = null, FileProcess? process = null)
+        => new SingleFileTask(item, transfer, process);
 
     #endregion
 }

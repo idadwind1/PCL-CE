@@ -88,6 +88,8 @@ public record FileItem(
         }
         set => _targetPath = Path.Combine(FileService.DefaultDirectory, value);
     }
+
+    public FileInfo GetFileInfo() => new(TargetPath);
     
     public override int GetHashCode() => TargetPath.GetHashCode();
 
@@ -96,5 +98,18 @@ public record FileItem(
         var str = TargetPath;
         if (Sources != null) str += $" [{string.Join(", ", Sources)}]";
         return str;
+    }
+
+    public static FileItem FromLocalFile(string name, FileType fileType = FileType.Plain, string? path = null)
+    {
+        var item = new FileItem(name, fileType);
+        if (path != null) item.TargetPath = path;
+        return item;
+    }
+
+    public static FileItem FromLocalPath(string path, FileType fileType = FileType.Plain)
+    {
+        var name = Path.GetFileName(path);
+        return FromLocalFile(name, fileType, path);
     }
 }

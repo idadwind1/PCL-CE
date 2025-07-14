@@ -8,6 +8,7 @@ using PCL.Core.Helper;
 using PCL.Core.LifecycleManagement;
 using PCL.Core.Model.Files;
 using PCL.Core.Utils;
+using PCL.Core.Utils.FileTask;
 using PCL.Core.Utils.Threading;
 using Special = System.Environment.SpecialFolder;
 
@@ -80,7 +81,7 @@ public sealed class FileService : GeneralService
         // correct paths
         const string name = "PCLCE";
         Context.Debug($"正在替换存储路径，目录名 {name}");
-        DataPath = Path.Combine(DefaultDirectory, "PCL\\CE");
+        DataPath = Path.Combine(DefaultDirectory, "PCL");
         SharedDataPath = GetSpecialPath(Special.ApplicationData, name);
         LocalDataPath = GetSpecialPath(Special.LocalApplicationData, name);
         TempPath = GetSpecialPath(Special.LocalApplicationData, $"Temp\\{name}");
@@ -94,6 +95,8 @@ public sealed class FileService : GeneralService
         // start load thread
         Context.Debug("正在启动文件加载守护线程");
         _fileLoadingThread = NativeInterop.RunInNewThread(_FileLoadCallback, "Daemon/FileLoading");
+        // invoke initialize
+        _Initialize();
     }
 
     public override void Stop()
@@ -107,7 +110,9 @@ public sealed class FileService : GeneralService
 
     #region Process
 
-    private static readonly List<FileMatchPair<FileTransfer>> _DefaultTransfers = [];
+    private static readonly List<FileMatchPair<FileTransfer>> _DefaultTransfers = [
+    ];
+    
     private static readonly List<FileMatchPair<FileProcess>> _DefaultProcesses = [];
 
     /// <summary>
@@ -122,20 +127,7 @@ public sealed class FileService : GeneralService
     public static void RegisterDefaultProcess(FileMatch match, FileProcess process)
         => _DefaultProcesses.Add(match.Pair(process));
 
-    private static FileTransfer? _MatchDefaultTransfer(FileItem item)
-    {
-        try { return _DefaultTransfers.First(pair => pair.Match(item)).Value; }
-        catch { return null; }
-    }
-    
-    private static FileProcess? _MatchDefaultProcess(FileItem item)
-    {
-        try { return _DefaultProcesses.First(pair => pair.Match(item)).Value; }
-        catch { return null; }
-    }
-
-    private static readonly ConcurrentQueue<IFileTask> _PendingTasks = [
-    ];
+    private static readonly ConcurrentQueue<IFileTask> _PendingTasks = [];
     
     private static readonly ConcurrentDictionary<FileItem, AtomicVariable<object>> _ProcessResults = [];
     private static readonly ConcurrentDictionary<FileItem, ManualResetEventSlim> _WaitForResultEvents = [];
@@ -162,48 +154,93 @@ public sealed class FileService : GeneralService
                 continue;
             }
 
-            foreach (var item in task.Items)
+            var items = task.Items.ToList();
+            var count = items.Count;
+            foreach (var item in items)
             {
-                var process = task.GetProcess(item) ?? _MatchDefaultProcess(item);
+                Context.Trace($"正在加载文件: {item}");
+                var finishedCount = 0;
+                var process = task.GetProcess(item) ?? _DefaultProcesses.MatchFirst(item);
                 var targetPath = item.TargetPath;
                 if (!item.ForceTransfer && File.Exists(targetPath)) PushProcess(targetPath);
                 else
                 {
-                    var transfer = task.GetTransfer(item) ?? _MatchDefaultTransfer(item);
-                    if (transfer == null) PushProcess(null);
-                    else threadPool.QueueIo(() => transfer(item, PushProcess));
+                    var transfers = task.GetTransfer(item).Concat(_DefaultTransfers.MatchAll(item));
+                    threadPool.QueueIo(() =>
+                    {
+                        foreach (var transfer in transfers)
+                        {
+                            try
+                            {
+                                transfer(item, PushProcess);
+                                break;
+                            }
+                            catch (TransferFailedException ex)
+                            {
+                                Context.Info("文件传输失败，将尝试其它传输实现", ex);
+                            }
+                            catch (Exception ex)
+                            {
+                                Context.Warn($"文件传输出错: {item}", ex);
+                                OnProcessFinished(item, ex);
+                            }
+                        }
+                        Context.Warn($"无支持的传输实现或全部失败: {item}");
+                        OnProcessFinished(item, null);
+                    });
                 }
                 continue;
 
                 void PushProcess(string? path)
                 {
-                    if (process == null) return;
                     threadPool.QueueCpu(() =>
                     {
-                        var result = process(item, path);
-                        var atomicResult = new AtomicVariable<object>(result, true, true);
-                        _ProcessResults.AddOrUpdate(item, atomicResult, (_, _) => atomicResult);
-                        var handled = task.OnProcessFinished(item, result);
-                        if (handled) _ProcessResults.TryRemove(item, out _);
+                        object? result;
+                        if (process == null) result = null;
+                        else
+                        {
+                            try { result = process(item, path); }
+                            catch (Exception ex)
+                            {
+                                Context.Warn($"文件处理出错: {item}", ex);
+                                result = ex;
+                            }
+                            var atomicResult = new AtomicVariable<object>(result, true, true);
+                            _ProcessResults.AddOrUpdate(item, atomicResult, (_, _) => atomicResult);
+                        }
+                        OnProcessFinished(item, result);
+                    });
+                }
+
+                void OnProcessFinished(FileItem finishedItem, object? result, bool removeHandled = true)
+                {
+                    threadPool.QueueCpu(() =>
+                    {
+                        try
+                        {
+                            var handled = task.OnProcessFinished(finishedItem, result);
+                            if (removeHandled && handled) _ProcessResults.TryRemove(finishedItem, out _);
+                        }
+                        catch (Exception ex)
+                        {
+                            Context.Error($"文件处理完成出错: {finishedItem}", ex);
+                        }
+                        if (++finishedCount != count) return;
+                        try
+                        {
+                            task.OnTaskFinished(null);
+                        }
+                        catch (Exception ex)
+                        {
+                            Context.Error($"任务完成出错", ex);
+                        }
                     });
                 }
             }
-
-            threadPool.QueueCpu(task.OnTaskFinished);
         }
         
         Context.Debug("尝试取消所有正在运行的工作");
         threadPool.CancelAll();
-    }
-
-    /// <summary>
-    /// Add a task to the loading queue.
-    /// </summary>
-    /// <param name="task">the task to add</param>
-    public static void QueueTask(IFileTask task)
-    {
-        _PendingTasks.Enqueue(task);
-        _ContinueEvent.Set();
     }
 
     /// <summary>
@@ -265,4 +302,25 @@ public sealed class FileService : GeneralService
 
     #endregion
 
+    private static void _Initialize()
+    {
+        // processes
+        RegisterDefaultProcess(FileMatches.WithNameExtension("txt"), FileProcesses.ReadText);
+        
+        // transfers
+        // TODO
+        
+        // preload tasks
+        QueueTask(new MatchableFileTask([
+            PredefinedFileItems.CacheInformation
+        ], [
+            FileMatches.Any.Pair(FileTransfers.Empty)
+        ]));
+    }
+
+}
+
+internal static class PredefinedFileItems
+{
+    internal static readonly FileItem CacheInformation = FileItem.FromLocalFile("cache.txt", FileType.Temporary);
 }

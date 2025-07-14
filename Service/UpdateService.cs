@@ -79,7 +79,7 @@ public sealed class UpdateService : GeneralService
                 restartArgs = $"restart update_{restartArgs}";
                 Context.Debug($"重启中，使用参数: {restartArgs}");
                 var psi = new ProcessStartInfo(target, restartArgs) { WorkingDirectory = targetDir };
-                Process.Start(target, restartArgs);
+                Process.Start(psi);
             }
         }
         catch (Exception ex)
