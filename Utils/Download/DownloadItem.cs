@@ -4,21 +4,79 @@ using System.IO;
 
 namespace PCL.Core.Utils.Download;
 
-public class DownloadItem(Uri uri, string targetPath, int chunkSize = 4096)
+/// <summary>
+/// 并行任务中断处理。
+/// </summary>
+/// <param name="status">任务状态</param>
+/// <param name="lastException">任务中断前抛出的最后一个异常</param>
+public delegate void ParallelInterruptHandler(ParallelTaskStatus status, Exception? lastException);
+
+/// <summary>
+/// 下载项状态。
+/// </summary>
+public enum DownloadItemStatus
+{
+    Success,
+    Waiting,
+    Running,
+    Cancelled,
+    Failed,
+}
+
+/// <summary>
+/// 下载项。
+/// </summary>
+public class DownloadItem(Uri uri, string targetPath, int chunkSize, int retry)
 {
     public string TargetPath { get; } = Path.GetFullPath(targetPath);
     
-    public Uri SourceUrl { get; set; } = uri;
+    public Uri SourceUri { get; } = uri;
     
-    public long ContentLength { get; set; } = 0;
+    public Uri RealUri { get; private set; } = uri;
+    
+    public long ContentLength { get; private set; } = 0;
     
     public int ChunkSize { get; } = chunkSize;
+    
+    public int Retry { get; } = retry;
 
     public LinkedList<ParallelTask> Parallels { get; } = [];
-
-    public event Action? Finished;
+    
+    public DownloadItemStatus Status { get; private set; } = DownloadItemStatus.Waiting;
     
     private int _finishedCount = 0;
-    
-    
+
+    public void Insert(
+        long startPosition,
+        long endPosition,
+        Action finishedCallback,
+        ParallelInterruptHandler errorCallback,
+        LinkedListNode<ParallelTask>? afterNode = null)
+    {
+        var task = new ParallelTask(RealUri, TargetPath, ChunkSize)
+        {
+            EndPosition = endPosition,
+            RetryCount = Retry,
+        };
+        task.When(ParallelTaskStatus.Running, () =>
+        {
+            RealUri = task.RealUri;
+            if (startPosition == 0 && endPosition == 0) ContentLength = task.TotalLength;
+            Status = DownloadItemStatus.Running;
+        });
+        task.EndCallback += (() =>
+        {
+            if (task.Status == ParallelTaskStatus.Success)
+            {
+                _finishedCount++;
+                if (_finishedCount != Parallels.Count) return;
+                Status = DownloadItemStatus.Success;
+                finishedCallback();
+            }
+            else errorCallback(task.Status, task.LastException);
+        });
+        task.Start(startPosition != 0, startPosition);
+        if (afterNode != null) Parallels.AddAfter(afterNode, task);
+        else Parallels.AddLast(task);
+    }
 }

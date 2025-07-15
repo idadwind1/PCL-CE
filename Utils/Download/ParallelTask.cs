@@ -134,10 +134,44 @@ public class ParallelTask
     /// </summary>
     public long RemainingLength => EndPosition - NextPosition + 1;
     
+    private ParallelTaskStatus _status = ParallelTaskStatus.WaitingStart;
+    
+    /// <summary>
+    /// 任务当前状态改变时触发的事件。
+    /// </summary>
+    public event Action<ParallelTaskStatus>? StatusChanged;
+
     /// <summary>
     /// 任务当前状态，将会随时更新。
     /// </summary>
-    public ParallelTaskStatus Status { get; private set; } = ParallelTaskStatus.WaitingStart;
+    public ParallelTaskStatus Status
+    {
+        get => _status;
+        private set
+        {
+            _status = value;
+            StatusChanged?.Invoke(_status);
+        }
+    }
+
+    /// <summary>
+    /// 快速订阅改变至某个状态的事件。
+    /// </summary>
+    /// <param name="when">目标状态</param>
+    /// <param name="action">事件回调委托</param>
+    public void When(ParallelTaskStatus when, Action action)
+    {
+        if (Status >= when) return;
+        StatusChanged += TempHandler;
+        return;
+
+        void TempHandler(ParallelTaskStatus status)
+        {
+            if (status != when) return;
+            action();
+            StatusChanged -= TempHandler;
+        }
+    }
     
     /// <summary>
     /// 导致上次传输失败的异常，若传输成功则为 <c>null</c>。
@@ -152,7 +186,7 @@ public class ParallelTask
     /// <summary>
     /// 此任务的 <see cref="Task"/> 实例。
     /// </summary>
-    public Task? DownloadTask { get; set; }
+    public Task? DownloadTask { get; private set; }
 
     public ParallelTask(Uri sourceUri, string targetPath, int chunkSize = 16384)
     {
@@ -241,10 +275,11 @@ public class ParallelTask
                         var count = RemainingLength > ChunkSize ? ChunkSize : (int)RemainingLength;
                         var buffer = new byte[count];
                         var read = await httpContentStream.ReadAsync(buffer, 0, count, cancellationToken);
-                        if (read < ChunkSize) throw new ParallelContentTooShortException(TotalLength, TransferredLength + read);
+                        if (read < count) throw new ParallelContentTooShortException(TotalLength, TransferredLength + read);
                         await Stream.WriteAsync(buffer, 0, read, cancellationToken);
                         NextPosition += read;
                     }
+                    await Stream.FlushAsync(cancellationToken);
                     Status = ParallelTaskStatus.Success;
                     break;
                 }
