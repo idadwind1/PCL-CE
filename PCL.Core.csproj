@@ -186,7 +186,6 @@
     <Compile Include="Service\FileCacheService.cs" />
     <Compile Include="Service\FileService.cs" />
     <Compile Include="Service\GeneralService.cs" />
-    <Compile Include="Service\HttpClientService.cs" />
     <Compile Include="Service\LogService.cs" />
     <Compile Include="Service\PromoteService.cs" />
     <Compile Include="Service\RpcService.cs" />
@@ -195,6 +194,9 @@
     <Compile Include="Service\UpdateService.cs" />
     <Compile Include="Utils\AnyType.cs" />
     <Compile Include="Utils\AtomicVariable.cs" />
+    <Compile Include="Utils\Download\Downloader.cs" />
+    <Compile Include="Utils\Download\DownloadItem.cs" />
+    <Compile Include="Utils\Download\ParallelTask.cs" />
     <Compile Include="Utils\ExpandoObjectConverter.cs" />
     <Compile Include="Utils\FileTask\FileTask.cs" />
     <Compile Include="Utils\FileTask\MatchableFileTask.cs" />
