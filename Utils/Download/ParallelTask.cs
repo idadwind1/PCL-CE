@@ -203,9 +203,6 @@ public class ParallelTask
         cancellationToken.Register(() => Status = ParallelTaskStatus.Cancelled);
         var task = Task.Run(async () =>
         {
-            // 重命名任务工作线程
-            var thread = Thread.CurrentThread;
-            thread.Name = $"DownloadTask@{thread.ManagedThreadId}";
             // 根据重试计数开始传输文件
             var failedStatus = (int)ParallelTaskStatus.Failed;
             while (true)

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace PCL.Core.Utils.Download;
 
@@ -43,6 +44,14 @@ public class DownloadItem(Uri uri, string targetPath, int chunkSize, int retry)
     public LinkedList<ParallelTask> Parallels { get; } = [];
     
     public DownloadItemStatus Status { get; private set; } = DownloadItemStatus.Waiting;
+
+    public long CalculateTransferredLength()
+    {
+        lock (Parallels)
+        {
+            return Parallels.Aggregate(0L, (len, task) => len + task.TransferredLength);
+        }
+    }
     
     private int _finishedCount = 0;
 
@@ -53,30 +62,36 @@ public class DownloadItem(Uri uri, string targetPath, int chunkSize, int retry)
         ParallelInterruptHandler errorCallback,
         LinkedListNode<ParallelTask>? afterNode = null)
     {
-        var task = new ParallelTask(RealUri, TargetPath, ChunkSize)
+        lock (Parallels)
         {
-            EndPosition = endPosition,
-            RetryCount = Retry,
-        };
-        task.When(ParallelTaskStatus.Running, () =>
-        {
-            RealUri = task.RealUri;
-            if (startPosition == 0 && endPosition == 0) ContentLength = task.TotalLength;
-            Status = DownloadItemStatus.Running;
-        });
-        task.EndCallback += (() =>
-        {
-            if (task.Status == ParallelTaskStatus.Success)
+            var task = new ParallelTask(RealUri, TargetPath, ChunkSize)
             {
-                _finishedCount++;
-                if (_finishedCount != Parallels.Count) return;
-                Status = DownloadItemStatus.Success;
-                finishedCallback();
+                EndPosition = endPosition,
+                RetryCount = Retry,
+            };
+            if (startPosition == 0 && endPosition != 0)
+            {
+                task.When(ParallelTaskStatus.Running, () =>
+                {
+                    RealUri = task.RealUri;
+                    ContentLength = task.TotalLength;
+                    Status = DownloadItemStatus.Running;
+                });
             }
-            else errorCallback(task.Status, task.LastException);
-        });
-        task.Start(startPosition != 0, startPosition);
-        if (afterNode != null) Parallels.AddAfter(afterNode, task);
-        else Parallels.AddLast(task);
+            task.EndCallback += (() =>
+            {
+                if (task.Status == ParallelTaskStatus.Success)
+                {
+                    _finishedCount++;
+                    if (_finishedCount != Parallels.Count) return;
+                    Status = DownloadItemStatus.Success;
+                    finishedCallback();
+                }
+                else errorCallback(task.Status, task.LastException);
+            });
+            task.Start(startPosition != 0, startPosition);
+            if (afterNode != null) Parallels.AddAfter(afterNode, task);
+            else Parallels.AddLast(task);
+        }
     }
 }

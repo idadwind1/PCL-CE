@@ -15,4 +15,8 @@ public class Downloader(int maxParallels = 16)
     public int MaxParallels { get; set; } = maxParallels;
     
     private ConcurrentQueue<DownloadItem> _downloadQueue = [];
+    
+    public void Start()
+    {
+    }
 }
