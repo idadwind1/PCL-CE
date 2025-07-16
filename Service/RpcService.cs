@@ -181,8 +181,10 @@ public sealed class RpcService : ILifecycleService
     {
         _pipe?.Dispose();
     }
+
+    public const string PipePrefix = "PCLCE_RPC";
     
-    private static readonly string _EchoPipeName = $"PCLCE_RPC@{NativeInterop.CurrentProcess.Id}";
+    private static readonly string _EchoPipeName = $"{PipePrefix}@{NativeInterop.CurrentProcess.Id}";
     private static readonly string[] _RequestTypeArray = ["GET", "SET", "REQ"];
     private static readonly HashSet<string> _RequestType = [.._RequestTypeArray];
 
@@ -233,7 +235,28 @@ public sealed class RpcService : ILifecycleService
     #region Function
 
     private static readonly Dictionary<string, RpcFunction> _FunctionMap = new() {
-        ["ping"] = (_, _, _) => RpcResponse.EmptySuccess
+        ["ping"] = ((_, _, _) => RpcResponse.EmptySuccess),
+        ["activate"] = ((_, _, _) =>
+        {
+            if (Lifecycle.CurrentState >= LifecycleState.WindowCreated) ActivateMainWindow();
+            else Lifecycle.When(LifecycleState.WindowCreated, ActivateMainWindow);
+            return RpcResponse.EmptySuccess;
+
+            void ActivateMainWindow()
+            {
+                var app = Lifecycle.CurrentApplication;
+                app.Dispatcher.BeginInvoke(() =>
+                {
+                    var window = app.MainWindow!;
+                    if (!window.Topmost)
+                    {
+                        window.Topmost = true;
+                        window.Topmost = false;
+                    }
+                    window.Activate();
+                });
+            }
+        })
     };
 
     /// <summary>

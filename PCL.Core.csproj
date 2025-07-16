@@ -191,6 +191,7 @@
     <Compile Include="Service\PromoteService.cs" />
     <Compile Include="Service\RpcService.cs" />
     <Compile Include="Service\MainWindowService.cs" />
+    <Compile Include="Service\SingleInstanceService.cs" />
     <Compile Include="Service\TestService.cs" Condition="Exists('Service\TestService.cs')" />
     <Compile Include="Service\UpdateService.cs" />
     <Compile Include="Utils\AnyType.cs" />

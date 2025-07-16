@@ -28,10 +28,10 @@ public sealed class FileService : GeneralService
     /// </summary>
     public static string DefaultDirectory => NativeInterop.ExecutableDirectory;
 
-    private static string _dataPath = @"PCL\CE";
-    private static string _sharedDataPath = @"PCL\CE\_Data";
-    private static string _localDataPath = @"PCL\CE\_Local";
-    private static string _tempPath = @"PCL\CE\_Temp";
+    private static string _dataPath;
+    private static string _sharedDataPath;
+    private static string _localDataPath;
+    private static string _tempPath;
     
     /// <summary>
     /// Per-instance data directory.
@@ -65,6 +65,32 @@ public sealed class FileService : GeneralService
         return Path.Combine(folderPath, relative);
     }
 
+    static FileService()
+    {
+#if DEBUG
+        const string name = "PCLCE_Debug";
+#else
+        const string name = "PCLCE";
+#endif
+        // correct paths
+        _dataPath = Path.Combine(DefaultDirectory, "PCL");
+        _sharedDataPath = GetSpecialPath(Special.ApplicationData, name);
+        _localDataPath = GetSpecialPath(Special.LocalApplicationData, name);
+        _tempPath = Path.Combine(Path.GetTempPath(), name);
+#if DEBUG
+        // read environment variables
+        NativeInterop.ReadEnvironmentVariable("PCL_PATH", ref _dataPath);
+        NativeInterop.ReadEnvironmentVariable("PCL_PATH_SHARED", ref _sharedDataPath);
+        NativeInterop.ReadEnvironmentVariable("PCL_PATH_LOCAL", ref _localDataPath);
+        NativeInterop.ReadEnvironmentVariable("PCL_PATH_TEMP", ref _tempPath);
+#endif
+        // create directories
+        Directory.CreateDirectory(_dataPath);
+        Directory.CreateDirectory(_sharedDataPath);
+        Directory.CreateDirectory(_localDataPath);
+        Directory.CreateDirectory(_tempPath);
+    }
+
     #endregion
 
     #region Lifecycle
@@ -78,20 +104,6 @@ public sealed class FileService : GeneralService
     
     public override void Start()
     {
-        // correct paths
-        const string name = "PCLCE";
-        Context.Debug($"正在替换存储路径，目录名 {name}");
-        DataPath = Path.Combine(DefaultDirectory, "PCL");
-        SharedDataPath = GetSpecialPath(Special.ApplicationData, name);
-        LocalDataPath = GetSpecialPath(Special.LocalApplicationData, name);
-        TempPath = GetSpecialPath(Special.LocalApplicationData, $"Temp\\{name}");
-#if DEBUG
-        // read environment variables
-        NativeInterop.ReadEnvironmentVariable("PCL_PATH", ref _dataPath);
-        NativeInterop.ReadEnvironmentVariable("PCL_PATH_SHARED", ref _sharedDataPath);
-        NativeInterop.ReadEnvironmentVariable("PCL_PATH_LOCAL", ref _localDataPath);
-        NativeInterop.ReadEnvironmentVariable("PCL_PATH_TEMP", ref _tempPath);
-#endif
         // start load thread
         Context.Debug("正在启动文件加载守护线程");
         _fileLoadingThread = NativeInterop.RunInNewThread(_FileLoadCallback, "Daemon/FileLoading");
