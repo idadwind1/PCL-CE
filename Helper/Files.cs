@@ -41,6 +41,7 @@ public static class Files
         link.TargetPath = target;
         if (!string.IsNullOrEmpty(arguments)) link.Arguments = arguments;
         if (!string.IsNullOrEmpty(workingDirectory)) link.WorkingDirectory = workingDirectory;
+        else link.WorkingDirectory = Path.GetDirectoryName(target) ?? Path.GetPathRoot(target);
         if (!string.IsNullOrEmpty(description)) link.Description = description;
         if (!string.IsNullOrEmpty(icon)) link.IconLocation = icon;
 
