@@ -127,6 +127,7 @@
     <Compile Include="Helper\BackgroundPresenter.cs" />
     <Compile Include="Helper\ByteHelper.cs" />
     <Compile Include="Helper\EncryptHelper.cs" />
+    <Compile Include="Helper\Files.cs" />
     <Compile Include="Helper\Hash\IHashProvider.cs" />
     <Compile Include="Helper\Hash\MD5Provider.cs" />
     <Compile Include="Helper\Hash\SHA1Provider.cs" />
@@ -220,6 +221,17 @@
     <Compile Include="Utils\Threading\LimitedConcurrencyLevelTaskScheduler.cs" />
     <Compile Include="Utils\VersionRange.cs" />
     <Compile Include="Utils\WebServer.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <COMReference Include="IWshRuntimeLibrary">
+      <Guid>{F935DC20-1CF0-11D0-ADB9-00C04FD58A0B}</Guid>
+      <VersionMajor>1</VersionMajor>
+      <VersionMinor>0</VersionMinor>
+      <Lcid>0</Lcid>
+      <WrapperTool>tlbimp</WrapperTool>
+      <Isolated>False</Isolated>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </COMReference>
   </ItemGroup>
   <!-- 生成 LifecycleServiceTypes 类的自定义任务 -->
   <Target Name="GenerateLifecycleServiceTypes" BeforeTargets="CoreCompile">
