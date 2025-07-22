@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -9,7 +10,7 @@ using System.Text;
 
 public class ArgumentsBuilder
 {
-    private readonly Dictionary<string, string> _args = new();
+    private readonly Dictionary<string, string?> _args = new();
 
     /// <summary>
     /// 添加键值对参数（自动处理空格转义）
@@ -18,6 +19,8 @@ public class ArgumentsBuilder
     /// <param name="value">参数值</param>
     public ArgumentsBuilder Add(string key, string value)
     {
+        if (key is null) throw new NullReferenceException(nameof(key));
+        if (value is null) throw new NullReferenceException(nameof(value));
         _args[key] = _handleEscapeValue(value);
         return this;
     }
@@ -28,6 +31,7 @@ public class ArgumentsBuilder
     /// <param name="flag">标志名（不带前缀）</param>
     public ArgumentsBuilder AddFlag(string flag)
     {
+        if (flag is null) throw new NullReferenceException(nameof(flag));
         _args[flag] = null;
         return this;
     }
@@ -77,7 +81,7 @@ public class ArgumentsBuilder
             }
 
             // 添加值（如果有）
-            if (arg.Value != null)
+            if (arg.Value is not null)
             {
                 sb.Append('=').Append(arg.Value);
             }
