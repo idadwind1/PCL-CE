@@ -393,24 +393,3 @@ public sealed class RpcService : ILifecycleService
         return true;
     }
 }
-
-public static class Rpc
-{
-    [Obsolete("请使用 RpcService.AddProperty")]
-    public static void AddProperty(RpcProperty prop) => RpcService.AddProperty(prop);
-    
-    [Obsolete("请使用 RpcService.RemoveProperty")]
-    public static bool RemoveProperty(string name) => RpcService.RemoveProperty(name);
-    
-    [Obsolete("请使用 RpcService.RemoveProperty")]
-    public static bool RemoveProperty(RpcProperty prop) => RpcService.RemoveProperty(prop);
-    
-    [Obsolete("请使用 RpcService.AddFunction")]
-    public static bool AddFunction(string name, RpcFunction func) => RpcService.AddFunction(name, func);
-    
-    [Obsolete("请使用 RpcService.RemoveFunction")]
-    public static bool RemoveFunction(string name) => RpcService.RemoveFunction(name);
-    
-    [Obsolete]
-    public static void Start() { }
-}
