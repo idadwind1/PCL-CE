@@ -21,23 +21,25 @@ public sealed class UpdateService : GeneralService
         
         if (args is not ["update", _, _, _, _])
         {
-            if (args is ["restart", "update_finished" or "update_failed", _])
+            switch (args)
             {
-                if (args[1] == "update_finished")
+                case ["update_finished", _]:
                 {
-                    var toDelete = args[2];
+                    var toDelete = args[1];
                     File.Delete(toDelete);
                     Context.Debug("更新来源文件已删除");
+                    break;
                 }
-                else
+                case ["update_failed", _]:
                 {
-                    var reason = args[2];
+                    var reason = args[1];
                     Context.Error(
                         $"更新失败: {reason}\n你可以手动将 exe 文件替换为 PCL 目录中的新版本" +
                         $"或再次尝试更新，若再次尝试仍然失败，请尽快反馈这个问题");
+                    break;
                 }
+                default: Context.Debug("无更新任务"); break;
             }
-            else Context.Debug("无更新任务");
             Context.DeclareStopped();
             return;
         }
@@ -75,7 +77,7 @@ public sealed class UpdateService : GeneralService
             if (restart)
             {
                 var restartArgs = (ex == null) ? $"finished \"{source}\"" : $"failed \"{ex.Message}\"";
-                restartArgs = $"restart update_{restartArgs}";
+                restartArgs = $"update_{restartArgs}";
                 Context.Debug($"重启中，使用参数: {restartArgs}");
                 Process.Start(target, restartArgs);
             }
