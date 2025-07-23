@@ -77,9 +77,10 @@ public class McPing : IDisposable
 
         _socket.Close();
         var retBinary = res.ToArray();
-        var packId = VarInt.Decode(retBinary.Skip(1).ToArray(), out var packIdLength);
-        LogWrapper.Debug("McPing",$"PackId: {packId}, PackIdLength: {packIdLength}");
-        var retCtx = Encoding.UTF8.GetString([.. retBinary.Skip(1 + packIdLength)]);
+        var dataLength = Convert.ToInt32(VarInt.Decode(retBinary.Skip(1).ToArray(), out var packDataHeaderLength));
+        LogWrapper.Debug("McPing",$"ServerDataLength: {dataLength}");
+        if (dataLength > retBinary.Length) throw new Exception("The server data is too large");
+        var retCtx = Encoding.UTF8.GetString([.. retBinary.Skip(1 + packDataHeaderLength).Take(dataLength)]);
 #if DEBUG
         LogWrapper.Debug("McPing", retCtx);
 #endif
