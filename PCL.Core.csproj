@@ -126,6 +126,7 @@
     <Compile Include="Extension\StringExtension.cs" />
     <Compile Include="Helper\BackgroundPresenter.cs" />
     <Compile Include="Helper\ByteHelper.cs" />
+    <Compile Include="Helper\CmdLineHelper.cs" />
     <Compile Include="Helper\EncryptHelper.cs" />
     <Compile Include="Helper\Files.cs" />
     <Compile Include="Helper\Hash\IHashProvider.cs" />
