@@ -264,7 +264,7 @@ Public Class PageInstanceCompResource
                         Return
                     End If
                 End If
-                
+
                 '根据组件类型设置PanEmpty的文本内容
                 If CurrentCompType = CompType.Schematic Then
                     '检查是否在子文件夹中
@@ -281,14 +281,14 @@ Public Class PageInstanceCompResource
                     TxtEmptyTitle.Text = "尚未安装资源"
                     TxtEmptyDescription.Text = "你可以下载新的资源，也可以从已经下载好的文件安装资源。" & vbCrLf & "如果你已经安装了资源，可能是版本隔离设置有误，请在设置中调整版本隔离选项。"
                 End If
-                
+
                 '如果当前在子文件夹中，显示返回上一级按钮
                 If Not String.IsNullOrEmpty(CurrentFolderPath) Then
                     BtnHintBack.Visibility = Visibility.Visible
                 Else
                     BtnHintBack.Visibility = Visibility.Collapsed
                 End If
-                
+
                 PanEmpty.Visibility = Visibility.Visible
                 PanBack.Visibility = Visibility.Collapsed
                 PanSchematicEmpty.Visibility = Visibility.Collapsed
@@ -350,7 +350,7 @@ Public Class PageInstanceCompResource
             AddHandler sender.Click, Sub(ss As MyLocalCompItem, ee As EventArgs)
                                          Dim currentTime = DateTime.Now
                                          Dim timeDiff = (currentTime - lastClickTime).TotalMilliseconds
-                                         
+
                                          If timeDiff <= 300 Then
                                              '300ms内双击，进入文件夹
                                              EnterFolderWithCheck(ss.Entry.ActualPath)
@@ -358,7 +358,7 @@ Public Class PageInstanceCompResource
                                              '单击切换选中状态
                                              ss.Checked = Not ss.Checked
                                          End If
-                                         
+
                                          lastClickTime = currentTime
                                      End Sub
         Else
@@ -404,6 +404,13 @@ Public Class PageInstanceCompResource
     Public Sub RefreshUI()
         If PanList Is Nothing Then Return
         Dim ShowingMods = If(IsSearching, SearchResult, ModItems.Values.Select(Function(i) i.Entry)).Where(Function(m) CanPassFilter(m)).ToList
+
+        ' 对显示的资源进行排序，确保文件夹置顶
+        If ShowingMods.Any() Then
+            Dim sortMethod = GetSortMethod(CurrentSortMethod)
+            ShowingMods.Sort(Function(a, b) sortMethod(a, b))
+        End If
+
         '重新列出列表
         AniControlEnabled += 1
         If ShowingMods.Any() Then
@@ -412,6 +419,12 @@ Public Class PageInstanceCompResource
             For Each TargetMod In ShowingMods
                 If Not ModItems.ContainsKey(TargetMod.FileName) Then Continue For
                 Dim Item As MyLocalCompItem = ModItems(TargetMod.FileName)
+
+                  ' 确保元素没有父容器，避免重复添加异常
+                If Item.Parent IsNot Nothing Then
+                    CType(Item.Parent, Panel).Children.Remove(Item)
+                End If
+
                 MinecraftFormatter.SetColorfulTextLab(Item.LabTitle.Text, Item.LabTitle)
                 MinecraftFormatter.SetColorfulTextLab(Item.LabInfo.Text, Item.LabInfo)
                 Item.Checked = SelectedMods.Contains(TargetMod.FileName) '更新选中状态
@@ -467,14 +480,14 @@ Public Class PageInstanceCompResource
                                                 End Function).Where(Function(g) g.Count > 1 AndAlso g.First.Comp IsNot Nothing).SelectMany(Function(g) g).ToList()
         BtnFilterDuplicate.Text = $"重复 ({DuplicateItems.Count})"
         BtnFilterDuplicate.Visibility = If(Filter = FilterType.Duplicate OrElse DuplicateItems.Any, Visibility.Visible, Visibility.Collapsed)
-        
+
         '返回按钮显示控制（在子文件夹中时显示）
         If Not String.IsNullOrEmpty(CurrentFolderPath) Then
             BtnManageBack.Visibility = Visibility.Visible
         Else
             BtnManageBack.Visibility = Visibility.Collapsed
         End If
-        
+
 
 
         '-----------------
@@ -503,7 +516,7 @@ Public Class PageInstanceCompResource
             BtnSelectDisable.IsEnabled = HasEnabled
             BtnSelectEnable.IsEnabled = HasDisabled
             BtnSelectUpdate.IsEnabled = HasUpdate
-            
+
             '针对投影原理图隐藏分享 更新 收藏按钮
             If CurrentCompType = CompType.Schematic Then
                 BtnSelectUpdate.Visibility = Visibility.Collapsed
@@ -571,14 +584,23 @@ Public Class PageInstanceCompResource
     Private Sub BtnManageBack_Click(sender As Object, e As EventArgs) Handles BtnManageBack.Click
         GoBackToParentFolder()
     End Sub
-    
+
     Private Sub BtnHintBack_Click(sender As Object, e As EventArgs) Handles BtnHintBack.Click
         GoBackToParentFolder()
     End Sub
 
     Private Sub BtnManageOpen_Click(sender As Object, e As EventArgs) Handles BtnManageOpen.Click, BtnHintOpen.Click
         Try
-            Dim CompFilePath = PageInstanceLeft.Instance.PathIndie & If(PageInstanceLeft.Instance.Version.HasLabyMod, "labymod-neo\fabric\" & PageInstanceLeft.Instance.Version.McName & "\", "") & GetPathNameByCompType(CurrentCompType) & "\"
+            Dim CompFilePath As String
+
+            ' 如果当前在子文件夹中，则打开当前子文件夹；否则打开根目录
+            If String.IsNullOrEmpty(CurrentFolderPath) Then
+                ' 打开根目录
+                CompFilePath = PageInstanceLeft.Instance.PathIndie & If(PageInstanceLeft.Instance.Version.HasLabyMod, "labymod-neo\fabric\" & PageInstanceLeft.Instance.Version.McName & "\", "") & GetPathNameByCompType(CurrentCompType) & "\"
+            Else
+                ' 打开当前子文件夹
+                CompFilePath = If(CurrentFolderPath.EndsWith("\"), CurrentFolderPath, CurrentFolderPath & "\")
+            End If
             Directory.CreateDirectory(CompFilePath)
             OpenExplorer(CompFilePath)
         Catch ex As Exception
@@ -663,12 +685,12 @@ Install:
     ''' </summary>
     Public Shared Sub InstallCompFiles(FilePathList As IEnumerable(Of String), CompType As CompType, Optional TargetFolderPath As String = "")
         If Not FilePathList.Any Then Exit Sub
-        
+
         Dim Extension As String = FilePathList.First.AfterLast(".").ToLower
         Dim ValidExtensions As String() = Nothing
         Dim CompTypeName As String = ""
         Dim CompFolder As String = ""
-        
+
         '检查回收站：回收站中的文件有错误的文件名
         If FilePathList.First.Contains(":\$RECYCLE.BIN\") Then
             Hint("请先将文件从回收站还原，再尝试安装！", HintType.Critical)
@@ -714,13 +736,13 @@ Install:
                     CompFolder = TargetFolderPath & "\"
                 End If
         End Select
-        
+
         '检查文件扩展名
         If Not ValidExtensions.Contains(Extension) Then
             Hint($"不支持的文件格式：{Extension}，{CompTypeName}支持的格式：{String.Join(", ", ValidExtensions)}", HintType.Critical)
             Exit Sub
         End If
-        
+
         Log($"[System] 文件为 {Extension} 格式，尝试作为{CompTypeName}安装")
 
         '检查实例兼容性
@@ -751,15 +773,15 @@ Install:
                     NewFileName = NewFileName.Replace(".disabled", "").Replace(".old", "")
                     If Not NewFileName.Contains(".") Then NewFileName += ".jar"
                 End If
-                
+
                 Dim DestFile = CompFolder & NewFileName
                 If File.Exists(DestFile) Then
                     If MyMsgBox($"已存在同名文件：{NewFileName}，是否要覆盖？", "文件覆盖确认", "覆盖", "取消") <> 1 Then Continue For
                 End If
-                
+
                 CopyFile(FilePath, DestFile)
             Next
-            
+
             If FilePathList.Count = 1 Then
                 Hint($"已安装 {GetFileNameFromPath(FilePathList.First)}！", HintType.Finish)
             Else
@@ -785,7 +807,7 @@ Install:
             Log(ex, $"复制{CompTypeName}文件失败", LogLevel.Msgbox)
         End Try
     End Sub
-    
+
     ''' <summary>
     ''' 获取当前的组件资源管理窗体。
     ''' </summary>
@@ -1039,7 +1061,7 @@ Install:
                 Dim Method = GetSortMethod(CurrentSortMethod)
 
                 ' 分离有效和无效项（保持原始相对顺序）
-                Dim invalid = items.Where(Function(i) i.Entry Is Nothing OrElse (CurrentSortMethod = SortMethod.TagNums AndAlso i.Entry.Comp Is Nothing)).ToList()
+                Dim invalid = items.Where(Function(i) i.Entry Is Nothing OrElse (CurrentSortMethod = SortMethod.TagNums AndAlso i.Entry.Comp Is Nothing AndAlso Not i.Entry.IsFolder)).ToList()
                 Dim valid = items.Except(invalid).ToList()
                 ' 仅对有效项进行排序
                 valid.Sort(Function(x, y) Method(x.Entry, y.Entry))
@@ -1057,64 +1079,92 @@ Install:
     End Sub
 
     Private Function GetSortMethod(Method As SortMethod) As Func(Of LocalCompFile, LocalCompFile, Integer)
+        ' 通用的文件夹置顶比较函数
+        Dim folderFirstCompare = Function(a As LocalCompFile, b As LocalCompFile) As Integer
+                                     If a.IsFolder AndAlso Not b.IsFolder Then Return -1
+                                     If Not a.IsFolder AndAlso b.IsFolder Then Return 1
+                                     Return 0 ' 相同类型，需要进一步比较
+                                 End Function
+
         Select Case Method
             Case SortMethod.FileName
                 Return Function(a As LocalCompFile, b As LocalCompFile) As Integer
                            ' 文件夹始终排在最前面
-                           If a.IsFolder AndAlso Not b.IsFolder Then Return -1
-                           If Not a.IsFolder AndAlso b.IsFolder Then Return 1
+                           Dim folderResult = folderFirstCompare(a, b)
+                           If folderResult <> 0 Then Return folderResult
                            ' 如果都是文件夹或都是文件，则按文件名排序
                            Return String.Compare(a.FileName, b.FileName, StringComparison.OrdinalIgnoreCase)
                        End Function
             Case SortMethod.CompName
                 Return Function(a As LocalCompFile, b As LocalCompFile) As Integer
                            ' 文件夹始终排在最前面
-                           If a.IsFolder AndAlso Not b.IsFolder Then Return -1
-                           If Not a.IsFolder AndAlso b.IsFolder Then Return 1
+                           Dim folderResult = folderFirstCompare(a, b)
+                           If folderResult <> 0 Then Return folderResult
                            ' 如果都是文件夹或都是文件，则按资源名称排序
                            Return String.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase)
                        End Function
             Case SortMethod.TagNums
                 Return Function(a As LocalCompFile, b As LocalCompFile) As Integer
                            ' 文件夹始终排在最前面
-                           If a.IsFolder AndAlso Not b.IsFolder Then Return -1
-                           If Not a.IsFolder AndAlso b.IsFolder Then Return 1
-                           ' 如果都是文件夹，则按名称排序；如果都是文件，则按标签数量排序
+                           Dim folderResult = folderFirstCompare(a, b)
+                           If folderResult <> 0 Then Return folderResult
+                           ' 如果都是文件夹，则按名称排序
                            If a.IsFolder AndAlso b.IsFolder Then
                                Return String.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase)
-                           Else
-                               Return b.Comp.Tags.Count - a.Comp.Tags.Count
                            End If
+                           ' 如果都是文件，则按标签数量排序（标签多的在前）
+                           If Not a.IsFolder AndAlso Not b.IsFolder Then
+                               ' 安全检查，确保Comp不为空
+                               Dim aTagCount = If(a.Comp?.Tags?.Count, 0)
+                               Dim bTagCount = If(b.Comp?.Tags?.Count, 0)
+                               Return bTagCount.CompareTo(aTagCount)
+                           End If
+                           ' 理论上不会到达这里，但为了安全起见
+                           Return String.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase)
                        End Function
             Case SortMethod.CreateTime
                 Return Function(a As LocalCompFile, b As LocalCompFile) As Integer
                            ' 文件夹始终排在最前面
-                           If a.IsFolder AndAlso Not b.IsFolder Then Return -1
-                           If Not a.IsFolder AndAlso b.IsFolder Then Return 1
-                           ' 如果都是文件夹或都是文件，则按创建时间排序
-                           Dim aDate = New FileInfo(If(a.IsFolder, a.ActualPath, a.Path)).CreationTime
-                           Dim bDate = New FileInfo(If(b.IsFolder, b.ActualPath, b.Path)).CreationTime
-                           Return If(aDate = bDate, 0, If(aDate > bDate, -1, 1))
+                           Dim folderResult = folderFirstCompare(a, b)
+                           If folderResult <> 0 Then Return folderResult
+                           ' 如果都是文件夹或都是文件，则按创建时间排序（新的在前）
+                           Try
+                               Dim aDate = New FileInfo(If(a.IsFolder, a.ActualPath, a.Path)).CreationTime
+                               Dim bDate = New FileInfo(If(b.IsFolder, b.ActualPath, b.Path)).CreationTime
+                               Return bDate.CompareTo(aDate)
+                           Catch ex As Exception
+                               ' 如果获取时间失败，则按名称排序
+                               Return String.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase)
+                           End Try
                        End Function
             Case SortMethod.ModFileSize
                 Return Function(a As LocalCompFile, b As LocalCompFile) As Integer
                            ' 文件夹始终排在最前面
-                           If a.IsFolder AndAlso Not b.IsFolder Then Return -1
-                           If Not a.IsFolder AndAlso b.IsFolder Then Return 1
-                           ' 如果都是文件夹，则按名称排序；如果都是文件，则按文件大小排序
+                           Dim folderResult = folderFirstCompare(a, b)
+                           If folderResult <> 0 Then Return folderResult
+                           ' 如果都是文件夹，则按名称排序
                            If a.IsFolder AndAlso b.IsFolder Then
                                Return String.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase)
-                           Else
-                               Dim aSize As Long = (New FileInfo(a.ActualPath)).Length
-                               Dim bSize As Long = (New FileInfo(b.ActualPath)).Length
-                               Return bSize.CompareTo(aSize)
                            End If
+                           ' 如果都是文件，则按文件大小排序（大的在前）
+                           If Not a.IsFolder AndAlso Not b.IsFolder Then
+                               Try
+                                   Dim aSize As Long = (New FileInfo(a.ActualPath)).Length
+                                   Dim bSize As Long = (New FileInfo(b.ActualPath)).Length
+                                   Return bSize.CompareTo(aSize)
+                               Catch ex As Exception
+                                   ' 如果获取大小失败，则按名称排序
+                                   Return String.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase)
+                               End Try
+                           End If
+                           ' 理论上不会到达这里，但为了安全起见
+                           Return String.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase)
                        End Function
             Case Else
                 Return Function(a As LocalCompFile, b As LocalCompFile) As Integer
                            ' 文件夹始终排在最前面
-                           If a.IsFolder AndAlso Not b.IsFolder Then Return -1
-                           If Not a.IsFolder AndAlso b.IsFolder Then Return 1
+                           Dim folderResult = folderFirstCompare(a, b)
+                           If folderResult <> 0 Then Return folderResult
                            ' 如果都是文件夹或都是文件，则按名称排序
                            Return String.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase)
                        End Function
@@ -1482,7 +1532,7 @@ Install:
                 End If
                 '获取信息
                 Dim ContentLines As New List(Of String)
-                
+
                 '检查是否为文件夹
                 If ModEntry.IsFolder Then
                     '处理文件夹详情
@@ -1506,7 +1556,7 @@ Install:
                         Catch ex As Exception
                             fileCount = 0
                         End Try
-                        
+
                         If fileCount = 0 Then
                             ContentLines.Add("空文件夹" & vbCrLf)
                         ElseIf fileCount = 1 Then
@@ -1669,7 +1719,7 @@ Install:
                            End Try
                        End Sub)
     End Sub
-    
+
 #Region "原理图文件详细信息显示"
 
     ''' <summary>
@@ -1678,36 +1728,36 @@ Install:
     Private Sub ShowLitematicDetails(ContentLines As List(Of String), ModEntry As LocalCompFile)
         ContentLines.Add("")
         ContentLines.Add("详细信息：")
-        
+
         ' 显示原始名称（从 NBT Metadata/Name 读取）
         If ModEntry.LitematicOriginalName IsNot Nothing Then
             ContentLines.Add("原始名称：" & ModEntry.LitematicOriginalName)
         End If
-        
+
         ' 显示版本信息
         If ModEntry.LitematicVersion.HasValue Then
             ContentLines.Add("原理图版本：" & ModEntry.LitematicVersion.Value)
         End If
-        
+
         ' 显示尺寸信息
         If ModEntry.LitematicEnclosingSize IsNot Nothing Then
             ContentLines.Add("包围盒大小：" & ModEntry.LitematicEnclosingSize)
         End If
-         
+
         ' 显示方块和体积统计
         If ModEntry.LitematicTotalBlocks.HasValue Then
             ContentLines.Add("总方块数：" & ModEntry.LitematicTotalBlocks.Value.ToString("N0"))
         End If
-        
+
         If ModEntry.LitematicTotalVolume.HasValue Then
             ContentLines.Add("总体积：" & ModEntry.LitematicTotalVolume.Value.ToString("N0"))
         End If
-        
+
         ' 显示区域数量
         If ModEntry.LitematicRegionCount.HasValue Then
             ContentLines.Add("区域数量：" & ModEntry.LitematicRegionCount.Value)
         End If
-        
+
         ' 显示时间信息
         If ModEntry.LitematicTimeCreated.HasValue Then
             Try
@@ -1717,7 +1767,7 @@ Install:
                 ContentLines.Add("创建时间：" & ModEntry.LitematicTimeCreated.Value)
             End Try
         End If
-        
+
         If ModEntry.LitematicTimeModified.HasValue Then
             Try
                 Dim modifiedTime As DateTime = DateTimeOffset.FromUnixTimeMilliseconds(ModEntry.LitematicTimeModified.Value).ToLocalTime().DateTime
@@ -1727,123 +1777,123 @@ Install:
             End Try
         End If
     End Sub
-    
+
     ''' <summary>
     ''' 显示 Schem 文件的详细信息
     ''' </summary>
     Private Sub ShowSchemDetails(ContentLines As List(Of String), ModEntry As LocalCompFile)
         ContentLines.Add("")
         ContentLines.Add("详细信息：")
-        
+
         ' 显示原始名称（从 NBT Metadata/Name 读取）
         If ModEntry.SchemOriginalName IsNot Nothing Then
             ContentLines.Add("原始名称：" & ModEntry.SchemOriginalName)
         End If
-        
+
         ' 显示版本信息
         If ModEntry.StructureGameVersion IsNot Nothing Then
             ContentLines.Add("游戏版本：" & ModEntry.StructureGameVersion)
         End If
-        
+
         If ModEntry.SpongeVersion.HasValue Then
             ContentLines.Add("Sponge 版本：" & ModEntry.SpongeVersion.Value)
         End If
-        
+
         If ModEntry.StructureDataVersion.HasValue Then
             ContentLines.Add("数据版本：" & ModEntry.StructureDataVersion.Value)
         End If
-        
+
         ' 显示尺寸信息
         If ModEntry.LitematicEnclosingSize IsNot Nothing Then
             ContentLines.Add("包围盒尺寸：" & ModEntry.LitematicEnclosingSize)
         End If
-        
+
         ' 显示方块和体积统计
         If ModEntry.LitematicTotalBlocks.HasValue Then
             ContentLines.Add("总方块数：" & ModEntry.LitematicTotalBlocks.Value.ToString("N0"))
         End If
-        
+
         If ModEntry.LitematicTotalVolume.HasValue Then
             ContentLines.Add("总体积：" & ModEntry.LitematicTotalVolume.Value.ToString("N0"))
         End If
-        
+
         ' 显示区域数量
         If ModEntry.LitematicRegionCount.HasValue Then
             ContentLines.Add("区域数量：" & ModEntry.LitematicRegionCount.Value)
         End If
-        
+
         ContentLines.Add("文件类型：Sponge Schematic")
     End Sub
-    
+
     ''' <summary>
     ''' 显示 Schematic 文件的详细信息
     ''' </summary>
     Private Sub ShowSchematicDetails(ContentLines As List(Of String), ModEntry As LocalCompFile)
         ContentLines.Add("")
         ContentLines.Add("详细信息：")
-        
+
         ' 显示尺寸信息
         If ModEntry.LitematicEnclosingSize IsNot Nothing Then
             ContentLines.Add("大小：" & ModEntry.LitematicEnclosingSize)
         End If
-        
+
         ' 显示方块和体积统计
         If ModEntry.LitematicTotalBlocks.HasValue Then
             ContentLines.Add("总方块数：" & ModEntry.LitematicTotalBlocks.Value.ToString("N0"))
         End If
-        
+
         If ModEntry.LitematicTotalVolume.HasValue Then
             ContentLines.Add("总体积：" & ModEntry.LitematicTotalVolume.Value.ToString("N0"))
         End If
-        
+
         ContentLines.Add("文件类型：MCEdit/WorldEdit Schematic")
     End Sub
-    
+
     ''' <summary>
     ''' 显示 NBT 结构文件的详细信息
     ''' </summary>
     Private Sub ShowNbtDetails(ContentLines As List(Of String), ModEntry As LocalCompFile)
         ContentLines.Add("")
         ContentLines.Add("详细信息：")
-        
+
         ' 显示作者信息
         If ModEntry.StructureAuthor IsNot Nothing Then
             ContentLines.Add("作者：" & ModEntry.StructureAuthor)
         End If
-        
+
         ' 显示版本信息
         If ModEntry.StructureGameVersion IsNot Nothing Then
             ContentLines.Add("游戏版本：" & ModEntry.StructureGameVersion)
         End If
-        
+
         If ModEntry.StructureDataVersion.HasValue Then
             ContentLines.Add("数据版本：" & ModEntry.StructureDataVersion.Value)
         End If
-        
+
         ' 显示尺寸信息
         If ModEntry.LitematicEnclosingSize IsNot Nothing Then
             ContentLines.Add("包围盒尺寸：" & ModEntry.LitematicEnclosingSize)
         End If
-        
+
         ' 显示方块和体积统计
         If ModEntry.LitematicTotalBlocks.HasValue Then
             ContentLines.Add("总方块数：" & ModEntry.LitematicTotalBlocks.Value.ToString("N0"))
         End If
-        
+
         If ModEntry.LitematicTotalVolume.HasValue Then
             ContentLines.Add("总体积：" & ModEntry.LitematicTotalVolume.Value.ToString("N0"))
         End If
-        
+
         ' 显示区域数量
         If ModEntry.LitematicRegionCount.HasValue Then
             ContentLines.Add("区域数量：" & ModEntry.LitematicRegionCount.Value)
         End If
-        
+
         ContentLines.Add("文件类型：原版结构")
     End Sub
 
 #End Region
-    
+
     Private Sub ShowDebugInfo(ContentLines As List(Of String), ModEntry As LocalCompFile)
         Dim DebugInfo As New List(Of String)
         If ModEntry.ModId IsNot Nothing Then
@@ -1860,7 +1910,7 @@ Install:
             ContentLines.AddRange(DebugInfo)
         End If
     End Sub
-    
+
     Private Sub ShowSchematicDialog(ContentLines As List(Of String), ModEntry As LocalCompFile)
         '投影原理图文件不显示百科搜索选项
         If ModEntry.Url Is Nothing Then
@@ -1882,33 +1932,36 @@ Install:
         End Get
     End Property
     Private SearchResult As List(Of LocalCompFile)
-
     Public Sub SearchRun() Handles SearchBox.TextChanged
-        If IsSearching Then
-            '构造请求
-            Dim QueryList As New List(Of SearchEntry(Of LocalCompFile))
-            For Each Entry As LocalCompFile In CompResourceListLoader.Output
-                Dim SearchSource As New List(Of KeyValuePair(Of String, Double))
-                SearchSource.Add(New KeyValuePair(Of String, Double)(Entry.Name, 1))
-                SearchSource.Add(New KeyValuePair(Of String, Double)(Entry.FileName, 1))
-                If Entry.Version IsNot Nothing Then
-                    SearchSource.Add(New KeyValuePair(Of String, Double)(Entry.Version, 0.2))
-                End If
-                If Entry.Description IsNot Nothing AndAlso Entry.Description <> "" Then
-                    SearchSource.Add(New KeyValuePair(Of String, Double)(Entry.Description, 0.4))
-                End If
-                If Entry.Comp IsNot Nothing Then
-                    If Entry.Comp.RawName <> Entry.Name Then SearchSource.Add(New KeyValuePair(Of String, Double)(Entry.Comp.RawName, 1))
-                    If Entry.Comp.TranslatedName <> Entry.Comp.RawName Then SearchSource.Add(New KeyValuePair(Of String, Double)(Entry.Comp.TranslatedName, 1))
-                    If Entry.Comp.Description <> Entry.Description Then SearchSource.Add(New KeyValuePair(Of String, Double)(Entry.Comp.Description, 0.4))
-                    SearchSource.Add(New KeyValuePair(Of String, Double)(String.Join("", Entry.Comp.Tags), 0.2))
-                End If
-                QueryList.Add(New SearchEntry(Of LocalCompFile) With {.Item = Entry, .SearchSource = SearchSource})
-            Next
-            '进行搜索
-            SearchResult = Search(QueryList, SearchBox.Text, MaxBlurCount:=6, MinBlurSimilarity:=0.35).Select(Function(r) r.Item).ToList
-        End If
-        RefreshUI()
+        Try
+            If IsSearching Then
+                '构造请求
+                Dim QueryList As New List(Of SearchEntry(Of LocalCompFile))
+                For Each Entry As LocalCompFile In CompResourceListLoader.Output
+                    Dim SearchSource As New List(Of KeyValuePair(Of String, Double))
+                    SearchSource.Add(New KeyValuePair(Of String, Double)(Entry.Name, 1))
+                    SearchSource.Add(New KeyValuePair(Of String, Double)(Entry.FileName, 1))
+                    If Entry.Version IsNot Nothing Then
+                        SearchSource.Add(New KeyValuePair(Of String, Double)(Entry.Version, 0.2))
+                    End If
+                    If Entry.Description IsNot Nothing AndAlso Entry.Description <> "" Then
+                        SearchSource.Add(New KeyValuePair(Of String, Double)(Entry.Description, 0.4))
+                    End If
+                    If Entry.Comp IsNot Nothing Then
+                        If Entry.Comp.RawName <> Entry.Name Then SearchSource.Add(New KeyValuePair(Of String, Double)(Entry.Comp.RawName, 1))
+                        If Entry.Comp.TranslatedName <> Entry.Comp.RawName Then SearchSource.Add(New KeyValuePair(Of String, Double)(Entry.Comp.TranslatedName, 1))
+                        If Entry.Comp.Description <> Entry.Description Then SearchSource.Add(New KeyValuePair(Of String, Double)(Entry.Comp.Description, 0.4))
+                        SearchSource.Add(New KeyValuePair(Of String, Double)(String.Join("", Entry.Comp.Tags), 0.2))
+                    End If
+                    QueryList.Add(New SearchEntry(Of LocalCompFile) With {.Item = Entry, .SearchSource = SearchSource})
+                Next
+                '进行搜索
+                SearchResult = Search(QueryList, SearchBox.Text, MaxBlurCount:=6, MinBlurSimilarity:=0.35).Select(Function(r) r.Item).ToList
+            End If
+            RefreshUI()
+        Catch ex As Exception
+            Log(ex, "搜索过程中发生异常", LogLevel.Debug)
+        End Try
     End Sub
 
 #End Region
