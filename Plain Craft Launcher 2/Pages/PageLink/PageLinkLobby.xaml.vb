@@ -121,6 +121,7 @@ Retry:
                                    RunInUi(Sub()
                                                HintAnnounce.Theme = MyHint.Themes.Red
                                                HintAnnounce.Text = "请更新到最新版本 PCL CE 以使用大厅"
+                                               IsLobbyAvailable = False
                                            End Sub)
                                    Exit Sub
                                End If
