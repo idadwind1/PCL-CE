@@ -21,15 +21,17 @@ public class McPing : IDisposable
     private readonly string _host;
     private readonly Socket _socket;
     private const int DefaultTimeout = 10000;
+    private int _timeout;
 
-    public McPing(IPEndPoint endpoint)
+    public McPing(IPEndPoint endpoint, int timeout = DefaultTimeout)
     {
         _endpoint  = endpoint;
         _host = _endpoint.Address.ToString();
         _socket =new Socket(SocketType.Stream, ProtocolType.Tcp);
+        _timeout = timeout;
     }
 
-    public McPing(string ip, int port = 25565)
+    public McPing(string ip, int port = 25565, int timeout = DefaultTimeout)
     {
         if (IPAddress.TryParse(ip, out var ipAddress))
             _endpoint = new IPEndPoint(ipAddress, port);
@@ -37,6 +39,7 @@ public class McPing : IDisposable
             _endpoint = new IPEndPoint(Dns.GetHostAddresses(ip).First(), port);
         _host = ip;
         _socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
+        _timeout = timeout;
     }
 
     /// <summary>
@@ -47,7 +50,16 @@ public class McPing : IDisposable
     public async Task<McPingResult> PingAsync()
     {
         using var cts = new CancellationTokenSource();
-        cts.CancelAfter(DefaultTimeout);
+        cts.CancelAfter(_timeout);
+        // 注册超时回调：强制关闭Socket中断阻塞操作
+        cts.Token.Register(() =>
+        {
+            try
+            {
+                if (_socket?.Connected == true) _socket.Close(); // 强制关闭连接，中断 ReadAsync 阻塞
+            }
+            catch (ObjectDisposedException) { /* 忽略已释放的异常 */ }
+        });
         // 信息获取
         LogWrapper.Debug("McPing",$"Connecting to {_endpoint}");
         await _socket.ConnectAsync(_endpoint);
@@ -260,6 +272,6 @@ public class McPing : IDisposable
         if (_disposed) return;
         _disposed = true;
         GC.SuppressFinalize(this);
-        _socket.Dispose();
+        _socket?.Dispose();
     }
 }

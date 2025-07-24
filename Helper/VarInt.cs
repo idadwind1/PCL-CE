@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace PCL.Core.Helper;
 
-public class VarInt
+public static class VarInt
 {
     /// <summary>
     /// 将无符号长整数编码为VarInt字节序列
@@ -92,11 +92,11 @@ public class VarInt
     /// 从流中读取并解码无符号长整数，并将流前进所读取的字节数
     /// </summary>
     /// <param name="stream">输入流</param>
-    /// <param name="token"></param>
+    /// <param name="cancellationToken">要监视取消请求的标记</param>
     /// <returns>解码后的64位无符号整数</returns>
     /// <exception cref="EndOfStreamException">流提前结束</exception>
     /// <exception cref="FormatException">VarInt格式无效</exception>
-    public async static Task<ulong> ReadFromStream(Stream stream, CancellationToken token = default)
+    public static async Task<ulong> ReadFromStream(Stream stream, CancellationToken cancellationToken = default)
     {
         ulong result = 0;
         int shift = 0;
@@ -105,7 +105,7 @@ public class VarInt
         var buffer = new byte[1];
         while (true)
         {
-            int readLength =  await stream.ReadAsync(buffer, 0, 1, token);
+            int readLength = await stream.ReadAsync(buffer, 0, 1, cancellationToken);
             if (readLength == 0)
                 throw new EndOfStreamException();
             
@@ -128,11 +128,11 @@ public class VarInt
     /// 从流中读取并解码无符号整数，并将流前进所读取的字节数
     /// </summary>
     /// <param name="stream">输入流</param>
-    /// <param name="token"></param>
+    /// <param name="cancellationToken"></param>
     /// <returns>解码后的32位无符号整数</returns>
-    public async static Task<uint> ReadUIntFromStream(Stream stream, CancellationToken token = default)
+    public static async Task<uint> ReadUIntFromStream(Stream stream, CancellationToken cancellationToken = default)
     {
-        ulong result = await ReadFromStream(stream, token);
+        ulong result = await ReadFromStream(stream, cancellationToken);
         if (result > uint.MaxValue)
             throw new OverflowException("Decoded value exceeds UInt32 range");
         return (uint)result;
