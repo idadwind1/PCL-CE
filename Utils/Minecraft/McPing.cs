@@ -56,7 +56,7 @@ public class McPing : IDisposable
         {
             try
             {
-                if (_socket?.Connected == true) _socket.Close(); // 强制关闭连接，中断 ReadAsync 阻塞
+                if (_socket.Connected) _socket.Close(); // 强制关闭连接，中断 ReadAsync 阻塞
             }
             catch (ObjectDisposedException) { /* 忽略已释放的异常 */ }
         });
@@ -272,6 +272,6 @@ public class McPing : IDisposable
         if (_disposed) return;
         _disposed = true;
         GC.SuppressFinalize(this);
-        _socket?.Dispose();
+        _socket.Dispose();
     }
 }
