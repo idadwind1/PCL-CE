@@ -989,7 +989,7 @@ Install:
     Private Sub SetSortMethod(Target As SortMethod)
         CurrentSortMethod = Target
         BtnSort.Text = $"排序：{GetSortName(Target)}"
-        RefreshUI()
+        'RefreshUI()
         DoSort()
     End Sub
 
