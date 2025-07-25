@@ -555,10 +555,13 @@ Public Module ModLink
     End Class
     Public NaidProfile As New NaidUser()
     Public NaidProfileException As Exception
+    Public NaidIsGettingInfo As Boolean
     Public Sub GetNaidData(Token As String, Optional IsRefresh As Boolean = False, Optional IsRetry As Boolean = False, Optional IsSilent As Boolean = False)
         RunInNewThread(Sub() GetNaidDataSync(Token, IsRefresh, IsRetry, IsSilent))
     End Sub
     Public Function GetNaidDataSync(Token As String, Optional IsRefresh As Boolean = False, Optional IsRetry As Boolean = False, Optional IsSilent As Boolean = False) As Boolean
+        If NaidIsGettingInfo Then Return False
+        NaidIsGettingInfo = True
         Try
             '获取 AccessToken 和 RefreshToken
             Dim RequestData As String = $"grant_type={If(IsRefresh, "refresh_token", "authorization_code")}&client_id={NatayarkClientId}&client_secret={NatayarkClientSecret}&{If(IsRefresh, "refresh_token", "code")}={Token}&redirect_uri=http://localhost:29992/callback"
@@ -610,6 +613,8 @@ Public Module ModLink
             End If
             NaidProfileException = ex
             Return False
+        Finally
+            NaidIsGettingInfo = False
         End Try
     End Function
 #End Region
