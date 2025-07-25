@@ -735,8 +735,7 @@ PortRetry:
     Private UdpThread As Thread = Nothing
     Private TcpThread As Thread = Nothing
     Private ServerSocket As Socket = Nothing
-    Private ChatClient As UdpClient = Nothing
-    Private ChatClientV6 As UdpClient = Nothing
+    Private BoardcastClient As Socket
     Private IsMcPortForwardRunning As Boolean = False
     Private PortForwardRetryTimes As Integer = 0
     Public Async Sub McPortForward(remoteIp As String, Optional remotePort As Integer = 25565, Optional desc As String = "§ePCL CE 局域网广播", Optional isRetry As Boolean = False)
@@ -750,27 +749,18 @@ PortRetry:
         ServerSocket.Listen(-1)
         Dim localPort As Integer = CType(ServerSocket.LocalEndPoint, IPEndPoint).Port
         IsMcPortForwardRunning = True
-
+        Dim boardcastEndpoint = New IPEndPoint(IPAddress.Broadcast, 4445)
         UdpThread = New Thread(Async Sub()
                                    Try
                                        Log($"[Link] 开始进行 MC 局域网广播, 广播的本地端口: {localPort}")
-                                       ChatClient = New UdpClient("224.0.2.60", 4445)
-                                       ChatClientV6 = New UdpClient("ff02::1:ff00:60", 4445)
+                                       BoardcastClient = New Socket(SocketType.Dgram, ProtocolType.Udp)
+                                       'ChatClient = New UdpClient("224.0.2.60", 4445)
+                                       'ChatClientV6 = New UdpClient("ff02::1:ff00:60", 4445)
                                        Dim Buffer As Byte() = Encoding.UTF8.GetBytes($"[MOTD]{desc}[/MOTD][AD]{localPort}[/AD]")
                                        Log($"[Link] 端口转发: {remoteIp}:{remotePort} -> 本地 {localPort}")
                                        While IsMcPortForwardRunning
-                                           If ChatClient IsNot Nothing Then
-                                               ChatClient.EnableBroadcast = True
-                                               ChatClient.MulticastLoopback = True
-                                           End If
-                                           If ChatClientV6 IsNot Nothing Then
-                                               ChatClientV6.EnableBroadcast = True
-                                               ChatClientV6.MulticastLoopback = True
-                                           End If
-
-                                           If IsMcPortForwardRunning AndAlso ChatClient IsNot Nothing AndAlso ChatClientV6 IsNot Nothing Then
-                                               Await ChatClient.SendAsync(Buffer, Buffer.Length)
-                                               Await ChatClientV6.SendAsync(Buffer, Buffer.Length)
+                                           If IsMcPortForwardRunning AndAlso BoardcastClient IsNot Nothing Then
+                                               BoardcastClient.SendTo(Buffer, boardcastEndpoint)
                                                If IsMcPortForwardRunning Then Await Task.Delay(1500)
                                            End If
                                        End While
@@ -855,13 +845,9 @@ PortRetry:
             TcpThread.Abort()
             TcpThread = Nothing
         End If
-        If ChatClient IsNot Nothing Then
-            ChatClient.Close()
-            ChatClient = Nothing
-        End If
-        If ChatClientV6 IsNot Nothing Then
-            ChatClientV6.Close()
-            ChatClientV6 = Nothing
+        If BoardcastClient IsNot Nothing Then
+            BoardcastClient.Close()
+            BoardcastClient = Nothing
         End If
         If ServerSocket IsNot Nothing Then
             ServerSocket.Close()
