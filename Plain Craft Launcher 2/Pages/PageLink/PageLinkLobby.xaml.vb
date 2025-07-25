@@ -535,7 +535,14 @@ Retry:
                                        LabConnectUserType.Text = "加入者"
                                        BtnFinishCopyIp.Visibility = Visibility.Visible
                                    End Sub)
-                           Dim processedId As String = JoinedLobbyId.FromB32ToB10()
+                           Dim processedId As String
+                           Try
+                               processedId = JoinedLobbyId.Trim().FromB32ToB10()
+                           Catch ex As Exception
+                               Hint("无效的房间号，请重试！", HintType.Critical)
+                               Log(ex, "[Link] 输入了错误的房间号")
+                               Return
+                           End Try
                            RemotePort = processedId.Substring(10)
                            Log("[Link] 远程端口解析结果: " & RemotePort)
                            LaunchLink(False, processedId.Substring(0, 8), processedId.Substring(8, 2), remotePort:=RemotePort)
