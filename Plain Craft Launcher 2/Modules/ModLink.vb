@@ -749,18 +749,21 @@ PortRetry:
         ServerSocket.Listen(-1)
         Dim localPort As Integer = CType(ServerSocket.LocalEndPoint, IPEndPoint).Port
         IsMcPortForwardRunning = True
-        Dim boardcastEndpoint = New IPEndPoint(IPAddress.Broadcast, 4445)
         UdpThread = New Thread(Async Sub()
                                    Try
                                        Log($"[Link] 开始进行 MC 局域网广播, 广播的本地端口: {localPort}")
                                        BoardcastClient = New Socket(SocketType.Dgram, ProtocolType.Udp)
+                                       BoardcastClient.DualMode = True
                                        'ChatClient = New UdpClient("224.0.2.60", 4445)
                                        'ChatClientV6 = New UdpClient("ff02::1:ff00:60", 4445)
                                        Dim Buffer As Byte() = Encoding.UTF8.GetBytes($"[MOTD]{desc}[/MOTD][AD]{localPort}[/AD]")
+                                       Dim boardcastEndpoint = New IPEndPoint(IPAddress.Parse("127.0.0.1"), 4445)
+                                       'Dim boardcastEndpointv6 = New IPEndPoint(IPAddress.Parse("::1"), 4445)
                                        Log($"[Link] 端口转发: {remoteIp}:{remotePort} -> 本地 {localPort}")
                                        While IsMcPortForwardRunning
                                            If IsMcPortForwardRunning AndAlso BoardcastClient IsNot Nothing Then
                                                BoardcastClient.SendTo(Buffer, boardcastEndpoint)
+                                               'BoardcastClient.SendTo(Buffer, boardcastEndpointv6)
                                                If IsMcPortForwardRunning Then Await Task.Delay(1500)
                                            End If
                                        End While
