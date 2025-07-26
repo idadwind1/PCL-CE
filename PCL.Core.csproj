@@ -167,6 +167,8 @@
     <Compile Include="Model\Files\FileProcess.cs" />
     <Compile Include="Model\Files\FileTransfer.cs" />
     <Compile Include="Model\Files\IFileTask.cs" />
+    <Compile Include="Model\GrayProfile.cs" />
+    <Compile Include="Model\GrayProfileConfig.cs" />
     <Compile Include="Model\Java.cs" />
     <Compile Include="Model\McPingResult.cs" />
     <Compile Include="Model\Net\HttpProxyManager.cs" />

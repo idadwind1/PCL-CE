@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using PCL.Core.Helper;
 using PCL.Core.LifecycleManagement;
+using PCL.Core.Model;
 using PCL.Core.Model.Files;
 using PCL.Core.Utils;
 using PCL.Core.Utils.FileTask;
@@ -13,6 +14,22 @@ using PCL.Core.Utils.Threading;
 using Special = System.Environment.SpecialFolder;
 
 namespace PCL.Core.Service;
+
+public static class PredefinedFileItems
+{
+    public static readonly FileItem CacheInformation = FileItem.FromLocalFile("cache.txt", FileType.Temporary);
+    public static readonly FileItem GrayProfile = FileItem.FromLocalFile("gray.json", FileType.Data);
+}
+
+public static class PredefinedFileTasks
+{
+    public static readonly IFileTask CacheInformation = FileTask.FromSingleFile(PredefinedFileItems.CacheInformation, FileTransfers.DoNothing);
+    public static readonly IFileTask GrayProfile = FileTask.FromSingleFile(PredefinedFileItems.GrayProfile, FileTransfers.DoNothing, FileProcesses.ParseJson<GrayProfileConfig>());
+    
+    internal static readonly IFileTask[] Preload = [
+        CacheInformation, GrayProfile
+    ];
+}
 
 /// <summary>
 /// Global file management service.
@@ -195,6 +212,7 @@ public sealed class FileService : GeneralService
                             {
                                 Context.Warn($"文件传输出错: {item}", ex);
                                 OnProcessFinished(item, ex);
+                                break;
                             }
                         }
                         Context.Warn($"无支持的传输实现或全部失败: {item}");
@@ -323,16 +341,7 @@ public sealed class FileService : GeneralService
         // TODO
         
         // preload tasks
-        QueueTask(new MatchableFileTask([
-            PredefinedFileItems.CacheInformation
-        ], [
-            FileMatches.Any.Pair(FileTransfers.Empty)
-        ]));
+        QueueTask(PredefinedFileTasks.Preload);
     }
 
-}
-
-internal static class PredefinedFileItems
-{
-    internal static readonly FileItem CacheInformation = FileItem.FromLocalFile("cache.txt", FileType.Temporary);
 }
