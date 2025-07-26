@@ -407,9 +407,12 @@ Public Module ModNet
             Catch ex As ThreadInterruptedException
                 Throw
             Catch ex As Exception
-                If ex.InnerException IsNot Nothing AndAlso TypeOf ex.InnerException Is HttpRequestFailedException AndAlso CInt(CType(ex.InnerException, HttpRequestFailedException).StatusCode).ToString().StartsWithF("40") AndAlso DontRetryOnRefused Then Throw
+                If ex.InnerException IsNot Nothing AndAlso
+                    TypeOf ex.InnerException Is HttpRequestFailedException AndAlso
+                    CInt(CType(ex.InnerException, HttpRequestFailedException).StatusCode).ToString().StartsWithF("4") AndAlso
+                    DontRetryOnRefused Then Throw
                 RetryException = ex
-                If ModeDebug Then Log(ex, $"[Net] 网络请求第 {RetryCount} 次失败（{Url}）")
+                Log(ex, $"[Net] 网络请求第 {RetryCount} 次失败（{Url}）", LogLevel.Debug)
             End Try
         End While
         Throw RetryException

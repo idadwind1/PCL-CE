@@ -762,7 +762,7 @@ SkipLogin:
             Dim IsIgnore As Boolean = False
             RunInUiWait(Sub()
                             If Not IsLaunching Then Exit Sub
-                            If MyMsgBox($"启动器在尝试刷新账号信息时遇到了网络错误。{vbCrLf}你可以选择取消，检查网络后再次启动，也可以选择忽略错误继续启动，但可能无法游玩部分服务器。", "账号信息获取失败", "继续", "取消") = 1 Then IsIgnore = True
+                            If MyMsgBox($"启动器在尝试刷新账号信息时(Step 2)遇到了网络错误。{vbCrLf}你可以选择取消，检查网络后再次启动，也可以选择忽略错误继续启动，但可能无法游玩部分服务器。", "账号信息获取失败", "继续", "取消") = 1 Then IsIgnore = True
                         End Sub)
             If IsIgnore Then
                 Return "Ignore"
@@ -825,7 +825,7 @@ SkipLogin:
                 Dim IsIgnore As Boolean = False
                 RunInUiWait(Sub()
                                 If Not IsLaunching Then Exit Sub
-                                If MyMsgBox($"启动器在尝试刷新账号信息时遇到了网络错误。{vbCrLf}你可以选择取消，检查网络后再次启动，也可以选择忽略错误继续启动，但可能无法游玩部分服务器。", "账号信息获取失败", "继续", "取消") = 1 Then IsIgnore = True
+                                If MyMsgBox($"启动器在尝试刷新账号信息时(Step 3)遇到了网络错误。{vbCrLf}你可以选择取消，检查网络后再次启动，也可以选择忽略错误继续启动，但可能无法游玩部分服务器。", "账号信息获取失败", "继续", "取消") = 1 Then IsIgnore = True
                             End Sub)
                 If IsIgnore Then
                     Return {SelectedProfile.AccessToken, "Ignore"}
@@ -869,7 +869,7 @@ SkipLogin:
                 Dim IsIgnore As Boolean = False
                 RunInUiWait(Sub()
                                 If Not IsLaunching Then Exit Sub
-                                If MyMsgBox($"启动器在尝试刷新账号信息时遇到了网络错误。{vbCrLf}你可以选择取消，检查网络后再次启动，也可以选择忽略错误继续启动，但可能无法游玩部分服务器。", "账号信息获取失败", "继续", "取消") = 1 Then IsIgnore = True
+                                If MyMsgBox($"启动器在尝试刷新账号信息时(Step 4)遇到了网络错误。{vbCrLf}你可以选择取消，检查网络后再次启动，也可以选择忽略错误继续启动，但可能无法游玩部分服务器。", "账号信息获取失败", "继续", "取消") = 1 Then IsIgnore = True
                             End Sub)
                 If IsIgnore Then
                     Return "Ignore"
@@ -949,7 +949,7 @@ SkipLogin:
                 Dim IsIgnore As Boolean = False
                 RunInUiWait(Sub()
                                 If Not IsLaunching Then Exit Sub
-                                If MyMsgBox($"启动器在尝试刷新账号信息时遇到了网络错误。{vbCrLf}你可以选择取消，检查网络后再次启动，也可以选择忽略错误继续启动，但可能无法游玩部分服务器。", "账号信息获取失败", "继续", "取消") = 1 Then IsIgnore = True
+                                If MyMsgBox($"启动器在尝试刷新账号信息时(Step 6)遇到了网络错误。{vbCrLf}你可以选择取消，检查网络后再次启动，也可以选择忽略错误继续启动，但可能无法游玩部分服务器。", "账号信息获取失败", "继续", "取消") = 1 Then IsIgnore = True
                             End Sub)
                 If IsIgnore Then
                     Return {SelectedProfile.Uuid, SelectedProfile.Username, "Ignore"}
