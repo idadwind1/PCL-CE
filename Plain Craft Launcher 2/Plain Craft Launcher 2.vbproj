@@ -1251,6 +1251,7 @@
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Images\Themes\server_bg.png" />
+    <Resource Include="Images\Icons\DefaultServer.png" />
     <Content Include="Resources\linkd.exe" />
     <Resource Include="Resources\oauth-complete.html" />
   </ItemGroup>
