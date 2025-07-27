@@ -110,7 +110,7 @@ public class McPing : IDisposable
                 Convert.ToInt32(versionNode["id"]?.ToString() ?? "-1")),
             new McPingPlayerResult(
                 Convert.ToInt32(playersNode["max"]?.ToString() ?? "0"),
-                Convert.ToInt32(playersNode["max"]?.ToString() ?? "0"),
+                Convert.ToInt32(playersNode["online"]?.ToString() ?? "0"),
                 (playersNode["sample"]?.AsArray() ?? []).Select(x => new McPingPlayerSampleResult(x!["name"]?.ToString() ?? "", x["id"]?.ToString() ?? "")).ToList()),
             descNode,
             retJson["favicon"]?.ToString() ?? string.Empty,
