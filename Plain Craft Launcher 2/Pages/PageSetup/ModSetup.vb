@@ -892,6 +892,14 @@ Public Class ModSetup
         AniSpeed = If(Value >= 30, 200, MathClamp(Value * 0.1 + 0.1, 0.1, 3))
     End Sub
 
+    Public Sub SystemHttpProxy(value As String)
+        Core.Model.Net.HttpProxyManager.Instance.ProxyAddress = value
+    End Sub
+
+    Public Sub SystemUseDefaultProxy(value As Boolean)
+        Core.Model.Net.HttpProxyManager.Instance.DisableProxy = value
+    End Sub
+
 #End Region
 
 #Region "Version"
