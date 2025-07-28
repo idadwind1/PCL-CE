@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
 using System.Text;
+using System.Windows;
 using PCL.Core.Helper;
 using PCL.Core.LifecycleManagement;
 
@@ -248,6 +249,7 @@ public sealed class RpcService : ILifecycleService
                 app.Dispatcher.BeginInvoke(() =>
                 {
                     var window = app.MainWindow!;
+                    if (window.WindowState == WindowState.Minimized) window.WindowState = WindowState.Normal;
                     if (!window.Topmost)
                     {
                         window.Topmost = true;

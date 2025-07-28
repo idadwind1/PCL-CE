@@ -33,7 +33,7 @@ public class SingleInstanceService : GeneralService
     {
         try
         {
-            var stream = File.Open(_LockFilePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
+            var stream = File.Open(_LockFilePath, FileMode.Create, FileAccess.ReadWrite, FileShare.Read);
             Context.Debug("未发现重复实例，正在向单例锁写入信息");
             using var sw = new StreamWriter(stream, Encoding.ASCII, 8, true);
             sw.Write(NativeInterop.CurrentProcessId);
