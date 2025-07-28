@@ -235,8 +235,6 @@ public sealed class FileService : GeneralService
                                 Context.Warn($"文件处理出错: {item}", ex);
                                 result = ex;
                             }
-                            var atomicResult = new AtomicVariable<object>(result, true, true);
-                            _ProcessResults.AddOrUpdate(item, atomicResult, (_, _) => atomicResult);
                         }
                         OnProcessFinished(item, result);
                     });
@@ -246,6 +244,10 @@ public sealed class FileService : GeneralService
                 {
                     threadPool.QueueCpu(() =>
                     {
+                        var atomicResult = new AtomicVariable<object>(result, true, true);
+                        _ProcessResults.AddOrUpdate(item, atomicResult, (_, _) => atomicResult);
+                        // 触发等待事件
+                        if (_WaitForResultEvents.TryGetValue(finishedItem, out var waitEvent)) waitEvent.Set();
                         try
                         {
                             var handled = task.OnProcessFinished(finishedItem, result);
@@ -313,16 +315,17 @@ public sealed class FileService : GeneralService
 
     /// <param name="item">which file to wait for the result</param>
     /// <param name="timeout">the maximum waiting time</param>
+    /// <param name="remove">whether remove from the temp dictionary after successfully get the value</param>
     /// <returns>
     /// a value, or <c>null</c> if the result is really <c>null</c>, or else, something is boom -
     /// I don't know what is wrong but in a word there is something wrong :D
     /// </returns>
-    public static AnyType? WaitForResult(FileItem item, TimeSpan? timeout = null)
+    public static AnyType? WaitForResult(FileItem item, TimeSpan? timeout = null, bool remove = true)
     {
-        var success = TryGetResult(item, out var result);
+        var success = TryGetResult(item, out var result, remove);
         if (success) return result;
         var waitEvent = _WaitForResultEvents.GetOrAdd(item, _ => new ManualResetEventSlim(false));
-        bool waitResult = true;
+        var waitResult = true;
         if (timeout is { } t) waitResult = waitEvent.Wait(t);
         else waitEvent.Wait();
         if (!waitResult) return null;
