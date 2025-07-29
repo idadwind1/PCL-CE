@@ -47,7 +47,7 @@ public class McPing : IDisposable
     /// </summary>
     /// <returns></returns>
     /// <exception cref="NullReferenceException">获取的结果出现字段缺失时</exception>
-    public async Task<McPingResult> PingAsync()
+    public async Task<McPingResult?> PingAsync()
     {
         using var cts = new CancellationTokenSource();
         cts.CancelAfter(_timeout);
@@ -61,8 +61,16 @@ public class McPing : IDisposable
             catch (ObjectDisposedException) { /* 忽略已释放的异常 */ }
         });
         // 信息获取
-        LogWrapper.Debug("McPing",$"Connecting to {_endpoint}");
-        await _socket.ConnectAsync(_endpoint);
+        try
+        {
+            LogWrapper.Debug("McPing", $"Connecting to {_endpoint}");
+            await _socket.ConnectAsync(_endpoint);
+        }
+        catch (Exception e)
+        {
+            LogWrapper.Error(e, "McPing",$"Failed to connect to the {_endpoint}");
+            return null;
+        }
         LogWrapper.Debug("McPing",$"Connection established: {_endpoint}");
         using var stream = new NetworkStream(_socket, false);
         var handshakePacket = _BuildHandshakePacket(_host, _endpoint.Port);
