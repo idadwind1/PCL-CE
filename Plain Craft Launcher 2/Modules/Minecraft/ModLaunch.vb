@@ -1602,9 +1602,6 @@ LoginFinish:
                 If McInstanceCurrent.Version.HasOptiFine Then Hint("OptiFine 与自动进入服务器可能不兼容，有概率导致材质丢失甚至游戏崩溃！", HintType.Critical)
             End If
         End If
-        '自定义
-        Dim ArgumentGame As String = Setup.Get("VersionAdvanceGame", instance:=McInstanceCurrent)
-        Arguments += " " & If(ArgumentGame = "", Setup.Get("LaunchAdvanceGame"), ArgumentGame)
         '输出
         McLaunchLog("Minecraft 启动参数：")
         McLaunchLog(Arguments)
