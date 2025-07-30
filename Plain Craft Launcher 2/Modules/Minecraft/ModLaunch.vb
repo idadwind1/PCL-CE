@@ -1560,6 +1560,9 @@ LoginFinish:
         For Each Arg In CurrentLaunchOptions.ExtraArgs
             Arguments += " " & Arg.Trim
         Next
+        '自定义参数
+        Dim ArgumentGame As String = Setup.Get("VersionAdvanceGame", instance:=McInstanceCurrent)
+        Arguments += " " & If(ArgumentGame = "", Setup.Get("LaunchAdvanceGame"), ArgumentGame)
         '替换参数
         Dim ReplaceArguments = McLaunchArgumentsReplace(McInstanceCurrent, Loader)
         If String.IsNullOrWhiteSpace(ReplaceArguments("${version_type}")) Then
@@ -1567,9 +1570,15 @@ LoginFinish:
             Arguments = Arguments.Replace(" --versionType ${version_type}", "")
             ReplaceArguments("${version_type}") = """"""
         End If
-        For Each entry As KeyValuePair(Of String, String) In ReplaceArguments
-            Arguments = Arguments.Replace(entry.Key, If(entry.Value.Contains(" ") OrElse entry.Value.Contains(":\"), """" & entry.Value & """", entry.Value))
+        Dim FinalArguments As String = ""
+        For Each Argument In Arguments.Split(" ")
+            For Each Entry As KeyValuePair(Of String, String) In ReplaceArguments
+                Argument = Argument.Replace(Entry.Key, Entry.Value)
+            Next
+            If (Argument.Contains(" ") OrElse Argument.Contains(":\")) AndAlso Not Argument.EndsWithF("""") Then Argument = $"""{Argument}"""
+            FinalArguments += Argument & " "
         Next
+        FinalArguments = FinalArguments.TrimEnd()
         '进存档
         Dim WorldName As String = CurrentLaunchOptions.WorldName
         If WorldName IsNot Nothing Then
