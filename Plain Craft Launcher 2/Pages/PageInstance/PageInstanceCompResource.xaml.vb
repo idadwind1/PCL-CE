@@ -964,7 +964,7 @@ Install:
             '#4992，Mod 从过滤器看可能不应在列表中，但因为刚切换状态所以依然保留在列表中，所以应该从列表 UI 判断，而非从过滤器判断
             Dim ShouldSelected As Boolean = Value AndAlso PanList.Children.Contains(Item)
             Item.Checked = ShouldSelected
-            If ShouldSelected Then SelectedMods.Add(Item.Entry.FileName)
+            If ShouldSelected Then SelectedMods.Add(Item.Entry.RawPath)
         Next
         AniControlEnabled -= 1
         RefreshBars()
@@ -1312,7 +1312,7 @@ Install:
 
     '更新
     Private Sub BtnSelectUpdate_Click() Handles BtnSelectUpdate.Click
-        Dim UpdateList As List(Of LocalCompFile) = CompResourceListLoader.Output.Where(Function(m) SelectedMods.Contains(m.FileName) AndAlso m.CanUpdate).ToList()
+        Dim UpdateList As List(Of LocalCompFile) = CompResourceListLoader.Output.Where(Function(m) SelectedMods.Contains(m.RawPath) AndAlso m.CanUpdate).ToList()
         If Not UpdateList.Any() Then Return
         UpdateResource(UpdateList)
         ChangeAllSelected(False)
@@ -1450,7 +1450,7 @@ Install:
 
     '删除
     Private Sub BtnSelectDelete_Click() Handles BtnSelectDelete.Click
-        DeleteMods(CompResourceListLoader.Output.Where(Function(m) SelectedMods.Contains(m.FileName)))
+        DeleteMods(CompResourceListLoader.Output.Where(Function(m) SelectedMods.Contains(m.RawPath)))
         ChangeAllSelected(False)
     End Sub
     Private Sub DeleteMods(ModList As IEnumerable(Of LocalCompFile))
@@ -1497,7 +1497,7 @@ Install:
                     IsSuccessful = False
                 End Try
                 '取消选中
-                SelectedMods.Remove(ModEntity.FileName)
+                SelectedMods.Remove(ModEntity.RawPath)
                 '更改 Loader 和 UI 中的列表
                 CompResourceListLoader.Output.Remove(ModEntity)
                 SearchResult?.Remove(ModEntity)
@@ -1546,13 +1546,13 @@ Install:
 
     '收藏
     Private Sub BtnSelectFavorites_Click(sender As Object, e As RouteEventArgs) Handles BtnSelectFavorites.Click
-        Dim Selected As List(Of CompProject) = CompResourceListLoader.Output.Where(Function(m) SelectedMods.Contains(m.FileName) AndAlso m.Comp IsNot Nothing).Select(Function(i) i.Comp).ToList
+        Dim Selected As List(Of CompProject) = CompResourceListLoader.Output.Where(Function(m) SelectedMods.Contains(m.RawPath) AndAlso m.Comp IsNot Nothing).Select(Function(i) i.Comp).ToList
         CompFavorites.ShowMenu(Selected, sender)
     End Sub
 
     '分享
     Private Sub BtnSelectShare_Click() Handles BtnSelectShare.Click
-        Dim ShareList As List(Of String) = CompResourceListLoader.Output.Where(Function(m) SelectedMods.Contains(m.FileName) AndAlso m.Comp IsNot Nothing).Select(Function(i) i.Comp.Id).ToList()
+        Dim ShareList As List(Of String) = CompResourceListLoader.Output.Where(Function(m) SelectedMods.Contains(m.RawPath) AndAlso m.Comp IsNot Nothing).Select(Function(i) i.Comp.Id).ToList()
         ClipboardSet(CompFavorites.GetShareCode(ShareList))
         ChangeAllSelected(False)
     End Sub
