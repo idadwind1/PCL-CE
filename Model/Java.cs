@@ -120,7 +120,11 @@ public class Java(string javaFolder, Version version, JavaBrandType brand, bool 
             var currentJavaArch = peData.Machine;
             var isJava64Bit = PEHeaderReader.IsMachine64Bit(peData.Machine);
             var shouldDisableByDefault =
-                (isJavaJre && javaVersion.Major >= 16) || (!isJava64Bit && Environment.Is64BitOperatingSystem);
+                (isJavaJre && javaVersion.Major >= 16)
+                || (!isJava64Bit && Environment.Is64BitOperatingSystem)
+                || (isJava64Bit && !Environment.Is64BitOperatingSystem)
+                || !File.Exists(Path.Combine(Directory.GetParent(currentJavaFolder)?.FullName ?? currentJavaFolder,
+                    "lib", "jvm.cfg"));
 
             return new Java(
                 currentJavaFolder,

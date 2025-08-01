@@ -102,6 +102,12 @@ public class JavaManage
         return _javas.Any(x => x.JavaExePath == javaExe);
     }
 
+    /// <summary>
+    /// 依据版本要求自动选择 Java
+    /// </summary>
+    /// <param name="minVersion">最小版本号</param>
+    /// <param name="maxVersion">最大版本号</param>
+    /// <returns></returns>
     public async Task<List<Java>> SelectSuitableJava(Version minVersion, Version maxVersion)
     {
         if (_javas.Count == 0)
