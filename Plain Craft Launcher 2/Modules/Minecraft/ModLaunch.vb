@@ -1228,7 +1228,7 @@ LoginFinish:
 #Region "离线验证"
     Private Sub McLoginLegacyStart(Data As LoaderTask(Of McLoginLegacy, McLoginResult))
         Dim Input As McLoginLegacy = Data.Input
-        ProfileLog("验证方式：离线（" & Input.UserName & "）")
+        ProfileLog($"验证方式：离线（{Input.UserName}, {Input.Uuid}）")
         Data.Progress = 0.1
         With Data.Output
             .Name = Input.UserName

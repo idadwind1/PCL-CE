@@ -63,14 +63,10 @@ Class PageLoginProfile
         SaveProfile() '保存档案配置，确保切换后的档案被正确保存
 
         '清除登录验证缓存，确保使用新档案的验证信息
-        Try
-            McLoginMsLoader?.Abort()
-            McLoginAuthLoader?.Abort()
-            McLoginLegacyLoader?.Abort()
-        Catch ex As Exception
-            Log(ex, "清除登录验证缓存时出现异常", LogLevel.Debug)
-        End Try
-        
+        McLoginMsLoader.State = LoadState.Waiting
+        McLoginAuthLoader.State = LoadState.Waiting
+        McLoginLegacyLoader.State = LoadState.Waiting
+
         RunInUi(Sub()
                     FrmLaunchLeft.RefreshPage(True)
                     FrmLaunchLeft.BtnLaunch.IsEnabled = True
