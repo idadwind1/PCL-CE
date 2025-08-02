@@ -9,6 +9,7 @@
         RunInNewThread(
         Sub()
             Try
+                SelectedProfile = Nothing
                 McLoginMsLoader.Start(GetLoginData(McLoginType.Ms), IsForceRestart:=True)
                 Do While McLoginMsLoader.State = LoadState.Loading
                     RunInUi(Sub() BtnLogin.Text = Math.Round(McLoginMsLoader.Progress * 100) & "%")

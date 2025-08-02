@@ -479,9 +479,9 @@ NextInner:
 #End Region
 
     '各个登录方式的主对象与输入构造
-    Public McLoginMsLoader As New LoaderTask(Of McLoginMs, McLoginResult)("Loader Login Ms", AddressOf McLoginMsStart, AddressOf GetLoginData) With {.ReloadTimeout = 1}
-    Public McLoginLegacyLoader As New LoaderTask(Of McLoginLegacy, McLoginResult)("Loader Login Legacy", AddressOf McLoginLegacyStart, AddressOf GetLoginData)
-    Public McLoginAuthLoader As New LoaderTask(Of McLoginServer, McLoginResult)("Loader Login Auth", AddressOf McLoginServerStart, AddressOf GetLoginData) With {.ReloadTimeout = 1000 * 60 * 10}
+    Public McLoginMsLoader As New LoaderTask(Of McLoginMs, McLoginResult)("Loader Login Ms", AddressOf McLoginMsStart) With {.ReloadTimeout = 1}
+    Public McLoginLegacyLoader As New LoaderTask(Of McLoginLegacy, McLoginResult)("Loader Login Legacy", AddressOf McLoginLegacyStart)
+    Public McLoginAuthLoader As New LoaderTask(Of McLoginServer, McLoginResult)("Loader Login Auth", AddressOf McLoginServerStart) With {.ReloadTimeout = 1000 * 60 * 10}
 
     '主加载函数，返回所有需要的登录信息
     Private McLoginMsRefreshTime As Long = 0 '上次刷新登录的时间
