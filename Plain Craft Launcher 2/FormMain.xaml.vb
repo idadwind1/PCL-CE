@@ -8,20 +8,20 @@ Public Class FormMain
 #Region "基础"
 
     '更新日志
-    Private Sub ShowUpdateLog(LastVersion As Integer)
+    Private Sub ShowUpdateLog()
         RunInNewThread(
-        Sub()
-            Dim ChangelogFile = $"{PathTemp}CEUpdateLog.md"
-            Dim Changelog As String
-            If File.Exists(ChangelogFile) Then
-                Changelog = ReadFile(ChangelogFile)
-            Else
-                Changelog = "欢迎使用呀~"
-            End If
-            If MyMsgBoxMarkdown(Changelog, "PCL CE 已更新至 " & VersionBranchName & " " & VersionBaseName, "确定", "完整更新日志") = 2 Then
-                OpenWebsite("https://github.com/PCL-Community/PCL2-CE/releases")
-            End If
-        End Sub, "UpdateLog Output")
+            Sub()
+                Dim ChangelogFile = $"{PathTemp}CEUpdateLog.md"
+                Dim Changelog As String
+                If File.Exists(ChangelogFile) Then
+                    Changelog = ReadFile(ChangelogFile)
+                Else
+                    Changelog = "欢迎使用呀~"
+                End If
+                If MyMsgBoxMarkdown(Changelog, "PCL CE 已更新至 " & VersionBranchName & " " & VersionBaseName, "确定", "完整更新日志") = 2 Then
+                    OpenWebsite("https://github.com/PCL-Community/PCL2-CE/releases")
+                End If
+            End Sub, "UpdateLog Output")
     End Sub
 
     '窗口加载
@@ -207,7 +207,7 @@ Public Class FormMain
                 End Select
             End If
             '遥测提示
-            If Setup.Get("SystemTelemetry") = Nothing Then
+            If Setup.IsUnset("SystemTelemetry") Then
                 Select Case MyMsgBox("这是一项与 Steam 硬件调查类似的计划，参与调查可以帮助我们更好的进行规划和开发，且我们会不定期发布该调查的统计结果。" & vbCrLf &
                                      "如果选择参与调查，我们将会收集以下信息：" & vbCrLf &
                                      "启动器版本信息与识别码，使用的 Windows 系统版本与架构，已安装的物理内存大小，NAT 与 IPv6 支持情况，是否使用过官方版 PCL、HMCL 或 BakaXL" & vbCrLf & vbCrLf &
@@ -327,7 +327,7 @@ Public Class FormMain
         '输出更新日志
         If LastVersionCode <= 0 Then Return
         If LowerVersionCode >= VersionCode Then Return
-        ShowUpdateLog(LowerVersionCode)
+        ShowUpdateLog()
     End Sub
     Private Sub DowngradeSub(LastVersionCode As Integer)
         Log("[Start] 版本号从 " & LastVersionCode & " 降低到 " & VersionCode)
