@@ -7,10 +7,10 @@ Class PageLoginProfile
     Public Sub Reload() Handles Me.Loaded
         RefreshProfileList()
         FrmLoginProfileSkin = Nothing
-        RunInNewThread(Sub()
-                           Thread.Sleep(800)
-                           RunInUi(Sub() FrmLaunchLeft.RefreshPage(True))
-                       End Sub)
+        'RunInNewThread(Sub()
+        '                   Thread.Sleep(800)
+        '                   RunInUi(Sub() FrmLaunchLeft.RefreshPage(True))
+        '               End Sub)
     End Sub
     Public Property ProfileCollection As New ObservableCollection(Of ProfileItem)
     Public Class ProfileItem
