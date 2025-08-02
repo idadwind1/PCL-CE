@@ -18,9 +18,7 @@ Public Class FormMain
                 Else
                     Changelog = "欢迎使用呀~"
                 End If
-                If MyMsgBoxMarkdown(Changelog, "PCL CE 已更新至 " & VersionBranchName & " " & VersionBaseName, "确定", "完整更新日志") = 2 Then
-                    OpenWebsite("https://github.com/PCL-Community/PCL2-CE/releases")
-                End If
+                MyMsgBoxMarkdown(Changelog, "PCL CE 已更新至 " & VersionBranchName & " " & VersionBaseName)
             End Sub, "UpdateLog Output")
     End Sub
 
