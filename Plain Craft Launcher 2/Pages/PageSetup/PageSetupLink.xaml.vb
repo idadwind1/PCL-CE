@@ -68,8 +68,10 @@
                                        End Sub)
                            Catch ex As Exception
                                Log("[Link] 刷新 Natayark ID 信息失败，需要重新登录")
-                               CardLogged.Visibility = Visibility.Collapsed
-                               CardNotLogged.Visibility = Visibility.Visible
+                               RunInUi(Sub()
+                                           CardLogged.Visibility = Visibility.Collapsed
+                                           CardNotLogged.Visibility = Visibility.Visible
+                                       End Sub)
                            End Try
                        End Sub)
     End Sub
