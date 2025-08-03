@@ -279,7 +279,7 @@ public sealed class Lifecycle : ILifecycleService
             Console.WriteLine("[Lifecycle] Log service stopped");
         }
         _SavePendingLogs();
-#if DEBUG || DEBUGCI
+#if TRACE
         // 输出仍在运行的线程
         Console.WriteLine("[Lifecycle] Thread(s) still in working:");
         var currentThreadId = NativeInterop.GetCurrentOsThreadId();

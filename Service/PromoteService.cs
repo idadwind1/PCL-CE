@@ -100,7 +100,7 @@ public sealed class PromoteService : ILifecycleService
     
     private static string _ShortenString(string str)
     {
-#if DEBUG || DEBUGCI
+#if TRACE
         const int maxLength = 40;
 #else
         const int maxLength = 15;
