@@ -2,7 +2,9 @@ Imports System.Net
 Imports System.Runtime.ConstrainedExecution
 Imports System.Runtime.InteropServices
 
-Imports PCL.Core
+Imports PCL.Core.IO
+Imports PCL.Core.Link
+Imports PCL.Core.Native
 
 Public Class PageOtherTest
     Public Sub New()
@@ -127,8 +129,8 @@ Public Class PageOtherTest
                         If Not McFolderList.Any() Then
                             McFolderListLoader.Start()
                         End If
-                        Log(String.Format("[Test] 当前缓存文件夹：{0}，默认缓存文件夹：{1}", PathTemp, IO.Path.GetTempPath() + "PCL\"))
-                        If String.Compare(PathTemp, IO.Path.GetTempPath() + "PCL\") = 0 Then
+                        Log(String.Format("[Test] 当前缓存文件夹：{0}，默认缓存文件夹：{1}", PathTemp, System.IO.Path.GetTempPath() + "PCL\"))
+                        If String.Compare(PathTemp, System.IO.Path.GetTempPath() + "PCL\") = 0 Then
                             If Setup.Get("HintClearRubbish") <= 2 Then
                                 If MyMsgBox("即将清理游戏日志、错误报告、缓存等文件。" & vbCrLf & "虽然应该没人往这些地方放重要文件，但还是问一下，是否确认继续？" & vbCrLf & vbCrLf & "在完成清理后，PCL 将自动重启。", "清理确认", "确定", "取消") = 2 Then
                                     Return
@@ -480,7 +482,7 @@ Public Class PageOtherTest
                                    End Try
                                End If
                                '查询信息
-                               Using query As New Utils.Minecraft.McPing(ip.ToString(), port)
+                               Using query As New McPing(ip.ToString(), port)
                                    Dim ret = query.PingAsync().Result
                                    If ret Is Nothing Then Throw New Exception("没有查询到信息")
                                    'Base64 图像转换
@@ -598,8 +600,8 @@ Public Class PageOtherTest
         Const shortcutName = "PCL 社区版.lnk"
         Const desktopName = "桌面"
         Const startName = "开始菜单"
-        Dim desktop = Service.FileService.GetSpecialPath(Environment.SpecialFolder.Desktop, shortcutName)
-        Dim start = Service.FileService.GetSpecialPath(Environment.SpecialFolder.StartMenu, "Programs\" & shortcutName)
+        Dim desktop = FileService.GetSpecialPath(Environment.SpecialFolder.Desktop, shortcutName)
+        Dim start = FileService.GetSpecialPath(Environment.SpecialFolder.StartMenu, "Programs\" & shortcutName)
         Dim choice = MyMsgBox(
             "这个快捷方式不会自动移除，在删除/移动启动器前请手动移除快捷方式。" & vbCrLf & vbCrLf &
             desktopName & "位置: " & desktop & vbCrLf & startName & "位置: " & start,
@@ -607,7 +609,7 @@ Public Class PageOtherTest
         If choice = 1 Then Exit Sub
         Dim shortcutPath = If(choice = 2, desktop, start)
         Dim locationName = If(choice = 2, desktopName, startName)
-        Helper.Files.CreateShortcut(shortcutPath, Helper.NativeInterop.ExecutablePath)
+        Files.CreateShortcut(shortcutPath, NativeInterop.ExecutablePath)
         Hint("已在" & locationName & "创建快捷方式", HintType.Finish)
     End Sub
     

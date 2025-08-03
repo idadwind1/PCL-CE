@@ -1,8 +1,8 @@
 using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using PCL.Core.Utils.Minecraft;
 using System.Threading.Tasks;
 using System.Net.Sockets;
+using PCL.Core.Link;
 
 namespace PCL.Test.Minecraft;
 

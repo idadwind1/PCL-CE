@@ -2,8 +2,8 @@ Imports System.IO.Compression
 Imports System.Threading.Tasks
 Imports Microsoft.Identity.Client
 Imports Microsoft.Identity.Client.Broker
+Imports PCL.Core.Minecraft
 
-Imports PCL.Core.Model
 Public Module ModLaunch
 
 #Region "开始"

@@ -4,8 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
-using PCL.Core.Helper;
+using PCL.Core.VersionControl;
 
 namespace PCL.Test
 {

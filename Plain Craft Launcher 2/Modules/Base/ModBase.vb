@@ -9,7 +9,8 @@ Imports System.Xaml
 Imports System.Threading.Tasks
 Imports Newtonsoft.Json
 Imports Newtonsoft.Json.Serialization
-Imports PCL.Core.Helper
+Imports PCL.Core.Logging
+Imports PCL.Core.Native
 
 Public Module ModBase
 

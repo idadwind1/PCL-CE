@@ -1,6 +1,5 @@
 ﻿Imports Newtonsoft.Json
-Imports PCL.Core.Helper
-Imports PCL.Core.Service
+Imports PCL.Core.Native
 
 Public Module ModNativeInterop
 

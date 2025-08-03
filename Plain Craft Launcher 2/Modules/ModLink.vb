@@ -4,11 +4,11 @@ Imports System.Net.Sockets
 Imports Makaretu.Nat
 Imports STUN
 Imports System.Threading.Tasks
-Imports PCL.Core.Model
-Imports PCL.Core.Utils.Minecraft
-Imports PCL.Core.Service
 Imports PCL.Core.Extension
-Imports PCL.Core.Helper
+Imports PCL.Core.IO
+Imports PCL.Core.Link
+Imports PCL.Core.Native
+Imports PCL.Core.Network
 
 Public Module ModLink
 
@@ -210,7 +210,7 @@ Public Module ModLink
     End Function
     Public Function GetLauncherBrand(pid As Integer) As String
         Try
-            Dim cmd = CmdLineHelper.GetCommandLine(pid)
+            Dim cmd = NativeInterop.GetCommandLine(pid)
             If cmd.Contains("-Dminecraft.launcher.brand=") Then
                 Return cmd.AfterFirst("-Dminecraft.launcher.brand=").BeforeFirst("-").TrimEnd("'", " ")
             Else
@@ -344,7 +344,7 @@ Public Module ModLink
                 Secret = ETNetworkDefaultSecret & Secret
             End If
             If Not IsHost Then
-                PageLinkLobby.JoinerLocalPort = PortHelper.GetAvailablePort()
+                PageLinkLobby.JoinerLocalPort = NetworkHelper.NewTcpPort()
                 Log("[Link] ET 本地端口转发端口: " & PageLinkLobby.JoinerLocalPort)
             End If
             If IsHost Then '创建者
