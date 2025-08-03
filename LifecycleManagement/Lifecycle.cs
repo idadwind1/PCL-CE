@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using PCL.Core.Helper;
+using PCL.Core.Native;
 
 namespace PCL.Core.LifecycleManagement;
 
