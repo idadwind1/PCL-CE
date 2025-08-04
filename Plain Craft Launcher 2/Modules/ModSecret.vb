@@ -5,6 +5,7 @@ Imports System.Management
 Imports PCL.Core.IO
 Imports PCL.Core.Secret
 Imports PCL.Core.UI
+Imports PCL.Core.Update
 Imports PCL.Core.Utils
 Imports PCL.Core.VersionControl
 

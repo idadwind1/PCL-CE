@@ -1,4 +1,5 @@
-﻿Imports PCL.Core.VersionControl
+﻿Imports PCL.Core.Update
+Imports PCL.Core.VersionControl
 
 Public Interface IUpdateSource
     ''' <summary>

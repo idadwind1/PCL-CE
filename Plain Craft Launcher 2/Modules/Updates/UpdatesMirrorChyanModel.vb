@@ -1,5 +1,6 @@
 ﻿
 Imports System.Text.Json
+Imports PCL.Core.Update
 Imports PCL.Core.VersionControl
 
 Public Class UpdatesMirrorChyanModel 'Mirror 酱的更新格式

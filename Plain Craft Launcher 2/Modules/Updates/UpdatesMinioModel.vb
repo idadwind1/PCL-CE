@@ -1,4 +1,6 @@
 ﻿Imports System.IO.Compression
+Imports PCL.Core.Update
+Imports PCL.Core.Update.Diff
 Imports PCL.Core.VersionControl
 
 Public Class UpdatesMinioModel '社区自己的更新系统格式
