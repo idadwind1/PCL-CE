@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 
-namespace PCL.Core.VersionControl;
+namespace PCL.Core.Update.Diff;
 
 public interface IBinaryDiff
 {

@@ -5,7 +5,7 @@ using PCL.Core.Extension;
 using PCL.Core.LifecycleManagement;
 using PCL.Core.Native;
 
-namespace PCL.Core.VersionControl;
+namespace PCL.Core.Update;
 
 [LifecycleService(LifecycleState.BeforeLoading)]
 public sealed class UpdateService : GeneralService

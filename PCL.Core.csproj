@@ -198,6 +198,12 @@
     <Compile Include="UI\GrayProfileConfig.cs" />
     <Compile Include="UI\MainWindowService.cs" />
     <Compile Include="UI\MsgBoxWrapper.cs" />
+    <Compile Include="Update\Diff\BsDiff.cs" />
+    <Compile Include="Update\Diff\IBinaryDiff.cs" />
+    <Compile Include="Update\SemVer.cs" />
+    <Compile Include="Update\UpdateHelper.cs" />
+    <Compile Include="Update\UpdateService.cs" />
+    <Compile Include="Update\VersionRange.cs" />
     <Compile Include="Utils\AnyType.cs" />
     <Compile Include="Utils\ArgumentsBuilder.cs" />
     <Compile Include="Utils\AtomicVariable.cs" />
@@ -208,18 +214,12 @@
     <Compile Include="Utils\Hash\SHA256Provider.cs" />
     <Compile Include="Utils\Hash\SHA512Provider.cs" />
     <Compile Include="Utils\StringStream.cs" />
-    <Compile Include="VersionControl\BsDiff.cs" />
     <Compile Include="VersionControl\FileVersionObjects.cs" />
     <Compile Include="VersionControl\FileVersionObjectsComparer.cs" />
-    <Compile Include="VersionControl\IBinaryDiff.cs" />
     <Compile Include="VersionControl\IVersionControl.cs" />
     <Compile Include="VersionControl\ObjectType.cs" />
-    <Compile Include="VersionControl\SemVer.cs" />
     <Compile Include="VersionControl\SnapLiteVersionControl.cs" />
-    <Compile Include="VersionControl\UpdateHelper.cs" />
-    <Compile Include="VersionControl\UpdateService.cs" />
     <Compile Include="VersionControl\VersionData.cs" />
-    <Compile Include="VersionControl\VersionRange.cs" />
   </ItemGroup>
   <ItemGroup>
     <COMReference Include="IWshRuntimeLibrary">

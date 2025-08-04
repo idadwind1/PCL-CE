@@ -1,6 +1,6 @@
 using System;
 
-namespace PCL.Core.VersionControl;
+namespace PCL.Core.Update;
 
 public class VersionRange(Version? minVersion, Version? maxVersion)
 {

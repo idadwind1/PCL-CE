@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Text.RegularExpressions;
 
-namespace PCL.Core.VersionControl;
+namespace PCL.Core.Update;
 
 [Serializable]
 public class SemVer(int major, int minor, int patch, string? prerelease = null, string? buildMetadata = null)

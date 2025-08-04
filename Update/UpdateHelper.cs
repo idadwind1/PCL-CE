@@ -2,7 +2,7 @@
 using System.IO;
 using System.Threading;
 
-namespace PCL.Core.VersionControl;
+namespace PCL.Core.Update;
 
 public static class UpdateHelper
 {

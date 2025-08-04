@@ -52,7 +52,7 @@ using System.IO;
 using System.Threading.Tasks;
 using ICSharpCode.SharpZipLib.BZip2;
 
-namespace PCL.Core.VersionControl;
+namespace PCL.Core.Update.Diff;
 
 
 public class BsDiff : IBinaryDiff
