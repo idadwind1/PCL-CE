@@ -202,6 +202,7 @@
     <Compile Include="Utils\ArgumentsBuilder.cs" />
     <Compile Include="Utils\AtomicVariable.cs" />
     <Compile Include="Utils\ExpandoObjectConverter.cs" />
+    <Compile Include="Utils\GameCore.cs" />
     <Compile Include="Utils\Hash\IHashProvider.cs" />
     <Compile Include="Utils\Hash\MD5Provider.cs" />
     <Compile Include="Utils\Hash\SHA1Provider.cs" />
