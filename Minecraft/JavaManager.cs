@@ -197,7 +197,7 @@ public class JavaManager
     private static readonly string[] _TotalKeyWords = [.._MostPossibleKeyWords.Concat(_PossibleKeyWords)];
 
     // 最大文件夹搜索深度
-    const int MaxSearchDepth = 12;
+    private const int MaxSearchDepth = 12;
 
     private static void _ScanDefaultInstallPaths(ref ConcurrentBag<string> javaPaths)
     {
