@@ -39,8 +39,8 @@ public class LogService : ILifecycleLogService
     {
         var thread = Thread.CurrentThread.Name ?? $"#{Thread.CurrentThread.ManagedThreadId}";
         if (module != null) module = $"[{module}] ";
-        var basic = $"[{DateTime.Now:HH:mm:ss.fff}] [{level.PrintName()}] [{thread}] {module}";
-        Logger.Log((ex == null) ? $"{basic}{msg}": $"{basic}({msg}) {ex}");
+        msg = $"[{DateTime.Now:HH:mm:ss.fff}] [{level.PrintName()}] [{thread}] {module}{msg}";
+        Logger.Log((ex == null) ? msg : $"{msg}\n{ex}");
     }
 
     public void OnLog(LifecycleLogItem item)
