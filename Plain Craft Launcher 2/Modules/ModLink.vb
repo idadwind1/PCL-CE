@@ -184,23 +184,39 @@ Public Module ModLink
             Log($"[MCDetect] 获取到端口数量 {lookupList.Count}")
             '并行查找本地，超时 3s 自动放弃
             Dim checkTasks = lookupList.Select(Function(lookup) Task.Run(Async Function()
-                                                                             Try
-                                                                                 Log($"[MCDetect] 找到疑似端口，开始验证：{lookup}")
-                                                                                 Using test As New McPing("127.0.0.1", lookup.Item1, 3000)
-                                                                                     Dim info = Await test.PingAsync()
+                                                                             Log($"[MCDetect] 找到疑似端口，开始验证：{lookup}")
+                                                                             Using test As New McPing("127.0.0.1", lookup.Item1, 3000)
+                                                                                 Dim info As McPingResult
+                                                                                 Try
+                                                                                     info = Await test.PingAsync()
                                                                                      Dim launcher = GetLauncherBrand(lookup.Item2)
                                                                                      If Not String.IsNullOrWhiteSpace(info.Version.Name) Then
                                                                                          Log($"[MCDetect] 端口 {lookup} 为有效 Minecraft 世界")
                                                                                          res.Add(New Tuple(Of Integer, McPingResult, String)(lookup.Item1, info, launcher))
+                                                                                         Return
                                                                                      End If
-                                                                                 End Using
-                                                                             Catch ex As Exception
-                                                                                 If TypeOf ex.InnerException Is ObjectDisposedException Then
-                                                                                     Log($"[McDetect] {lookup} 验证超时，已强制断开连接")
-                                                                                 Else
-                                                                                     Log(ex, $"[McDetect] {lookup} 验证出错")
-                                                                                 End If
-                                                                             End Try
+                                                                                 Catch ex As Exception
+                                                                                     If TypeOf ex.InnerException Is ObjectDisposedException Then
+                                                                                         Log($"[McDetect] {lookup} 验证超时，已强制断开连接，将尝试旧版检测")
+                                                                                     Else
+                                                                                         Log(ex, $"[McDetect] {lookup} 验证出错，将尝试旧版检测")
+                                                                                     End If
+                                                                                 End Try
+                                                                                 Try
+                                                                                     info = Await test.PingOldAsync()
+                                                                                     If Not String.IsNullOrWhiteSpace(info.Version.Name) Then
+                                                                                         Log($"[MCDetect] 端口 {lookup} 为有效 Minecraft 世界")
+                                                                                         res.Add(New Tuple(Of Integer, McPingResult, String)(lookup.Item1, info, "Unknown"))
+                                                                                         Return
+                                                                                     End If
+                                                                                 Catch ex As Exception
+                                                                                     If TypeOf ex.InnerException Is ObjectDisposedException Then
+                                                                                         Log($"[McDetect] {lookup} 验证超时，已强制断开连接")
+                                                                                     Else
+                                                                                         Log(ex, $"[McDetect] {lookup} 验证出错")
+                                                                                     End If
+                                                                                 End Try
+                                                                             End Using
                                                                          End Function)).ToArray()
             Await Task.WhenAll(checkTasks)
         Catch ex As Exception
