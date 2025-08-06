@@ -4,6 +4,7 @@ using System.IO;
 using PCL.Core.IO;
 using PCL.Core.LifecycleManagement;
 using PCL.Core.ProgramSetup.SourceManage;
+using PCL.Core.Secret;
 
 namespace PCL.Core.ProgramSetup;
 
@@ -28,6 +29,8 @@ public sealed class SetupService() : GeneralService("program-setup", "程序配�
         var rawValue = _GetSourceManager(entry).Get(entry.KeyName, gamePath);
         if (rawValue is null)
             return (bool)entry.DefaultValue;
+        if (entry.IsEncrypted)
+            rawValue = EncryptHelper.SecretDecrypt(rawValue);
         return bool.Parse(rawValue);
     }
 
@@ -42,6 +45,8 @@ public sealed class SetupService() : GeneralService("program-setup", "程序配�
         var rawValue = _GetSourceManager(entry).Get(entry.KeyName, gamePath);
         if (rawValue is null)
             return (int)entry.DefaultValue;
+        if (entry.IsEncrypted)
+            rawValue = EncryptHelper.SecretDecrypt(rawValue);
         return int.Parse(rawValue, CultureInfo.InvariantCulture);
     }
 
@@ -53,7 +58,10 @@ public sealed class SetupService() : GeneralService("program-setup", "程序配�
     /// <returns>获取到的值，如果键不存在则返回条目的默认值</returns>
     public static string GetString(SetupEntry entry, string? gamePath = null)
     {
-        return _GetSourceManager(entry).Get(entry.KeyName, gamePath) ?? (string)entry.DefaultValue;
+        var rawValue = _GetSourceManager(entry).Get(entry.KeyName, gamePath) ?? (string)entry.DefaultValue;
+        if (entry.IsEncrypted)
+            rawValue = EncryptHelper.SecretDecrypt(rawValue);
+        return rawValue;
     }
 
     #endregion
@@ -68,7 +76,12 @@ public sealed class SetupService() : GeneralService("program-setup", "程序配�
     /// <param name="gamePath">游戏目录路径</param>
     public static void SetBool(SetupEntry entry, bool value, string? gamePath = null)
     {
-        var oldRawValue = _GetSourceManager(entry).Set(entry.KeyName, value.ToString(), gamePath);
+        var rawValue = value.ToString();
+        if (entry.IsEncrypted)
+            rawValue = EncryptHelper.SecretEncrypt(rawValue);
+        var oldRawValue = _GetSourceManager(entry).Set(entry.KeyName, rawValue, gamePath);
+        if (entry.IsEncrypted && oldRawValue is not null)
+            oldRawValue = EncryptHelper.SecretDecrypt(oldRawValue);
         bool? oldValue = oldRawValue is null ? null : bool.Parse(oldRawValue);
         SetupChanged?.Invoke(entry, oldValue, value, gamePath);
     }
@@ -81,8 +94,12 @@ public sealed class SetupService() : GeneralService("program-setup", "程序配�
     /// <param name="gamePath">游戏目录路径</param>
     public static void SetInt32(SetupEntry entry, int value, string? gamePath = null)
     {
-        var oldRawValue =
-            _GetSourceManager(entry).Set(entry.KeyName, value.ToString(CultureInfo.InvariantCulture), gamePath);
+        var rawValue = value.ToString(CultureInfo.InvariantCulture);
+        if (entry.IsEncrypted)
+            rawValue = EncryptHelper.SecretEncrypt(rawValue);
+        var oldRawValue = _GetSourceManager(entry).Set(entry.KeyName, rawValue, gamePath);
+        if (entry.IsEncrypted && oldRawValue is not null)
+            oldRawValue = EncryptHelper.SecretDecrypt(oldRawValue);
         int? oldValue = oldRawValue is null ? null : int.Parse(oldRawValue, CultureInfo.InvariantCulture);
         SetupChanged?.Invoke(entry, oldValue, value, gamePath);
     }
@@ -98,8 +115,13 @@ public sealed class SetupService() : GeneralService("program-setup", "程序配�
     {
         if (value is null)
             throw new ArgumentNullException(nameof(value));
-        string? oldValue = _GetSourceManager(entry).Set(entry.KeyName, value, gamePath);
-        SetupChanged?.Invoke(entry, oldValue, value, gamePath);
+        var rawValue = value;
+        if (entry.IsEncrypted)
+            rawValue = EncryptHelper.SecretEncrypt(rawValue);
+        string? oldRawValue = _GetSourceManager(entry).Set(entry.KeyName, rawValue, gamePath);
+        if (entry.IsEncrypted && oldRawValue is not null)
+            oldRawValue = EncryptHelper.SecretDecrypt(oldRawValue);
+        SetupChanged?.Invoke(entry, oldRawValue, value, gamePath);
     }
 
     #endregion
@@ -114,6 +136,8 @@ public sealed class SetupService() : GeneralService("program-setup", "程序配�
     public static void DeleteBool(SetupEntry entry, string? gamePath = null)
     {
         var oldRawValue = _GetSourceManager(entry).Remove(entry.KeyName, gamePath);
+        if (entry.IsEncrypted && oldRawValue is not null)
+            oldRawValue = EncryptHelper.SecretDecrypt(oldRawValue);
         bool? oldValue = oldRawValue is null ? null : bool.Parse(oldRawValue);
         SetupChanged?.Invoke(entry, oldValue, null, gamePath);
     }
@@ -126,6 +150,8 @@ public sealed class SetupService() : GeneralService("program-setup", "程序配�
     public static void DeleteInt32(SetupEntry entry, string? gamePath = null)
     {
         var oldRawValue = _GetSourceManager(entry).Remove(entry.KeyName, gamePath);
+        if (entry.IsEncrypted && oldRawValue is not null)
+            oldRawValue = EncryptHelper.SecretDecrypt(oldRawValue);
         int? oldValue = oldRawValue is null ? null : int.Parse(oldRawValue, CultureInfo.InvariantCulture);
         SetupChanged?.Invoke(entry, oldValue, null, gamePath);
     }
@@ -137,8 +163,10 @@ public sealed class SetupService() : GeneralService("program-setup", "程序配�
     /// <param name="gamePath">游戏目录路径</param>
     public static void DeleteString(SetupEntry entry, string? gamePath = null)
     {
-        string? oldValue = _GetSourceManager(entry).Remove(entry.KeyName, gamePath);
-        SetupChanged?.Invoke(entry, oldValue, null, gamePath);
+        string? oldRawValue = _GetSourceManager(entry).Remove(entry.KeyName, gamePath);
+        if (entry.IsEncrypted && oldRawValue is not null)
+            oldRawValue = EncryptHelper.SecretDecrypt(oldRawValue);
+        SetupChanged?.Invoke(entry, oldRawValue, null, gamePath);
     }
 
     #endregion
