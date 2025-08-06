@@ -329,6 +329,9 @@ Public Module ModLink
     Public IsETReady As Boolean = False
     Public Function LaunchEasyTier(IsHost As Boolean, Optional Name As String = ETNetworkDefaultName, Optional Secret As String = ETNetworkDefaultSecret, Optional IsAfterDownload As Boolean = False, Optional LocalPort As Integer = 25565, Optional remotePort As Integer = 25565) As Integer
         Try
+            If ETProcess IsNot Nothing AndAlso Not ETProcess.HasExited Then
+                ETProcess.Kill()
+            End If
             ETProcess = New Process With {
                 .EnableRaisingEvents = True,
                 .StartInfo = New ProcessStartInfo With {
