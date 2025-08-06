@@ -8,7 +8,7 @@ using PCL.Core.Secret;
 
 namespace PCL.Core.ProgramSetup;
 
-public sealed class SetupService() : GeneralService("program-setup", "程序配置")
+public sealed class SetupService : GeneralService
 {
     #region 对外接口
 
@@ -191,6 +191,7 @@ public sealed class SetupService() : GeneralService("program-setup", "程序配�
 #endif
     private static readonly FileItem _GlobalSetupFile = new(@$".{GlobalSetupFolder}\Config.json", FileType.SharedData);
     private static readonly FileItem _LocalSetupFile = new("Setup.ini", FileType.Data);
+    private static LifecycleContext _context = null!;
     private static FileSetupSourceManager _globalSetupSource = null!;
     private static RegisterSetupSourceManager _globalOldSetupSource = null!;
     private static FileSetupSourceManager _localSetupSource = null!;
@@ -199,6 +200,8 @@ public sealed class SetupService() : GeneralService("program-setup", "程序配�
     private static CombinedMigrationSetupSourceManager _migrationSetupSourceEncrypted = null!;
 
     #region ILifecycleService
+
+    public SetupService() : base("program-setup", "程序配置") { _context = ServiceContext; }
 
     public override void Start()
     {
@@ -209,7 +212,7 @@ public sealed class SetupService() : GeneralService("program-setup", "程序配�
         }
         catch (Exception ex)
         {
-            ServiceContext.Fatal("全局配置源托管器初始化失败", ex);
+            _context.Fatal("全局配置源托管器初始化失败", ex);
             _BackupFileAndShutdown(_GlobalSetupFile);
         }
         // 局部配置源托管器
@@ -219,7 +222,7 @@ public sealed class SetupService() : GeneralService("program-setup", "程序配�
         }
         catch (Exception ex)
         {
-            ServiceContext.Fatal("局部配置源托管器初始化失败", ex);
+            _context.Fatal("局部配置源托管器初始化失败", ex);
             _BackupFileAndShutdown(_LocalSetupFile);
         }
         // 来自注册表的旧全局源托管器、游戏实例源托管器、用来支持配置迁移的托管器
@@ -254,7 +257,7 @@ public sealed class SetupService() : GeneralService("program-setup", "程序配�
             File.Replace(filePath, bakPath, filePath + ".tmp");
         else
             File.Move(filePath, bakPath);
-        ServiceContext.Info(
+        _context.Fatal(
             $"配置文件无法解析，可能已经损坏！{Environment.NewLine}" +
             $"请删除 {filePath}{Environment.NewLine}" +
             $"并使用备份配置文件 {bakPath}",
