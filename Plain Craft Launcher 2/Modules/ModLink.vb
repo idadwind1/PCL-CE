@@ -206,7 +206,7 @@ Public Module ModLink
                                                                                      info = Await test.PingOldAsync()
                                                                                      If Not String.IsNullOrWhiteSpace(info.Version.Name) Then
                                                                                          Log($"[MCDetect] 端口 {lookup} 为有效 Minecraft 世界")
-                                                                                         res.Add(New Tuple(Of Integer, McPingResult, String)(lookup.Item1, info, "Unknown"))
+                                                                                         res.Add(New Tuple(Of Integer, McPingResult, String)(lookup.Item1, info, String.Empty))
                                                                                          Return
                                                                                      End If
                                                                                  Catch ex As Exception
