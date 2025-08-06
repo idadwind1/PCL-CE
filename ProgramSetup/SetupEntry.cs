@@ -51,7 +51,9 @@ public sealed class SetupEntry(
                 return;
             lock (_HandlersDict)
             {
-                (_HandlersDict[KeyName] ??= new()).Add(value);
+                if (!_HandlersDict.TryGetValue(KeyName, out var handlers))
+                    _HandlersDict.Add(KeyName, handlers = new());
+                handlers.Add(value);
             }
         }
         remove
