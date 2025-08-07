@@ -646,6 +646,8 @@ Retry:
             Result = NetRequestRetry("https://login.live.com/oauth20_token.srf", "POST",
                 $"client_id={OAuthClientId}&refresh_token={Uri.EscapeDataString(Code)}&grant_type=refresh_token&scope=XboxLive.signin%20offline_access",
                 "application/x-www-form-urlencoded", 2)
+        Catch ex As ThreadInterruptedException
+            Log(ex, "加载线程已终止")
         Catch ex As Exception
             If ex.Message.ContainsF("must sign in again", True) OrElse ex.Message.ContainsF("password expired", True) OrElse
                (ex.Message.Contains("refresh_token") AndAlso ex.Message.Contains("is not valid")) Then '#269
