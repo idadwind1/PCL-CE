@@ -19,6 +19,8 @@ public class LogService : ILifecycleLogService
     
     private static Logger? _logger;
     public static Logger Logger => _logger!;
+    
+    private static bool _wrapperRegistered = false;
 
     public void Start()
     {
@@ -27,11 +29,12 @@ public class LogService : ILifecycleLogService
         _logger = new Logger(config);
         Context.Trace("正在注册日志事件");
         LogWrapper.OnLog += _OnWrapperLog;
+        _wrapperRegistered = true;
     }
 
     public void Stop()
     {
-        LogWrapper.OnLog -= _OnWrapperLog;
+        if (_wrapperRegistered) LogWrapper.OnLog -= _OnWrapperLog;
         _logger?.Dispose();
     }
 
