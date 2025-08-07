@@ -2,24 +2,27 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace PCL.Core.Network;
 
 /// <summary>
-/// 并行任务中断处理。
+/// 分块下载中断处理。
 /// </summary>
 /// <param name="status">任务状态</param>
 /// <param name="lastException">任务中断前抛出的最后一个异常</param>
-public delegate void ParallelInterruptHandler(ParallelTaskStatus status, Exception? lastException);
+public delegate void SegmentInterruptHandler(DownloadSegmentStatus status, Exception? lastException);
 
 /// <summary>
 /// 下载项状态。
 /// </summary>
 public enum DownloadItemStatus
 {
-    Success,
     Waiting,
+    Starting,
     Running,
+    Success,
     Cancelled,
     Failed,
 }
@@ -27,7 +30,11 @@ public enum DownloadItemStatus
 /// <summary>
 /// 下载项。
 /// </summary>
-public class DownloadItem(Uri uri, string targetPath, int chunkSize, int retry)
+public class DownloadItem(
+    Uri uri,
+    string targetPath,
+    int chunkSize = 16384,
+    int retry = 3)
 {
     public string TargetPath { get; } = Path.GetFullPath(targetPath);
     
@@ -41,57 +48,105 @@ public class DownloadItem(Uri uri, string targetPath, int chunkSize, int retry)
     
     public int Retry { get; } = retry;
 
-    public LinkedList<ParallelTask> Parallels { get; } = [];
+    public bool TrySegment { get; set; } = true;
+
+    public LinkedList<DownloadSegment> Segments { get; } = [];
     
     public DownloadItemStatus Status { get; private set; } = DownloadItemStatus.Waiting;
 
     public long CalculateTransferredLength()
     {
-        lock (Parallels)
-        {
-            return Parallels.Aggregate(0L, (len, task) => len + task.TransferredLength);
-        }
+        lock (Segments) return Segments
+            .Aggregate(0L, (len, task) => len + task.TransferredLength);
     }
     
+    public long CalculateRemainingLength() => (ContentLength == 0) ? 0 : ContentLength - CalculateTransferredLength();
+
     private int _finishedCount = 0;
 
-    public void Insert(
+    private void _ConstructDownloadSegment(
+        long startPosition,
+        long endPosition,
+        Action<DownloadSegment>? endCallback,
+        CancellationToken cancelToken,
+        out Task task,
+        out DownloadSegment segment)
+    {
+        var seg = new DownloadSegment(RealUri, TargetPath, ChunkSize)
+        {
+            EndPosition = endPosition,
+            RetryCount = Retry,
+        };
+        if (startPosition == 0 && endPosition != 0)
+        {
+            seg.When(DownloadSegmentStatus.Running, () =>
+            {
+                RealUri = seg.RealUri;
+                ContentLength = seg.TotalLength;
+                Status = DownloadItemStatus.Running;
+            });
+        }
+        seg.EndCallback += endCallback;
+        segment = seg;
+        task = seg.Start(startPosition != 0, startPosition, cancelToken);
+    }
+
+    public async Task NewSegment(
         long startPosition,
         long endPosition,
         Action finishedCallback,
-        ParallelInterruptHandler errorCallback,
-        LinkedListNode<ParallelTask>? afterNode = null)
+        SegmentInterruptHandler errorCallback,
+        LinkedListNode<DownloadSegment>? afterNode = null,
+        CancellationToken cancelToken = default)
     {
-        lock (Parallels)
+        if (Segments.Count == 0) Status = DownloadItemStatus.Starting;
+        cancelToken.Register(() => Status = DownloadItemStatus.Cancelled);
+        Task task;
+        lock (Segments)
         {
-            var task = new ParallelTask(RealUri, TargetPath, ChunkSize)
-            {
-                EndPosition = endPosition,
-                RetryCount = Retry,
-            };
-            if (startPosition == 0 && endPosition != 0)
-            {
-                task.When(ParallelTaskStatus.Running, () =>
+            _ConstructDownloadSegment(
+                startPosition, endPosition, (seg =>
                 {
-                    RealUri = task.RealUri;
-                    ContentLength = task.TotalLength;
-                    Status = DownloadItemStatus.Running;
-                });
+                    if (seg.Status == DownloadSegmentStatus.Success)
+                    {
+                        _finishedCount++;
+                        if (_finishedCount != Segments.Count) return;
+                        Status = DownloadItemStatus.Success;
+                        finishedCallback();
+                    }
+                    else if (seg.Status != DownloadSegmentStatus.Cancelled)
+                    {
+                        errorCallback(seg.Status, seg.LastException);
+                    }
+                }),
+                cancelToken, out task, out var segment);
+            if (afterNode != null)
+            {
+                Segments.AddAfter(afterNode, segment);
+                afterNode.Value.EndPosition = startPosition - 1;
             }
-            task.EndCallback += (() =>
-            {
-                if (task.Status == ParallelTaskStatus.Success)
-                {
-                    _finishedCount++;
-                    if (_finishedCount != Parallels.Count) return;
-                    Status = DownloadItemStatus.Success;
-                    finishedCallback();
-                }
-                else errorCallback(task.Status, task.LastException);
-            });
-            task.Start(startPosition != 0, startPosition);
-            if (afterNode != null) Parallels.AddAfter(afterNode, task);
-            else Parallels.AddLast(task);
+            else Segments.AddLast(segment);
         }
+        await task;
+    }
+
+    public async Task RestartSegment(LinkedListNode<DownloadSegment> node, CancellationToken cancelToken = default)
+    {
+        Task task;
+        lock (Segments)
+        {
+            var segment = node.Value;
+            segment.Cancel();
+            _ConstructDownloadSegment(
+                segment.StartPosition, segment.EndPosition, segment.EndCallback,
+                cancelToken, out task, out segment);
+            node.Value = segment;
+        }
+        await task;
+    }
+
+    public override string ToString()
+    {
+        return $"[{SourceUri}] -> [{TargetPath}]";
     }
 }
