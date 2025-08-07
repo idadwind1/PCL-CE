@@ -143,12 +143,11 @@ public sealed class InstanceSetupSourceManager : ISetupSourceManager, IDisposabl
 /// <typeparam name="T">元素类型</typeparam>
 file sealed class ProducerConsumerSet<T> : IProducerConsumerCollection<T>
 {
-    private readonly ConcurrentDictionary<T, object> _dictionary = new();
-    private readonly object _aObject = new();
+    private readonly ConcurrentDictionary<T, object?> _dictionary = new();
 
     bool IProducerConsumerCollection<T>.TryAdd(T item)
     {
-        _dictionary.TryAdd(item, _aObject);
+        _dictionary.TryAdd(item, null);
         return true;
     }
 
@@ -157,7 +156,7 @@ file sealed class ProducerConsumerSet<T> : IProducerConsumerCollection<T>
         while (true)
         {
             var pair = _dictionary.FirstOrDefault();
-            if (pair.Value is null)
+            if (pair.Key is null)
             {
                 item = default!;
                 return false;
