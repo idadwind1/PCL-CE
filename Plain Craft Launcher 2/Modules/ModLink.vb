@@ -340,10 +340,7 @@ Public Module ModLink
                 .StartInfo = New ProcessStartInfo With {
                     .FileName = etFilePath,
                     .WorkingDirectory = ETPath,
-                    .UseShellExecute = False,
-                    .CreateNoWindow = True,
-                    .RedirectStandardOutput = True,
-                    .RedirectStandardError = True
+                    .WindowStyle = ProcessWindowStyle.Hidden
                 }
             }
             '兜底
