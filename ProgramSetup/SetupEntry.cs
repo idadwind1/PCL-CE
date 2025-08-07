@@ -32,7 +32,7 @@ public sealed class SetupEntry(
             handlersCopy = handlers.ToArray();
         }
         foreach (var handler in handlersCopy)
-            handler.Invoke(oldValue, newValue, gamePath);
+            handler.Invoke(oldValue ?? entry.DefaultValue, newValue ?? entry.DefaultValue, gamePath);
     }
 
     public static void UnsubscribeAllChangedHandlers()
@@ -41,7 +41,7 @@ public sealed class SetupEntry(
             _HandlersDict.Clear();
     }
 
-    public delegate void ValueChangedHandler(object? oldValue, object? newValue, string? gamePath);
+    public delegate void ValueChangedHandler(object oldValue, object newValue, string? gamePath);
 
     public event ValueChangedHandler? ValueChanged
     {
