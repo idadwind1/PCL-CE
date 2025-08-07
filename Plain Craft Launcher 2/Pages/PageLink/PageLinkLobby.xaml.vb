@@ -378,7 +378,7 @@ Retry:
             Dim PlayerList As New List(Of ETPlayerInfo)
             Dim cliJson As JArray = JArray.Parse(ETCliOutput)
             For Each p In cliJson
-                If p("hostname").ToString().Contains("PublicServer") Then Continue For '服务器
+                If p("hostname").ToString().StartsWith("PublicServer") Then Continue For '服务器
                 Dim hostnameSplit As String() = p("hostname").ToString().Split("|")
                 Dim info As New ETPlayerInfo With {
                     .IsHost = p("hostname").ToString().StartsWithF("H|", True) OrElse p("ipv4") = "10.144.144.1",
@@ -398,7 +398,7 @@ Retry:
                 End If
                 PlayerNum += 1
             Next
-            If Not PlayerList.Any(Function(x) x.IsHost) Then
+            If HostInfo Is Nothing Then
                 If RemainRetry > 0 Then
                     Log($"[Link] 未找到大厅创建者 IP，放弃前再重试 {RemainRetry} 次")
                     Thread.Sleep(1000)
