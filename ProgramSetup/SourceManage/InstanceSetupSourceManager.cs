@@ -1,8 +1,16 @@
 ﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.IO;
+using System.Threading;
+using PCL.Core.Extension;
+using PCL.Core.Logging;
+using ContentDictionary = System.Collections.Concurrent.ConcurrentDictionary<string, string>;
 
 namespace PCL.Core.ProgramSetup.SourceManage;
 
-public class InstanceSetupSourceManager : ISetupSourceManager, IDisposable
+// 现有实现会内存泄漏，但是做按照时间的缓存清理实在是太难了……
+public sealed class InstanceSetupSourceManager : ISetupSourceManager, IDisposable
 {
     #region ISetupSourceManager
 
@@ -10,31 +18,119 @@ public class InstanceSetupSourceManager : ISetupSourceManager, IDisposable
     {
         if (gamePath is null)
             throw new ArgumentException("获取游戏实例配置时未提供游戏路径", nameof(gamePath));
-        throw new NotImplementedException();
+        var cache = _LoadCache(_GetFilePath(gamePath));
+        return cache.Content.TryGetValue(key, out var value) ? value : null;
     }
 
     public string? Set(string key, string value, string? gamePath)
     {
         if (gamePath is null)
             throw new ArgumentException("获取游戏实例配置时未提供游戏路径", nameof(gamePath));
-        throw new NotImplementedException();
+        var cache = _LoadCache(_GetFilePath(gamePath));
+        var result = cache.Content.UpdateAndGetPrevious(key, value);
+        _waitingToSave.Add(cache);
+        return result;
     }
 
     public string? Remove(string key, string? gamePath)
     {
         if (gamePath is null)
             throw new ArgumentException("获取游戏实例配置时未提供游戏路径", nameof(gamePath));
-        throw new NotImplementedException();
+        var cache = _LoadCache(_GetFilePath(gamePath));
+        var result = cache.Content.TryRemove(key, out var value) ? value : null;
+        _waitingToSave.Add(cache);
+        return result;
     }
 
     #endregion
 
-    public InstanceSetupSourceManager()
+    private readonly IFileSerializer<ContentDictionary> _serializer;
+    private readonly Dictionary<string, CacheEntry> _fileCache = new();
+    private readonly Thread _saveJobThread;
+    private readonly BlockingCollection<CacheEntry> _waitingToSave = new(new ConcurrentBag<CacheEntry>());
+    private volatile int _disposed = 0;
+
+    public InstanceSetupSourceManager(IFileSerializer<ContentDictionary> serializer)
     {
-        throw new NotImplementedException();
+        _serializer = serializer;
+        _saveJobThread = new Thread(_SaveJob);
+        _saveJobThread.Start();
+    }
+
+    private static string _GetFilePath(string gamePath) => Path.Combine(gamePath, "PCL", "Setup.ini");
+
+    private CacheEntry _LoadCache(string filePath)
+    {
+        lock (_fileCache)
+        {
+            // 尝试获取缓存
+            if (_fileCache.TryGetValue(filePath, out var cache))
+                return cache;
+            // 新加载文件内容
+            var result = new ContentDictionary();
+            using (var fs = new FileStream(filePath, FileMode.OpenOrCreate, FileAccess.Read))
+                _serializer.Deserialize(fs, result);
+            // 保存缓存
+            return _fileCache[filePath] = new CacheEntry(filePath, result);
+        }
+    }
+
+    private void _SaveJob()
+    {
+        while (true)
+        {
+            CacheEntry cache;
+            try { cache = _waitingToSave.Take(); }
+            catch (InvalidOperationException) { break; /* 完事，收工 */ }
+            catch (Exception ex)
+            {
+                LogWrapper.Error(ex, "Setup", "处理实例保存队列时的意外错误");
+                break; // 瘫了
+            }
+            try
+            {
+                // 检查文件是否已被修改
+                if (!cache.VerifyLastWriteTime())
+                {
+                    LogWrapper.Warn("Setup", "配置模型已损坏：尝试保存一个游戏实例文件夹内的配置文件，但它已被外部修改");
+                    lock (_fileCache)
+                        _fileCache.Remove(cache.FilePath);
+                    continue;
+                }
+                // 写入临时文件
+                var tmpPath = cache.FilePath + ".tmp";
+                using (var fs = new FileStream(tmpPath, FileMode.Create, FileAccess.Write))
+                    _serializer.Serialize(cache.Content, fs);
+                // 替换文件
+                File.Replace(tmpPath, cache.FilePath, null);
+                // 重新记录文件写入时间
+                cache.UpdateLastWriteTime();
+                LogWrapper.Trace("Setup", "向硬盘同步配置文件：" + cache.FilePath);
+            }
+            catch (Exception ex)
+            {
+                LogWrapper.Error(ex, "Setup", "向硬盘同步配置文件失败：" + cache.FilePath);
+            }
+        }
     }
 
     public void Dispose()
     {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            return;
+        _waitingToSave.CompleteAdding();
+        _saveJobThread.Join();
+        _waitingToSave.Dispose();
+        _fileCache.Clear();
+    }
+
+    private sealed class CacheEntry(string filePath, ContentDictionary content)
+    {
+        public readonly string FilePath = filePath;
+        public readonly ContentDictionary Content = content;
+        private volatile object _lastWriteTime = File.GetLastWriteTimeUtc(filePath);
+
+        public bool VerifyLastWriteTime() => File.GetLastWriteTimeUtc(FilePath) == (DateTime) _lastWriteTime;
+        public void UpdateLastWriteTime() => _lastWriteTime = File.GetLastWriteTimeUtc(FilePath);
     }
 }

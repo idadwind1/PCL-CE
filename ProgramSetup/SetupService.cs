@@ -227,7 +227,7 @@ public sealed class SetupService : GeneralService
         }
         // 来自注册表的旧全局源托管器、游戏实例源托管器、用来支持配置迁移的托管器
         _globalOldSetupSource = new RegisterSetupSourceManager(@$"Software\{GlobalSetupFolder}");
-        _instanceSetupSource = new InstanceSetupSourceManager();
+        _instanceSetupSource = new InstanceSetupSourceManager(IniDictSerializer.Instance);
         _migrationSetupSource =
             new CombinedMigrationSetupSourceManager(_globalOldSetupSource, _globalSetupSource)
                 { ProcessValueAsEncrypted = false };
