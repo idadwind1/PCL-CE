@@ -63,7 +63,9 @@ public sealed class SetupService : GeneralService
     /// <returns>获取到的值，如果键不存在则返回条目的默认值</returns>
     public static string GetString(SetupEntry entry, string? gamePath = null)
     {
-        var rawValue = _GetSourceManager(entry).Get(entry.KeyName, gamePath) ?? (string)entry.DefaultValue;
+        var rawValue = _GetSourceManager(entry).Get(entry.KeyName, gamePath);
+        if (rawValue is null)
+            return (string)entry.DefaultValue;
         if (entry.IsEncrypted)
             rawValue = EncryptHelper.SecretDecrypt(rawValue);
         return rawValue;

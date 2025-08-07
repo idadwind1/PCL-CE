@@ -54,6 +54,7 @@ public sealed class FileSetupSourceManager : ISetupSourceManager, IDisposable
         // 加载文件内容
         try
         {
+            _baseFile.CreateDirectory();
             using var fs = new FileStream(_baseFile.TargetPath, FileMode.OpenOrCreate, FileAccess.Read, FileShare.Read);
             _serializer.Deserialize(fs, _content);
         }
@@ -90,6 +91,7 @@ public sealed class FileSetupSourceManager : ISetupSourceManager, IDisposable
                 // 写入临时文件
                 var targetPath = _baseFile.TargetPath;
                 var tmpPath = targetPath + ".tmp";
+                _baseFile.CreateDirectory();
                 using (var fs = new FileStream(tmpPath, FileMode.Create, FileAccess.Write, FileShare.Read))
                     _serializer.Serialize(_content, fs);
                 // 替换文件

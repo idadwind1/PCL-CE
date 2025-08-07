@@ -69,6 +69,9 @@ public sealed class InstanceSetupSourceManager : ISetupSourceManager, IDisposabl
             if (_fileCache.TryGetValue(filePath, out var cache))
                 return cache;
             // 新加载文件内容
+            var dir = Path.GetDirectoryName(filePath);
+            if (dir is not null && dir.Length > 0)
+                Directory.CreateDirectory(dir);
             var result = new ConcurrentDictionary<string, string>();
             using (var fs = new FileStream(filePath, FileMode.OpenOrCreate, FileAccess.Read))
                 _serializer.Deserialize(fs, result);
@@ -100,6 +103,9 @@ public sealed class InstanceSetupSourceManager : ISetupSourceManager, IDisposabl
                     continue;
                 }
                 // 写入临时文件
+                var dir = Path.GetDirectoryName(cache.FilePath);
+                if (dir is not null && dir.Length > 0)
+                    Directory.CreateDirectory(dir);
                 var tmpPath = cache.FilePath + ".tmp";
                 using (var fs = new FileStream(tmpPath, FileMode.Create, FileAccess.Write))
                     _serializer.Serialize(cache.Content, fs);
