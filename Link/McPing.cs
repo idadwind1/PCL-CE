@@ -19,7 +19,6 @@ public class McPing : IDisposable
 {
     private readonly IPEndPoint _endpoint;
     private readonly string _host;
-    private readonly Socket _socket;
     private const int DefaultTimeout = 10000;
     private int _timeout;
 
@@ -27,7 +26,6 @@ public class McPing : IDisposable
     {
         _endpoint  = endpoint;
         _host = _endpoint.Address.ToString();
-        _socket =new Socket(SocketType.Stream, ProtocolType.Tcp);
         _timeout = timeout;
     }
 
@@ -38,7 +36,6 @@ public class McPing : IDisposable
         else
             _endpoint = new IPEndPoint(Dns.GetHostAddresses(ip).First(), port);
         _host = ip;
-        _socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
         _timeout = timeout;
     }
 
@@ -49,6 +46,7 @@ public class McPing : IDisposable
     /// <exception cref="NullReferenceException">获取的结果出现字段缺失时</exception>
     public async Task<McPingResult?> PingAsync()
     {
+        using var so = new Socket(SocketType.Stream, ProtocolType.Tcp);
         using var cts = new CancellationTokenSource();
         cts.CancelAfter(_timeout);
         // 注册超时回调：强制关闭Socket中断阻塞操作
@@ -56,7 +54,7 @@ public class McPing : IDisposable
         {
             try
             {
-                if (_socket.Connected) _socket.Close(); // 强制关闭连接，中断 ReadAsync 阻塞
+                if (so.Connected) so.Close(); // 强制关闭连接，中断 ReadAsync 阻塞
             }
             catch (ObjectDisposedException) { /* 忽略已释放的异常 */ }
         });
@@ -64,7 +62,7 @@ public class McPing : IDisposable
         try
         {
             LogWrapper.Debug("McPing", $"Connecting to {_endpoint}");
-            await _socket.ConnectAsync(_endpoint);
+            await so.ConnectAsync(_endpoint);
         }
         catch (Exception e)
         {
@@ -72,7 +70,7 @@ public class McPing : IDisposable
             return null;
         }
         LogWrapper.Debug("McPing",$"Connection established: {_endpoint}");
-        using var stream = new NetworkStream(_socket, false);
+        using var stream = new NetworkStream(so, false);
         var handshakePacket = _BuildHandshakePacket(_host, _endpoint.Port);
         await stream.WriteAsync(handshakePacket, 0, handshakePacket.Length, cts.Token);
         LogWrapper.Debug("McPing",$"Handshake sent, packet length: {handshakePacket.Length}");
@@ -95,7 +93,7 @@ public class McPing : IDisposable
             await res.WriteAsync(buffer, 0, curReaded, cts.Token);
         }
 
-        _socket.Close();
+        so.Close();
         var retBinary = res.ToArray();
         var dataLength = Convert.ToInt32(VarIntHelper.Decode(retBinary.Skip(1).ToArray(), out var packDataHeaderLength));
         LogWrapper.Debug("McPing",$"ServerDataLength: {dataLength}");
@@ -135,6 +133,54 @@ public class McPing : IDisposable
                         .ToList())
             );
         return ret;
+    }
+
+    public async Task<McPingResult?> PingOldAsync()
+    {
+        using var so = new Socket(SocketType.Stream, ProtocolType.Tcp);
+        using var cts = new CancellationTokenSource();
+        cts.CancelAfter(_timeout);
+        cts.Token.Register(() =>
+        {
+            try
+            {
+                if (so.Connected) so.Close();
+            }
+            catch (ObjectDisposedException) { /* Ignore */ }
+        });
+        await so.ConnectAsync(_endpoint);
+        LogWrapper.Debug("McPing", $"Connected to {_endpoint}");
+        using var stream = new NetworkStream(so, false);
+        var queryPack = new byte[] { 0xfe, 0x01 };
+        await stream.WriteAsync(queryPack, 0, queryPack.Length, cts.Token);
+        var ms = new MemoryStream();
+        await stream.CopyToAsync(ms);
+        so.Close();
+        var retData = ms.ToArray();
+        if (retData.Length < 21 || (retData.Length >= 21 && retData[0] != 0xff))
+        {
+            LogWrapper.Info("McPing", $"Unknown response from {_endpoint}, ignore");
+            return null;
+        }
+        var retRep = Encoding.UTF8.GetString(retData);
+        try
+        {
+                var retPart = retRep.Split(["\0\0\0"], StringSplitOptions.None);
+                retPart = retPart.Select(s => new string(s
+                        .Where((c, index) => index % 2 == 0)
+                        .ToArray()))
+                        .ToArray();
+                if (retPart.Length < 6)
+                    return null;
+                return new McPingResult(new McPingVersionResult(retPart[2], int.Parse(retPart[1])),
+                    new McPingPlayerResult(int.Parse(retPart[5]), int.Parse(retPart[4]), []), retPart[3], string.Empty, 0,
+                    new McPingModInfoResult(string.Empty, []));
+        }
+        catch (Exception e)
+        {
+            LogWrapper.Error(e, "McPing", $"Unable to serialize response from {_endpoint}");
+            return null;
+        }
     }
 
     /// <summary>
@@ -280,6 +326,5 @@ public class McPing : IDisposable
         if (_disposed) return;
         _disposed = true;
         GC.SuppressFinalize(this);
-        _socket.Dispose();
     }
 }

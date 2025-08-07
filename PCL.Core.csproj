@@ -177,7 +177,7 @@
     <Compile Include="Network\HttpRequest.cs" />
     <Compile Include="Network\HttpRequestOptions.cs" />
     <Compile Include="Network\NetworkHelper.cs" />
-    <Compile Include="Network\ParallelTask.cs" />
+    <Compile Include="Network\DownloadSegment.cs" />
     <Compile Include="Network\RoutedWebServer.cs" />
     <Compile Include="Network\WebServer.cs" />
     <Compile Include="Native\DualThreadPool.cs" />

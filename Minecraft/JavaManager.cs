@@ -45,7 +45,7 @@ public class JavaManager
                 await Task.WhenAll(searchTasks);
 
                 // 记录之前设置为禁用的 Java
-                var disabledJava = from j in _javas where !j.IsEnabled select j.JavaExePath;
+                var oldJavaList = _javas.ToDictionary(x => x.JavaExePath);
                 // 新搜索到的 Java 路径
                 var newJavaList = new HashSet<string>(
                     _javas
@@ -59,9 +59,10 @@ public class JavaManager
                     .Select(x => Java.Parse(x)!)
                     .Where(x => x != null)
                     .ToList();
-                foreach (var item in ret.Where(j => disabledJava.Contains(j!.JavaExePath)))
+                foreach (var item in ret)
                 {
-                    item!.IsEnabled = false;
+                    if (oldJavaList.TryGetValue(item.JavaExePath, out var existing))
+                        item.IsEnabled = existing.IsEnabled;
                 }
 
                 _javas = ret;
@@ -196,7 +197,7 @@ public class JavaManager
     private static readonly string[] _TotalKeyWords = [.._MostPossibleKeyWords.Concat(_PossibleKeyWords)];
 
     // 最大文件夹搜索深度
-    const int MaxSearchDepth = 12;
+    private const int MaxSearchDepth = 12;
 
     private static void _ScanDefaultInstallPaths(ref ConcurrentBag<string> javaPaths)
     {

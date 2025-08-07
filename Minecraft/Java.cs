@@ -119,12 +119,14 @@ public class Java(string javaFolder, Version version, JavaBrandType brand, bool 
             var peData = PEHeaderReader.ReadPEHeader(javaExePath);
             var currentJavaArch = peData.Machine;
             var isJava64Bit = PEHeaderReader.IsMachine64Bit(peData.Machine);
+            var javaLibDir = Path.Combine(Directory.GetParent(currentJavaFolder)!.FullName, "lib");
+            var isJavaUsable = (!isJavaJre && File.Exists(Path.Combine(javaLibDir, "jvm.lib"))) ||
+                               (isJavaJre && File.Exists(Path.Combine(javaLibDir, "rt.jar")));
             var shouldDisableByDefault =
                 (isJavaJre && javaVersion.Major >= 16)
                 || (!isJava64Bit && Environment.Is64BitOperatingSystem)
                 || (isJava64Bit && !Environment.Is64BitOperatingSystem)
-                || !File.Exists(Path.Combine(Directory.GetParent(currentJavaFolder)?.FullName ?? currentJavaFolder,
-                    "lib", "jvm.cfg"));
+                || !isJavaUsable;
 
             return new Java(
                 currentJavaFolder,

@@ -27,7 +27,7 @@ public record LifecycleLogItem(
     /// <summary>
     /// 创建该日志项的线程名
     /// </summary>
-    public string ThreadName = Thread.CurrentThread.Name ?? $"#{Thread.CurrentThread.ManagedThreadId}";
+    public string ThreadName { get; } = Thread.CurrentThread.Name ?? $"#{Thread.CurrentThread.ManagedThreadId}";
 
     public override string ToString()
     {
@@ -39,7 +39,8 @@ public record LifecycleLogItem(
     public string ComposeMessage()
     {
         var source = (Source == null) ? "" : $" [{Source.Name}|{Source.Identifier}]";
-        var basic = $"[{Time:HH:mm:ss.fff}] [{Level.PrintName()}] [{ThreadName}]{source}";
-        return Exception == null ? $"{basic} {Message}" : $"{basic} ({Message}) {Exception}";
+        var result = $"[{Time:HH:mm:ss.fff}] [{Level.PrintName()}] [{ThreadName}]{source} {Message}";
+        if (Exception != null) result += $"\n{Exception}";
+        return result;
     }
 }
