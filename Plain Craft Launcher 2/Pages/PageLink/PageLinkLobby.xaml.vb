@@ -346,7 +346,7 @@ Retry:
                        End Sub, "EasyTier Status Watcher", ThreadPriority.BelowNormal)
     End Sub
     'EasyTier Cli 信息获取
-    Private Sub GetETInfo(Optional RemainRetry As Integer = 5)
+    Private Sub GetETInfo(Optional RemainRetry As Integer = 10)
         Dim ETCliProcess As New Process With {
                                    .StartInfo = New ProcessStartInfo With {
                                        .FileName = $"{ETPath}\easytier-cli.exe",
