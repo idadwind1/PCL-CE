@@ -5,7 +5,6 @@ using System.IO;
 using System.Threading;
 using PCL.Core.Extension;
 using PCL.Core.Logging;
-using ContentDictionary = System.Collections.Concurrent.ConcurrentDictionary<string, string>;
 
 namespace PCL.Core.ProgramSetup.SourceManage;
 
@@ -44,13 +43,13 @@ public sealed class InstanceSetupSourceManager : ISetupSourceManager, IDisposabl
 
     #endregion
 
-    private readonly IFileSerializer<ContentDictionary> _serializer;
+    private readonly IFileSerializer<ConcurrentDictionary<string, string>> _serializer;
     private readonly Dictionary<string, CacheEntry> _fileCache = new();
     private readonly Thread _saveJobThread;
     private readonly BlockingCollection<CacheEntry> _waitingToSave = new(new ConcurrentBag<CacheEntry>());
     private volatile int _disposed = 0;
 
-    public InstanceSetupSourceManager(IFileSerializer<ContentDictionary> serializer)
+    public InstanceSetupSourceManager(IFileSerializer<ConcurrentDictionary<string, string>> serializer)
     {
         _serializer = serializer;
         _saveJobThread = new Thread(_SaveJob);
@@ -67,7 +66,7 @@ public sealed class InstanceSetupSourceManager : ISetupSourceManager, IDisposabl
             if (_fileCache.TryGetValue(filePath, out var cache))
                 return cache;
             // 新加载文件内容
-            var result = new ContentDictionary();
+            var result = new ConcurrentDictionary<string, string>();
             using (var fs = new FileStream(filePath, FileMode.OpenOrCreate, FileAccess.Read))
                 _serializer.Deserialize(fs, result);
             // 保存缓存
@@ -124,10 +123,10 @@ public sealed class InstanceSetupSourceManager : ISetupSourceManager, IDisposabl
         _fileCache.Clear();
     }
 
-    private sealed class CacheEntry(string filePath, ContentDictionary content)
+    private sealed class CacheEntry(string filePath, ConcurrentDictionary<string, string> content)
     {
         public readonly string FilePath = filePath;
-        public readonly ContentDictionary Content = content;
+        public readonly ConcurrentDictionary<string, string> Content = content;
         private volatile object _lastWriteTime = File.GetLastWriteTimeUtc(filePath);
 
         public bool VerifyLastWriteTime() => File.GetLastWriteTimeUtc(FilePath) == (DateTime) _lastWriteTime;
