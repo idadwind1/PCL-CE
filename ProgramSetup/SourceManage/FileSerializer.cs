@@ -12,7 +12,7 @@ public interface IFileSerializer<in TSerialized>
 
 public class IniDictSerializer : IFileSerializer<IDictionary<string, string>>
 {
-    public static IniDictSerializer Instance = new();
+    public static readonly IniDictSerializer Instance = new();
 
     public void Deserialize(Stream source, IDictionary<string, string> result)
     {
@@ -39,7 +39,7 @@ public class IniDictSerializer : IFileSerializer<IDictionary<string, string>>
 
 public class JsonDictSerializer : IFileSerializer<IDictionary<string, string>>
 {
-    public static JsonDictSerializer Instance = new();
+    public static readonly JsonDictSerializer Instance = new();
     private readonly JsonSerializerOptions _serializerOptions = new() { WriteIndented = true };
 
     public void Deserialize(Stream source, IDictionary<string, string> result)
