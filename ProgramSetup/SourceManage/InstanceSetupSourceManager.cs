@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using PCL.Core.Extension;
 using PCL.Core.Logging;
@@ -46,7 +49,7 @@ public sealed class InstanceSetupSourceManager : ISetupSourceManager, IDisposabl
     private readonly IFileSerializer<ConcurrentDictionary<string, string>> _serializer;
     private readonly Dictionary<string, CacheEntry> _fileCache = new();
     private readonly Thread _saveJobThread;
-    private readonly BlockingCollection<CacheEntry> _waitingToSave = new(new ConcurrentBag<CacheEntry>());
+    private readonly BlockingCollection<CacheEntry> _waitingToSave = new(new ProducerConsumerSet<CacheEntry>());
     private volatile int _disposed = 0;
 
     public InstanceSetupSourceManager(IFileSerializer<ConcurrentDictionary<string, string>> serializer)
@@ -132,4 +135,50 @@ public sealed class InstanceSetupSourceManager : ISetupSourceManager, IDisposabl
         public bool VerifyLastWriteTime() => File.GetLastWriteTimeUtc(FilePath) == (DateTime) _lastWriteTime;
         public void UpdateLastWriteTime() => _lastWriteTime = File.GetLastWriteTimeUtc(FilePath);
     }
+}
+
+/// <summary>
+/// 一个用于应付 BlockingCollection 的会自动去重的并发集合
+/// </summary>
+/// <typeparam name="T">元素类型</typeparam>
+file sealed class ProducerConsumerSet<T> : IProducerConsumerCollection<T>
+{
+    private readonly ConcurrentDictionary<T, object> _dictionary = new();
+    private readonly object _aObject = new();
+
+    bool IProducerConsumerCollection<T>.TryAdd(T item)
+    {
+        _dictionary.TryAdd(item, _aObject);
+        return true;
+    }
+
+    bool IProducerConsumerCollection<T>.TryTake([UnscopedRef] out T item)
+    {
+        while (true)
+        {
+            var pair = _dictionary.FirstOrDefault();
+            if (pair.Value is null)
+            {
+                item = default!;
+                return false;
+            }
+            if (_dictionary.TryRemove(pair.Key, out _))
+            {
+                item = pair.Key;
+                return true;
+            }
+        }
+    }
+
+    // ReSharper disable once NotDisposedResourceIsReturned
+    IEnumerator<T> IEnumerable<T>.GetEnumerator() => _dictionary.Keys.GetEnumerator();
+
+    // ReSharper disable once NotDisposedResourceIsReturned
+    IEnumerator IEnumerable.GetEnumerator() => _dictionary.Keys.GetEnumerator();
+    int ICollection.Count => _dictionary.Count;
+    object ICollection.SyncRoot => ((ICollection)_dictionary).SyncRoot;
+    bool ICollection.IsSynchronized => ((ICollection)_dictionary).IsSynchronized;
+    void ICollection.CopyTo(Array array, int index) => _dictionary.Keys.CopyTo((T[])array, index);
+    void IProducerConsumerCollection<T>.CopyTo(T[] array, int index) => _dictionary.Keys.CopyTo(array, index);
+    T[] IProducerConsumerCollection<T>.ToArray() => _dictionary.Keys.ToArray();
 }
