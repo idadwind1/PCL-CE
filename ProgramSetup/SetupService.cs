@@ -8,6 +8,7 @@ using PCL.Core.Secret;
 
 namespace PCL.Core.ProgramSetup;
 
+[LifecycleService(LifecycleState.Loading, Priority = 1111)]
 public sealed class SetupService : GeneralService
 {
     #region 对外接口
