@@ -94,7 +94,7 @@ public sealed class InstanceSetupSourceManager : ISetupSourceManager, IDisposabl
                 // 检查文件是否已被修改
                 if (!cache.VerifyLastWriteTime())
                 {
-                    LogWrapper.Warn("Setup", "配置模型已损坏：尝试保存一个游戏实例文件夹内的配置文件，但它已被外部修改");
+                    LogWrapper.Error("Setup", "配置模型已损坏：尝试保存一个游戏实例文件夹内的配置文件，但它已被外部修改");
                     lock (_fileCache)
                         _fileCache.Remove(cache.FilePath);
                     continue;
@@ -107,7 +107,7 @@ public sealed class InstanceSetupSourceManager : ISetupSourceManager, IDisposabl
                 File.Replace(tmpPath, cache.FilePath, null);
                 // 重新记录文件写入时间
                 cache.UpdateLastWriteTime();
-                LogWrapper.Trace("Setup", "向硬盘同步配置文件：" + cache.FilePath);
+                LogWrapper.Debug("Setup", "向硬盘同步配置文件：" + cache.FilePath);
             }
             catch (Exception ex)
             {

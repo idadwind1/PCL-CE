@@ -76,7 +76,7 @@ public sealed class SetupEntry(
 
 public enum SetupEntrySource
 {
-    SystemGlobal,
     PathLocal,
+    SystemGlobal,
     GameInstance
 }

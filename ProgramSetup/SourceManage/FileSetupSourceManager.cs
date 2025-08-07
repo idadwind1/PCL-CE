@@ -94,7 +94,7 @@ public sealed class FileSetupSourceManager : ISetupSourceManager, IDisposable
                     _serializer.Serialize(_content, fs);
                 // 替换文件
                 File.Replace(tmpPath, targetPath, null);
-                LogWrapper.Trace("Setup", "向硬盘同步配置文件：" + _baseFile);
+                LogWrapper.Debug("Setup", "向硬盘同步配置文件：" + _baseFile);
             }
             catch (Exception ex)
             {

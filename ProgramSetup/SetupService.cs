@@ -17,6 +17,10 @@ public sealed class SetupService : GeneralService
 
     public delegate void SetupChangedHandler(SetupEntry entry, object? oldValue, object? newValue, string? gamePath);
 
+    [Obsolete("别调这个，仅用于对 ModSetup 的迁移")]
+    public static void RaiseSetupChanged(SetupEntry entry, object? oldValue, object? newValue, string? gamePath) =>
+        SetupChanged?.Invoke(entry, oldValue, newValue, gamePath);
+
     #region Get
 
     /// <summary>
@@ -190,7 +194,9 @@ public sealed class SetupService : GeneralService
 #else
     private const string GlobalSetupFolder = "PCLCE"; // PCL 社区版的注册表与 PCL 的注册表隔离，以防数据冲突
 #endif
-    private static readonly FileItem _GlobalSetupFile = new(@$".{GlobalSetupFolder}\Config.json", FileType.SharedData);
+    private static readonly FileItem _GlobalSetupFile =
+        new(Path.Combine($".{GlobalSetupFolder}", "Config.json"), FileType.SharedData);
+
     private static readonly FileItem _LocalSetupFile = new("Setup.ini", FileType.Data);
     private static LifecycleContext _context = null!;
     private static FileSetupSourceManager _globalSetupSource = null!;
