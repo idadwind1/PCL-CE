@@ -1,8 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Threading;
-using PCL.Core.LifecycleManagement;
-using PCL.Core.Native;
+using PCL.Core.App;
 
 namespace PCL.Core.Logging;
 
@@ -25,7 +24,7 @@ public class LogService : ILifecycleLogService
     public void Start()
     {
         Context.Trace("正在初始化 Logger 实例");
-        var config = new LoggerConfiguration(Path.Combine(NativeInterop.ExecutableDirectory, "PCL", "Log"));
+        var config = new LoggerConfiguration(Path.Combine(Basics.ExecutableDirectory, "PCL", "Log"));
         _logger = new Logger(config);
         Context.Trace("正在注册日志事件");
         LogWrapper.OnLog += _OnWrapperLog;

@@ -122,7 +122,19 @@
     <PackageReference Include="LiteDB" Version="5.0.21" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Extension\StringExtension.cs" />
+    <Compile Include="App\ApplicationService.cs" />
+    <Compile Include="App\Basics.cs" />
+    <Compile Include="App\GeneralService.cs" />
+    <Compile Include="App\Lifecycle.cs" />
+    <Compile Include="App\LifecycleContext.cs" />
+    <Compile Include="App\LifecycleService.cs" />
+    <Compile Include="App\LifecycleState.cs" />
+    <Compile Include="App\MainWindowService.cs" />
+    <Compile Include="App\PromoteService.cs" />
+    <Compile Include="App\RpcService.cs" />
+    <Compile Include="App\SingleInstanceService.cs" />
+    <Compile Include="App\UpdateHelper.cs" />
+    <Compile Include="App\UpdateService.cs" />
     <Compile Include="IO\ByteStream.cs" />
     <Compile Include="IO\FileCacheService.cs" />
     <Compile Include="IO\FileItem.cs" />
@@ -135,23 +147,15 @@
     <Compile Include="IO\FileTransfer.cs" />
     <Compile Include="IO\IFileTask.cs" />
     <Compile Include="IO\MatchableFileTask.cs" />
+    <Compile Include="IO\PipeComm.cs" />
     <Compile Include="IO\ZipFileTask.cs" />
-    <Compile Include="LifecycleManagement\GeneralService.cs" />
-    <Compile Include="LifecycleManagement\ILifecycleLogService.cs" />
-    <Compile Include="LifecycleManagement\ILifecycleService.cs" />
-    <Compile Include="LifecycleManagement\Lifecycle.cs" />
-    <Compile Include="LifecycleManagement\LifecycleActionLevel.cs" />
-    <Compile Include="LifecycleManagement\LifecycleContext.cs" />
-    <Compile Include="LifecycleManagement\LifecycleLogItem.cs" />
-    <Compile Include="LifecycleManagement\LifecycleLogLevel.cs" />
-    <Compile Include="LifecycleManagement\LifecycleService.cs" />
-    <Compile Include="LifecycleManagement\LifecycleServiceInfo.cs" />
-    <Compile Include="LifecycleManagement\LifecycleState.cs" />
     <Compile Include="Link\McPing.cs" />
     <Compile Include="Link\McPingResult.cs" />
+    <Compile Include="Logging\ActionLevel.cs" />
     <Compile Include="Logging\Logger.cs" />
     <Compile Include="Logging\LoggerConfiguration.cs" />
     <Compile Include="Logging\LoggerSegmentMode.cs" />
+    <Compile Include="Logging\LogLevel.cs" />
     <Compile Include="Logging\LogService.cs" />
     <Compile Include="Logging\LogWrapper.cs" />
     <Compile Include="Minecraft\Java.cs" />
@@ -169,57 +173,52 @@
     <Compile Include="Minecraft\ResourceProject\Modrinth\ModrinthLicense.cs" />
     <Compile Include="Minecraft\ResourceProject\Modrinth\ModrinthModeratorMessage.cs" />
     <Compile Include="Minecraft\ResourceProject\Modrinth\ModrinthProject.cs" />
-    <Compile Include="Minecraft\VarIntHelper.cs" />
-    <Compile Include="Network\Downloader.cs" />
-    <Compile Include="Network\DownloadItem.cs" />
-    <Compile Include="Network\HttpProxyManager.cs" />
-    <Compile Include="Network\HttpRequest.cs" />
-    <Compile Include="Network\HttpRequestOptions.cs" />
-    <Compile Include="Network\NetworkHelper.cs" />
-    <Compile Include="Network\DownloadSegment.cs" />
-    <Compile Include="Network\RoutedWebServer.cs" />
-    <Compile Include="Network\WebServer.cs" />
-    <Compile Include="Native\DualThreadPool.cs" />
-    <Compile Include="Native\LimitedConcurrencyLevelTaskScheduler.cs" />
-    <Compile Include="Native\NativeInterop.cs" />
-    <Compile Include="Native\PEHeaderReader.cs" />
-    <Compile Include="Native\PromoteService.cs" />
-    <Compile Include="Native\RpcService.cs" />
-    <Compile Include="Native\SingleInstanceService.cs" />
-    <Compile Include="Native\ToastNotification.cs" />
+    <Compile Include="Net\Downloader.cs" />
+    <Compile Include="Net\DownloadItem.cs" />
+    <Compile Include="Net\HttpProxyManager.cs" />
+    <Compile Include="Net\HttpRequest.cs" />
+    <Compile Include="Net\HttpRequestOptions.cs" />
+    <Compile Include="Net\NetworkHelper.cs" />
+    <Compile Include="Net\DownloadSegment.cs" />
+    <Compile Include="Net\RoutedWebServer.cs" />
+    <Compile Include="Net\WebServer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Secret\EncryptHelper.cs" />
-    <Compile Include="Secret\Identify.cs" />
-    <Compile Include="Service\TestService.cs" Condition="Exists('Service\TestService.cs')" />
-    <Compile Include="UI\ApplicationService.cs" />
     <Compile Include="UI\BackgroundPresenter.cs" />
     <Compile Include="UI\Controls\BlurBorder.cs" />
     <Compile Include="UI\GrayProfile.cs" />
     <Compile Include="UI\GrayProfileConfig.cs" />
-    <Compile Include="UI\MainWindowService.cs" />
     <Compile Include="UI\MsgBoxWrapper.cs" />
-    <Compile Include="Update\Diff\BsDiff.cs" />
-    <Compile Include="Update\Diff\IBinaryDiff.cs" />
-    <Compile Include="Update\SemVer.cs" />
-    <Compile Include="Update\UpdateHelper.cs" />
-    <Compile Include="Update\UpdateService.cs" />
-    <Compile Include="Update\VersionRange.cs" />
+    <Compile Include="UI\ToastNotification.cs" />
     <Compile Include="Utils\AnyType.cs" />
     <Compile Include="Utils\ArgumentsBuilder.cs" />
     <Compile Include="Utils\AtomicVariable.cs" />
+    <Compile Include="Utils\Diff\BsDiff.cs" />
+    <Compile Include="Utils\Diff\IBinaryDiff.cs" />
     <Compile Include="Utils\ExpandoObjectConverter.cs" />
+    <Compile Include="Utils\Exts\StringExtension.cs" />
     <Compile Include="Utils\Hash\IHashProvider.cs" />
     <Compile Include="Utils\Hash\MD5Provider.cs" />
     <Compile Include="Utils\Hash\SHA1Provider.cs" />
     <Compile Include="Utils\Hash\SHA256Provider.cs" />
     <Compile Include="Utils\Hash\SHA512Provider.cs" />
+    <Compile Include="Utils\OS\EnvironmentInterop.cs" />
+    <Compile Include="Utils\OS\KernelInterop.cs" />
+    <Compile Include="Utils\OS\ProcessInterop.cs" />
+    <Compile Include="Utils\PEHeaderReader.cs" />
+    <Compile Include="Utils\Secret\EncryptHelper.cs" />
+    <Compile Include="Utils\Secret\Identify.cs" />
+    <Compile Include="Utils\SemVer.cs" />
     <Compile Include="Utils\StringStream.cs" />
-    <Compile Include="VersionControl\FileVersionObjects.cs" />
-    <Compile Include="VersionControl\FileVersionObjectsComparer.cs" />
-    <Compile Include="VersionControl\IVersionControl.cs" />
-    <Compile Include="VersionControl\ObjectType.cs" />
-    <Compile Include="VersionControl\SnapLiteVersionControl.cs" />
-    <Compile Include="VersionControl\VersionData.cs" />
+    <Compile Include="Utils\Threading\DualThreadPool.cs" />
+    <Compile Include="Utils\Threading\LimitedConcurrencyLevelTaskScheduler.cs" />
+    <Compile Include="Utils\VarIntHelper.cs" />
+    <Compile Include="Utils\VersionControl\FileVersionObjects.cs" />
+    <Compile Include="Utils\VersionControl\FileVersionObjectsComparer.cs" />
+    <Compile Include="Utils\VersionControl\IVersionControl.cs" />
+    <Compile Include="Utils\VersionControl\ObjectType.cs" />
+    <Compile Include="Utils\VersionControl\SnapLiteVersionControl.cs" />
+    <Compile Include="Utils\VersionControl\VersionData.cs" />
+    <Compile Include="Utils\VersionRange.cs" />
   </ItemGroup>
   <ItemGroup>
     <COMReference Include="IWshRuntimeLibrary">
@@ -236,11 +235,11 @@
   <Target Name="GenerateLifecycleServiceTypes" BeforeTargets="CoreCompile">
     <Message Text="Generating LifecycleServiceTypes class..." Importance="normal" />
     <ItemGroup>
-      <PowerShellScript Include="$(MSBuildProjectDirectory)\LifecycleManagement\LifecycleServiceTypesGenerator.ps1" />
+      <PowerShellScript Include="$(MSBuildProjectDirectory)\App\LifecycleServiceTypesGenerator.ps1" />
     </ItemGroup>
     <Exec Command="powershell.exe -ExecutionPolicy Bypass -File &quot;@(PowerShellScript)&quot; &quot;$(MSBuildProjectDirectory)&quot;" ContinueOnError="false" />
     <ItemGroup>
-      <Compile Include="LifecycleManagement\LifecycleServiceTypes.g.cs" Condition="Exists('LifecycleManagement\LifecycleServiceTypes.g.cs')" />
+      <Compile Include="App\LifecycleServiceTypes.g.cs" Condition="Exists('App\LifecycleServiceTypes.g.cs')" />
     </ItemGroup>
   </Target>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
