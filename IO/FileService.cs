@@ -4,10 +4,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using PCL.Core.LifecycleManagement;
-using PCL.Core.Native;
+using PCL.Core.App;
 using PCL.Core.UI;
 using PCL.Core.Utils;
+using PCL.Core.Utils.OS;
+using PCL.Core.Utils.Threading;
 using Special = System.Environment.SpecialFolder;
 
 namespace PCL.Core.IO;
@@ -40,7 +41,7 @@ public sealed class FileService : GeneralService
     /// <summary>
     /// The default directory used for relative path combining.
     /// </summary>
-    public static string DefaultDirectory => NativeInterop.ExecutableDirectory;
+    public static string DefaultDirectory => Basics.ExecutableDirectory;
 
     private static string _dataPath;
     private static string _sharedDataPath;
@@ -93,10 +94,10 @@ public sealed class FileService : GeneralService
         _tempPath = Path.Combine(Path.GetTempPath(), name);
 #if DEBUG
         // read environment variables
-        NativeInterop.ReadEnvironmentVariable("PCL_PATH", ref _dataPath);
-        NativeInterop.ReadEnvironmentVariable("PCL_PATH_SHARED", ref _sharedDataPath);
-        NativeInterop.ReadEnvironmentVariable("PCL_PATH_LOCAL", ref _localDataPath);
-        NativeInterop.ReadEnvironmentVariable("PCL_PATH_TEMP", ref _tempPath);
+        EnvironmentInterop.ReadVariable("PCL_PATH", ref _dataPath);
+        EnvironmentInterop.ReadVariable("PCL_PATH_SHARED", ref _sharedDataPath);
+        EnvironmentInterop.ReadVariable("PCL_PATH_LOCAL", ref _localDataPath);
+        EnvironmentInterop.ReadVariable("PCL_PATH_TEMP", ref _tempPath);
 #endif
         // create directories
         Directory.CreateDirectory(_dataPath);
@@ -120,7 +121,7 @@ public sealed class FileService : GeneralService
     {
         // start load thread
         Context.Debug("正在启动文件加载守护线程");
-        _fileLoadingThread = NativeInterop.RunInNewThread(_FileLoadCallback, "Daemon/FileLoading");
+        _fileLoadingThread = Basics.RunInNewThread(_FileLoadCallback, "Daemon/FileLoading");
         // invoke initialize
         _Initialize();
     }
@@ -163,11 +164,11 @@ public sealed class FileService : GeneralService
     private static void _FileLoadCallback()
     {
         int? threadLimit = null;
-        NativeInterop.ReadEnvironmentVariable("PCL_FILE_THREAD_LIMIT", ref threadLimit);
+        EnvironmentInterop.ReadVariable("PCL_FILE_THREAD_LIMIT", ref threadLimit);
         
         // CPU 密集工作线程应使用性能内核的数量限制（超线程一并计入），防止跑到能效内核上
         // 如果这个死人调度还给往能效内核上扔就没法了，砍掉 Windows 即可解决
-        threadLimit ??= NativeInterop.GetPerformanceLogicalProcessorCount();
+        threadLimit ??= KernelInterop.GetPerformanceLogicalProcessorCount();
         
         Context.Info($"以最多 {threadLimit} 个线程初始化线程池");
         var threadPool = new DualThreadPool((int)threadLimit);
@@ -244,7 +245,7 @@ public sealed class FileService : GeneralService
                         var atomicResult = new AtomicVariable<object>(result, true, true);
                         _ProcessResults.AddOrUpdate(item, atomicResult, (_, _) => atomicResult);
                         // 触发等待事件
-                        if (_WaitForResultEvents.TryGetValue(finishedItem, out var waitEvent)) waitEvent.Set();
+                        if (_WaitForResultEvents.TryRemove(finishedItem, out var waitEvent)) waitEvent.Set();
                         try
                         {
                             var handled = task.OnProcessFinished(finishedItem, result);

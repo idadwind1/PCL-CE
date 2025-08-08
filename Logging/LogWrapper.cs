@@ -2,16 +2,6 @@
 
 namespace PCL.Core.Logging;
 
-public enum LogLevel
-{
-    Trace,
-    Debug,
-    Info,
-    Warning,
-    Error,
-    Fatal
-}
-
 public delegate void LogHandler(LogLevel level, string msg, string? module = null, Exception? ex = null);
 
 public static class LogWrapper
@@ -47,21 +37,6 @@ public static class LogWrapper
     // Trace
     public static void Trace(string? module, string msg) => OnLog?.Invoke(LogLevel.Trace, msg, module);
     public static void Trace(string msg) => Trace(null, msg);
-
-    // LogLevel extension
-    public static string PrintName(this LogLevel level)
-    {
-        return level switch
-        {
-            LogLevel.Trace => "TRA",
-            LogLevel.Debug => "DBG",
-            LogLevel.Info => "INFO",
-            LogLevel.Warning => "WARN",
-            LogLevel.Error => "ERR!",
-            LogLevel.Fatal => "FTL!",
-            _ => "NUL"
-        };
-    }
 
     public static Logger CurrentLogger => LogService.Logger;
 }

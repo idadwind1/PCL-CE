@@ -406,7 +406,4 @@ FodyWeavers.xsd
 *.sln.iml
 
 # Generated Code
-LifecycleManagement/LifecycleServiceTypes.g.cs
-
-# Test files
-Service/TestService.cs
+App/LifecycleServiceTypes.g.cs

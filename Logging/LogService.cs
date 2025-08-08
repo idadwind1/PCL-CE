@@ -1,8 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Threading;
-using PCL.Core.LifecycleManagement;
-using PCL.Core.Native;
+using PCL.Core.App;
 
 namespace PCL.Core.Logging;
 
@@ -19,19 +18,22 @@ public class LogService : ILifecycleLogService
     
     private static Logger? _logger;
     public static Logger Logger => _logger!;
+    
+    private static bool _wrapperRegistered = false;
 
     public void Start()
     {
         Context.Trace("正在初始化 Logger 实例");
-        var config = new LoggerConfiguration(Path.Combine(NativeInterop.ExecutableDirectory, "PCL", "Log"));
+        var config = new LoggerConfiguration(Path.Combine(Basics.ExecutableDirectory, "PCL", "Log"));
         _logger = new Logger(config);
         Context.Trace("正在注册日志事件");
         LogWrapper.OnLog += _OnWrapperLog;
+        _wrapperRegistered = true;
     }
 
     public void Stop()
     {
-        LogWrapper.OnLog -= _OnWrapperLog;
+        if (_wrapperRegistered) LogWrapper.OnLog -= _OnWrapperLog;
         _logger?.Dispose();
     }
 
@@ -39,8 +41,8 @@ public class LogService : ILifecycleLogService
     {
         var thread = Thread.CurrentThread.Name ?? $"#{Thread.CurrentThread.ManagedThreadId}";
         if (module != null) module = $"[{module}] ";
-        var basic = $"[{DateTime.Now:HH:mm:ss.fff}] [{level.PrintName()}] [{thread}] {module}";
-        Logger.Log((ex == null) ? $"{basic}{msg}": $"{basic}({msg}) {ex}");
+        msg = $"[{DateTime.Now:HH:mm:ss.fff}] [{level.PrintName()}] [{thread}] {module}{msg}";
+        Logger.Log((ex == null) ? msg : $"{msg}\n{ex}");
     }
 
     public void OnLog(LifecycleLogItem item)
