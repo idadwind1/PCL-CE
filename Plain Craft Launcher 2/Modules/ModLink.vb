@@ -4,11 +4,11 @@ Imports System.Net.Sockets
 Imports Makaretu.Nat
 Imports STUN
 Imports System.Threading.Tasks
-Imports PCL.Core.Extension
 Imports PCL.Core.IO
 Imports PCL.Core.Link
-Imports PCL.Core.Native
-Imports PCL.Core.Network
+Imports PCL.Core.Net
+Imports PCL.Core.Utils.Exts
+Imports PCL.Core.Utils.OS
 
 Public Module ModLink
 
@@ -226,7 +226,7 @@ Public Module ModLink
     End Function
     Public Function GetLauncherBrand(pid As Integer) As String
         Try
-            Dim cmd = NativeInterop.GetCommandLine(pid)
+            Dim cmd = ProcessInterop.GetCommandLine(pid)
             If cmd.Contains("-Dminecraft.launcher.brand=") Then
                 Return cmd.AfterFirst("-Dminecraft.launcher.brand=").BeforeFirst("-").TrimEnd("'", " ")
             Else

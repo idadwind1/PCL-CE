@@ -1,6 +1,5 @@
 ﻿Imports System.Windows.Threading
-Imports System.IO.Compression
-Imports PCL.Core.LifecycleManagement
+Imports PCL.Core.App
 
 Public Class Application
 

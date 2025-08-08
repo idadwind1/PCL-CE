@@ -1,8 +1,5 @@
-Imports System.Diagnostics.Eventing.Reader
+
 Imports System.IO.Compression
-Imports System.Threading.Tasks
-Imports Microsoft.Identity.Client
-Imports Microsoft.Identity.Client.Broker
 Imports PCL.Core.Minecraft
 
 Public Module ModLaunch
