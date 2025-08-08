@@ -244,7 +244,7 @@ public sealed class FileService : GeneralService
                         var atomicResult = new AtomicVariable<object>(result, true, true);
                         _ProcessResults.AddOrUpdate(item, atomicResult, (_, _) => atomicResult);
                         // 触发等待事件
-                        if (_WaitForResultEvents.TryGetValue(finishedItem, out var waitEvent)) waitEvent.Set();
+                        if (_WaitForResultEvents.TryRemove(finishedItem, out var waitEvent)) waitEvent.Set();
                         try
                         {
                             var handled = task.OnProcessFinished(finishedItem, result);
