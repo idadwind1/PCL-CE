@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using PCL.Core.App;
 using PCL.Core.UI;
 using PCL.Core.Utils;
@@ -157,7 +158,7 @@ public sealed class FileService : GeneralService
     private static readonly ConcurrentQueue<IFileTask> _PendingTasks = [];
     
     private static readonly ConcurrentDictionary<FileItem, AtomicVariable<object>> _ProcessResults = [];
-    private static readonly ConcurrentDictionary<FileItem, ManualResetEventSlim> _WaitForResultEvents = [];
+    private static readonly ConcurrentDictionary<FileItem, AsyncManualResetEvent> _WaitForResultEvents = [];
     private static readonly AutoResetEvent _ContinueEvent = new(false);
     private static bool _running = true;
 
@@ -300,7 +301,7 @@ public sealed class FileService : GeneralService
         if (remove) _ProcessResults.TryRemove(item, out _);
         return true;
     }
-    
+
     /// <param name="item">which file to get the result</param>
     /// <param name="remove">whether remove from the temp dictionary after successfully get the value</param>
     /// <returns>a <b>nullable</b> value</returns>
@@ -322,10 +323,30 @@ public sealed class FileService : GeneralService
     {
         var success = TryGetResult(item, out var result, remove);
         if (success) return result;
-        var waitEvent = _WaitForResultEvents.GetOrAdd(item, _ => new ManualResetEventSlim(false));
+        var waitEvent = _WaitForResultEvents.GetOrAdd(item, _ => new AsyncManualResetEvent());
         var waitResult = true;
         if (timeout is { } t) waitResult = waitEvent.Wait(t);
         else waitEvent.Wait();
+        if (!waitResult) return null;
+        TryGetResult(item, out result);
+        return result;
+    }
+
+    /// <param name="item">which file to wait for the result</param>
+    /// <param name="cancelToken">the cancellation token to stop waiting</param>
+    /// <param name="remove">whether remove from the temp dictionary after successfully get the value</param>
+    /// <returns>
+    /// a value, or <c>null</c> if the result is really <c>null</c>, or else, something is boom -
+    /// I don't know what is wrong but in a word there is something wrong :D
+    /// </returns>
+    public static async Task<AnyType?> WaitForResultAsync(FileItem item, CancellationToken cancelToken = default, bool remove = true)
+    {
+        var success = TryGetResult(item, out var result, remove);
+        if (success) return result;
+        var waitEvent = _WaitForResultEvents.GetOrAdd(item, _ => new AsyncManualResetEvent());
+        var waitResult = true;
+        cancelToken.Register(() => waitResult = false);
+        await waitEvent.WaitAsync(cancelToken);
         if (!waitResult) return null;
         TryGetResult(item, out result);
         return result;
