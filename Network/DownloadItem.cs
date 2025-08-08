@@ -54,6 +54,8 @@ public class DownloadItem(
     
     public DownloadItemStatus Status { get; private set; } = DownloadItemStatus.Waiting;
 
+    public event Action? Finished;
+
     public long CalculateTransferredLength()
     {
         lock (Segments) return Segments
@@ -61,23 +63,31 @@ public class DownloadItem(
     }
     
     public long CalculateRemainingLength() => (ContentLength == 0) ? 0 : ContentLength - CalculateTransferredLength();
+    
+    private CancellationTokenSource _cancelTokenSource = new();
+
+    public bool Cancel(bool markAsFailed = false)
+    {
+        if (Status is not DownloadItemStatus.Starting and DownloadItemStatus.Running) return false;
+        _cancelTokenSource.Cancel();
+        if (markAsFailed) Status = DownloadItemStatus.Failed;
+        return true;
+    }
 
     private int _finishedCount = 0;
 
     private void _ConstructDownloadSegment(
         long startPosition,
-        long endPosition,
+        long? endPosition,
         Action<DownloadSegment>? endCallback,
         CancellationToken cancelToken,
+        int retry,
         out Task task,
         out DownloadSegment segment)
     {
-        var seg = new DownloadSegment(RealUri, TargetPath, ChunkSize)
-        {
-            EndPosition = endPosition,
-            RetryCount = Retry,
-        };
-        if (startPosition == 0 && endPosition != 0)
+        var seg = new DownloadSegment(RealUri, TargetPath, ChunkSize) { RetryCount = retry };
+        if (endPosition is { } end) seg.EndPosition = end;
+        if (startPosition == 0 && endPosition == 0)
         {
             seg.When(DownloadSegmentStatus.Running, () =>
             {
@@ -93,14 +103,17 @@ public class DownloadItem(
 
     public async Task NewSegment(
         long startPosition,
-        long endPosition,
-        Action finishedCallback,
+        long? endPosition,
         SegmentInterruptHandler errorCallback,
-        LinkedListNode<DownloadSegment>? afterNode = null,
-        CancellationToken cancelToken = default)
+        LinkedListNode<DownloadSegment>? afterNode = null)
     {
-        if (Segments.Count == 0) Status = DownloadItemStatus.Starting;
-        cancelToken.Register(() => Status = DownloadItemStatus.Cancelled);
+        var cToken = _cancelTokenSource.Token;
+        if (Segments.Count == 0)
+        {
+            // 初始化
+            Status = DownloadItemStatus.Starting;
+            cToken.Register(() => Status = DownloadItemStatus.Cancelled);
+        }
         Task task;
         lock (Segments)
         {
@@ -112,14 +125,14 @@ public class DownloadItem(
                         _finishedCount++;
                         if (_finishedCount != Segments.Count) return;
                         Status = DownloadItemStatus.Success;
-                        finishedCallback();
+                        Finished?.Invoke();
                     }
                     else if (seg.Status != DownloadSegmentStatus.Cancelled)
                     {
                         errorCallback(seg.Status, seg.LastException);
                     }
                 }),
-                cancelToken, out task, out var segment);
+                cToken, Retry, out task, out var segment);
             if (afterNode != null)
             {
                 Segments.AddAfter(afterNode, segment);
@@ -130,7 +143,9 @@ public class DownloadItem(
         await task;
     }
 
-    public async Task RestartSegment(LinkedListNode<DownloadSegment> node, CancellationToken cancelToken = default)
+    public async Task RestartSegment(
+        LinkedListNode<DownloadSegment> node,
+        bool isRetry = false)
     {
         Task task;
         lock (Segments)
@@ -139,14 +154,11 @@ public class DownloadItem(
             segment.Cancel();
             _ConstructDownloadSegment(
                 segment.StartPosition, segment.EndPosition, segment.EndCallback,
-                cancelToken, out task, out segment);
+                _cancelTokenSource.Token, segment.RetryCount, out task, out segment);
             node.Value = segment;
         }
         await task;
     }
 
-    public override string ToString()
-    {
-        return $"[{SourceUri}] -> [{TargetPath}]";
-    }
+    public override string ToString() => $"[{SourceUri}] -> [{TargetPath}]";
 }

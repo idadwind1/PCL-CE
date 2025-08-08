@@ -119,9 +119,9 @@ public class DownloadSegment(Uri sourceUri, string targetPath, int chunkSize = 1
     public int RetryCount { get; set; } = 3;
     
     /// <summary>
-    /// 传输总长度。
+    /// 传输总长度。若来源不支持内容长度，则为 0。
     /// </summary>
-    public long TotalLength => EndPosition - StartPosition + 1;
+    public long TotalLength => (EndPosition == 0) ? 0 : EndPosition - StartPosition + 1;
     
     /// <summary>
     /// 已传输的长度。
@@ -239,7 +239,7 @@ public class DownloadSegment(Uri sourceUri, string targetPath, int chunkSize = 1
                 if (EndPosition == 0)
                 {
                     var totalRead = 0L;
-                    while (true)
+                    while (!cToken.IsCancellationRequested)
                     {
                         var buffer = new byte[ChunkSize];
                         CurrentChunkStartTime = DateTime.Now;
@@ -256,7 +256,7 @@ public class DownloadSegment(Uri sourceUri, string targetPath, int chunkSize = 1
                 else
                 {
                     long remaining;
-                    while ((remaining = RemainingLength) > 0)
+                    while (!cToken.IsCancellationRequested && (remaining = RemainingLength) > 0)
                     {
                         var count = remaining > ChunkSize ? ChunkSize : (int)remaining;
                         var buffer = new byte[count];
@@ -270,13 +270,13 @@ public class DownloadSegment(Uri sourceUri, string targetPath, int chunkSize = 1
                     }
                 }
                 await stream.FlushAsync(cToken);
-                Status = DownloadSegmentStatus.Success;
+                if (!cToken.IsCancellationRequested) Status = DownloadSegmentStatus.Success;
                 break;
             }
             catch (Exception e)
             {
                 LastException = e;
-                if (--RetryCount == 0) Status = (DownloadSegmentStatus)failedStatus;
+                if (--RetryCount == 0) Status = (DownloadSegmentStatus)(failedStatus);
                 else await Task.Delay(1000, cToken);
             }
         }
@@ -294,8 +294,5 @@ public class DownloadSegment(Uri sourceUri, string targetPath, int chunkSize = 1
         return true;
     }
     
-    public override string ToString()
-    {
-        return $"[{SourceUri}]({StartPosition}..{EndPosition}) -> [{TargetPath}]";
-    }
+    public override string ToString() => $"[{SourceUri}]({StartPosition}..{EndPosition}) -> [{TargetPath}]";
 }

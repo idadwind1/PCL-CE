@@ -375,7 +375,7 @@ public sealed class Lifecycle : ILifecycleService
     /// </returns>
     public static Task<bool> WaitForStateAsync(LifecycleState state)
     {
-        if (CurrentState >= state) return Task.FromResult(false); // 如果已经是目标状态，则直接返回 true
+        if (CurrentState >= state) return Task.FromResult(false); // 如果已经是目标状态，则直接返回 false
         var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         StateChanged += TempHandler;
         return tcs.Task;
