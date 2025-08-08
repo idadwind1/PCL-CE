@@ -170,6 +170,7 @@
     <Compile Include="Minecraft\ResourceProject\Modrinth\ModrinthModeratorMessage.cs" />
     <Compile Include="Minecraft\ResourceProject\Modrinth\ModrinthProject.cs" />
     <Compile Include="Minecraft\VarIntHelper.cs" />
+    <Compile Include="Minecraft\GameCore.cs" />
     <Compile Include="Network\Downloader.cs" />
     <Compile Include="Network\DownloadItem.cs" />
     <Compile Include="Network\HttpProxyManager.cs" />
@@ -202,7 +203,6 @@
     <Compile Include="Utils\ArgumentsBuilder.cs" />
     <Compile Include="Utils\AtomicVariable.cs" />
     <Compile Include="Utils\ExpandoObjectConverter.cs" />
-    <Compile Include="Utils\GameCore.cs" />
     <Compile Include="Utils\Hash\IHashProvider.cs" />
     <Compile Include="Utils\Hash\MD5Provider.cs" />
     <Compile Include="Utils\Hash\SHA1Provider.cs" />
