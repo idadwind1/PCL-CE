@@ -1,7 +1,7 @@
 ﻿using System.IO;
 using System.IO.Compression;
 
-namespace PCL.Core.Utils
+namespace Minecraft
 {
     public class GameCore
     {
