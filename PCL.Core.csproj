@@ -160,6 +160,7 @@
     <Compile Include="Logging\LogWrapper.cs" />
     <Compile Include="Minecraft\Java.cs" />
     <Compile Include="Minecraft\JavaManager.cs" />
+    <Compile Include="Minecraft\GameCore.cs" />
     <Compile Include="Minecraft\ResourceProject\Curseforge\CurseforgeAuthors.cs" />
     <Compile Include="Minecraft\ResourceProject\Curseforge\CurseforgeCategories.cs" />
     <Compile Include="Minecraft\ResourceProject\Curseforge\CurseforgeFile.cs" />
