@@ -4,11 +4,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using PCL.Core.LifecycleManagement;
-using PCL.Core.Native;
+using System.Threading.Tasks;
+using PCL.Core.App;
 using PCL.Core.ProgramSetup;
 using PCL.Core.UI;
 using PCL.Core.Utils;
+using PCL.Core.Utils.OS;
+using PCL.Core.Utils.Threading;
 using Special = System.Environment.SpecialFolder;
 
 namespace PCL.Core.IO;
@@ -46,7 +48,7 @@ public sealed class FileService : GeneralService
     /// <summary>
     /// The default directory used for relative path combining.
     /// </summary>
-    public static string DefaultDirectory => NativeInterop.ExecutableDirectory;
+    public static string DefaultDirectory => Basics.ExecutableDirectory;
 
     private static string _dataPath;
     private static string _sharedDataPath;
@@ -99,10 +101,10 @@ public sealed class FileService : GeneralService
         _tempPath = Path.Combine(Path.GetTempPath(), name);
 #if DEBUG
         // read environment variables
-        NativeInterop.ReadEnvironmentVariable("PCL_PATH", ref _dataPath);
-        NativeInterop.ReadEnvironmentVariable("PCL_PATH_SHARED", ref _sharedDataPath);
-        NativeInterop.ReadEnvironmentVariable("PCL_PATH_LOCAL", ref _localDataPath);
-        NativeInterop.ReadEnvironmentVariable("PCL_PATH_TEMP", ref _tempPath);
+        EnvironmentInterop.ReadVariable("PCL_PATH", ref _dataPath);
+        EnvironmentInterop.ReadVariable("PCL_PATH_SHARED", ref _sharedDataPath);
+        EnvironmentInterop.ReadVariable("PCL_PATH_LOCAL", ref _localDataPath);
+        EnvironmentInterop.ReadVariable("PCL_PATH_TEMP", ref _tempPath);
 #endif
         // create directories
         Directory.CreateDirectory(_dataPath);
@@ -126,7 +128,7 @@ public sealed class FileService : GeneralService
     {
         // start load thread
         Context.Debug("正在启动文件加载守护线程");
-        _fileLoadingThread = NativeInterop.RunInNewThread(_FileLoadCallback, "Daemon/FileLoading");
+        _fileLoadingThread = Basics.RunInNewThread(_FileLoadCallback, "Daemon/FileLoading");
         // invoke initialize
         _Initialize();
     }
@@ -162,18 +164,18 @@ public sealed class FileService : GeneralService
     private static readonly ConcurrentQueue<IFileTask> _PendingTasks = [];
     
     private static readonly ConcurrentDictionary<FileItem, AtomicVariable<object>> _ProcessResults = [];
-    private static readonly ConcurrentDictionary<FileItem, ManualResetEventSlim> _WaitForResultEvents = [];
+    private static readonly ConcurrentDictionary<FileItem, AsyncManualResetEvent> _WaitForResultEvents = [];
     private static readonly AutoResetEvent _ContinueEvent = new(false);
     private static bool _running = true;
 
     private static void _FileLoadCallback()
     {
         int? threadLimit = null;
-        NativeInterop.ReadEnvironmentVariable("PCL_FILE_THREAD_LIMIT", ref threadLimit);
+        EnvironmentInterop.ReadVariable("PCL_FILE_THREAD_LIMIT", ref threadLimit);
         
         // CPU 密集工作线程应使用性能内核的数量限制（超线程一并计入），防止跑到能效内核上
         // 如果这个死人调度还给往能效内核上扔就没法了，砍掉 Windows 即可解决
-        threadLimit ??= NativeInterop.GetPerformanceLogicalProcessorCount();
+        threadLimit ??= KernelInterop.GetPerformanceLogicalProcessorCount();
         
         Context.Info($"以最多 {threadLimit} 个线程初始化线程池");
         var threadPool = new DualThreadPool((int)threadLimit);
@@ -250,7 +252,7 @@ public sealed class FileService : GeneralService
                         var atomicResult = new AtomicVariable<object>(result, true, true);
                         _ProcessResults.AddOrUpdate(item, atomicResult, (_, _) => atomicResult);
                         // 触发等待事件
-                        if (_WaitForResultEvents.TryGetValue(finishedItem, out var waitEvent)) waitEvent.Set();
+                        if (_WaitForResultEvents.TryRemove(finishedItem, out var waitEvent)) waitEvent.Set();
                         try
                         {
                             var handled = task.OnProcessFinished(finishedItem, result);
@@ -305,7 +307,7 @@ public sealed class FileService : GeneralService
         if (remove) _ProcessResults.TryRemove(item, out _);
         return true;
     }
-    
+
     /// <param name="item">which file to get the result</param>
     /// <param name="remove">whether remove from the temp dictionary after successfully get the value</param>
     /// <returns>a <b>nullable</b> value</returns>
@@ -327,10 +329,30 @@ public sealed class FileService : GeneralService
     {
         var success = TryGetResult(item, out var result, remove);
         if (success) return result;
-        var waitEvent = _WaitForResultEvents.GetOrAdd(item, _ => new ManualResetEventSlim(false));
+        var waitEvent = _WaitForResultEvents.GetOrAdd(item, _ => new AsyncManualResetEvent());
         var waitResult = true;
         if (timeout is { } t) waitResult = waitEvent.Wait(t);
         else waitEvent.Wait();
+        if (!waitResult) return null;
+        TryGetResult(item, out result);
+        return result;
+    }
+
+    /// <param name="item">which file to wait for the result</param>
+    /// <param name="cancelToken">the cancellation token to stop waiting</param>
+    /// <param name="remove">whether remove from the temp dictionary after successfully get the value</param>
+    /// <returns>
+    /// a value, or <c>null</c> if the result is really <c>null</c>, or else, something is boom -
+    /// I don't know what is wrong but in a word there is something wrong :D
+    /// </returns>
+    public static async Task<AnyType?> WaitForResultAsync(FileItem item, CancellationToken cancelToken = default, bool remove = true)
+    {
+        var success = TryGetResult(item, out var result, remove);
+        if (success) return result;
+        var waitEvent = _WaitForResultEvents.GetOrAdd(item, _ => new AsyncManualResetEvent());
+        var waitResult = true;
+        cancelToken.Register(() => waitResult = false);
+        await waitEvent.WaitAsync(cancelToken);
         if (!waitResult) return null;
         TryGetResult(item, out result);
         return result;

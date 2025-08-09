@@ -1,5 +1,5 @@
 ﻿using System.IO;
-using PCL.Core.LifecycleManagement;
+using PCL.Core.App;
 
 namespace PCL.Core.IO;
 

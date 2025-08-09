@@ -6,9 +6,9 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using PCL.Core.Extension;
 using PCL.Core.IO;
 using PCL.Core.Logging;
+using PCL.Core.Utils.Exts;
 
 namespace PCL.Core.ProgramSetup.SourceManage;
 

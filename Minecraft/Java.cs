@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using PCL.Core.Logging;
-using PCL.Core.Native;
+using PCL.Core.Utils;
 
 namespace PCL.Core.Minecraft;
 

@@ -1,4 +1,4 @@
-﻿using PCL.Core.Secret;
+﻿using PCL.Core.Utils.Secret;
 
 namespace PCL.Core.ProgramSetup.SourceManage;
 
