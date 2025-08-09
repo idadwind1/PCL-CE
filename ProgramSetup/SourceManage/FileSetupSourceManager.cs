@@ -39,7 +39,7 @@ public sealed class FileSetupSourceManager : ISetupSourceManager, IDisposable
 
     #endregion
 
-    private readonly ConcurrentDictionary<string, string> _content = new();
+    private readonly ConcurrentDictionary<string, string> _content;
     private readonly IFileSerializer<ConcurrentDictionary<string, string>> _serializer;
     private readonly FileItem _baseFile;
     private readonly Thread _saveJobThread;
@@ -47,21 +47,32 @@ public sealed class FileSetupSourceManager : ISetupSourceManager, IDisposable
     private readonly ManualResetEventSlim _saveEvent = new();
     private volatile int _disposed = 0;
 
-    public FileSetupSourceManager(FileItem baseFile, IFileSerializer<ConcurrentDictionary<string, string>> serializer)
+    public FileSetupSourceManager(FileItem baseFile, IFileSerializer<ConcurrentDictionary<string, string>> serializer,
+        bool contentPreloaded)
     {
         _serializer = serializer;
         _baseFile = baseFile;
-        // 加载文件内容
-        try
+        if (contentPreloaded)
         {
-            _baseFile.CreateDirectory();
-            using var fs = new FileStream(_baseFile.TargetPath, FileMode.OpenOrCreate, FileAccess.Read, FileShare.Read);
-            _serializer.Deserialize(fs, _content);
+            // 获取预加载的文件内容
+            var fileResult = FileService.WaitForResult(baseFile, TimeSpan.FromSeconds(10));
+            if (fileResult is null)
+                throw new InvalidOperationException("获取预加载内容失败：" + _baseFile);
+            _content = fileResult.Value<ConcurrentDictionary<string, string>>();
         }
-        catch (Exception ex)
+        else
         {
-            LogWrapper.Warn(ex, "Setup", "读取配置文件内容失败：" + _baseFile);
-            throw;
+            // 从硬盘加载文件内容
+            try
+            {
+                _baseFile.CreateDirectory();
+                using var fs = new FileStream(_baseFile.TargetPath, FileMode.OpenOrCreate, FileAccess.Read);
+                _content = _serializer.Deserialize(fs);
+            }
+            catch (Exception ex)
+            {
+                throw new IOException("加载配置文件内容失败：" + _baseFile.TargetPath, ex);
+            }
         }
         // 启动保存工作线程
         _saveJobThread = new Thread(_SaveJob) { Priority = ThreadPriority.BelowNormal };
@@ -96,11 +107,11 @@ public sealed class FileSetupSourceManager : ISetupSourceManager, IDisposable
                     _serializer.Serialize(_content, fs);
                 // 替换文件
                 File.Replace(tmpPath, targetPath, null);
-                LogWrapper.Debug("Setup", "向硬盘同步配置文件：" + _baseFile);
+                LogWrapper.Debug("Setup", "向硬盘同步配置文件：" + _baseFile.TargetPath);
             }
             catch (Exception ex)
             {
-                LogWrapper.Error(ex, "Setup", "向硬盘同步配置文件失败：" + _baseFile);
+                LogWrapper.Error(ex, "Setup", "向硬盘同步配置文件失败：" + _baseFile.TargetPath);
             }
         }
     }

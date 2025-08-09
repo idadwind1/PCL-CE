@@ -131,6 +131,7 @@
     <Compile Include="IO\FileMatchPair.cs" />
     <Compile Include="IO\FileProcess.cs" />
     <Compile Include="IO\Files.cs" />
+    <Compile Include="IO\FileSerializer.cs" />
     <Compile Include="IO\FileService.cs" />
     <Compile Include="IO\FileTask.cs" />
     <Compile Include="IO\FileTransfer.cs" />
@@ -188,14 +189,15 @@
     <Compile Include="Native\RpcService.cs" />
     <Compile Include="Native\SingleInstanceService.cs" />
     <Compile Include="Native\ToastNotification.cs" />
+    <Compile Include="ProgramSetup\Setup.g.cs" />
+    <Compile Include="ProgramSetup\SetupListener.cs" />
     <Compile Include="ProgramSetup\SetupEntry.cs" />
-    <Compile Include="ProgramSetup\SetupModel.cs" />
+    <Compile Include="ProgramSetup\SetupListenerRegisterer.g.cs" />
     <Compile Include="ProgramSetup\SetupService.cs" />
     <Compile Include="ProgramSetup\SourceManage\CombinedMigrationSetupSourceManager.cs" />
     <Compile Include="ProgramSetup\SourceManage\FileSetupSourceManager.cs" />
     <Compile Include="ProgramSetup\SourceManage\InstanceSetupSourceManager.cs" />
     <Compile Include="ProgramSetup\SourceManage\ISetupSourceManager.cs" />
-    <Compile Include="ProgramSetup\SourceManage\FileSerializer.cs" />
     <Compile Include="ProgramSetup\SourceManage\RegisterSetupSourceManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Secret\EncryptHelper.cs" />
@@ -223,6 +225,7 @@
     <Compile Include="Utils\Hash\SHA1Provider.cs" />
     <Compile Include="Utils\Hash\SHA256Provider.cs" />
     <Compile Include="Utils\Hash\SHA512Provider.cs" />
+    <Compile Include="Utils\ParameterizedProperty.cs" />
     <Compile Include="Utils\StringStream.cs" />
     <Compile Include="VersionControl\FileVersionObjects.cs" />
     <Compile Include="VersionControl\FileVersionObjectsComparer.cs" />
@@ -242,6 +245,9 @@
       <EmbedInteropTypes>True</EmbedInteropTypes>
     </COMReference>
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="ProgramSetup\SetupModel.json" />
+  </ItemGroup>
   <!-- 生成 LifecycleServiceTypes 类的自定义任务 -->
   <Target Name="GenerateLifecycleServiceTypes" BeforeTargets="CoreCompile">
     <Message Text="Generating LifecycleServiceTypes class..." Importance="normal" />
@@ -251,6 +257,17 @@
     <Exec Command="powershell.exe -ExecutionPolicy Bypass -File &quot;@(PowerShellScript)&quot; &quot;$(MSBuildProjectDirectory)&quot;" ContinueOnError="false" />
     <ItemGroup>
       <Compile Include="LifecycleManagement\LifecycleServiceTypes.g.cs" Condition="Exists('LifecycleManagement\LifecycleServiceTypes.g.cs')" />
+    </ItemGroup>
+  </Target>
+  <!-- 生成 SetupEntries / Setup / SetupChangedListener 类的自定义任务 -->
+  <Target Name="GenerateSetupAccessor" BeforeTargets="CoreCompile">
+    <Message Text="Generating setup accessors..." Importance="normal" />
+    <ItemGroup>
+      <SetupAccessorGeneratorScript Include="$(MSBuildProjectDirectory)\ProgramSetup\SetupAccessorGenerator.ps1" />
+    </ItemGroup>
+    <Exec Command="powershell.exe -ExecutionPolicy Bypass -File &quot;@(SetupAccessorGeneratorScript)&quot; &quot;$(MSBuildProjectDirectory)&quot;" ContinueOnError="false" />
+    <ItemGroup>
+      <Compile Include="ProgramSetup\SetupEntries.g.cs" Condition="Exists('ProgramSetup\SetupEntries.g.cs')" />
     </ItemGroup>
   </Target>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

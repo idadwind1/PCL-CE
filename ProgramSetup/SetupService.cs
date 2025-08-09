@@ -1,8 +1,12 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Globalization;
 using System.IO;
+using System.Linq;
+using System.Text.Json;
 using PCL.Core.IO;
 using PCL.Core.LifecycleManagement;
+using PCL.Core.Logging;
 using PCL.Core.ProgramSetup.SourceManage;
 using PCL.Core.Secret;
 
@@ -17,7 +21,6 @@ public sealed class SetupService : GeneralService
 
     public delegate void SetupChangedHandler(SetupEntry entry, object? oldValue, object? newValue, string? gamePath);
 
-    [Obsolete("别调这个，仅用于对 ModSetup 的迁移")]
     public static void RaiseSetupChanged(SetupEntry entry, object? oldValue, object? newValue, string? gamePath) =>
         SetupChanged?.Invoke(entry, oldValue, newValue, gamePath);
 
@@ -192,18 +195,19 @@ public sealed class SetupService : GeneralService
     #endregion
 
 #if DEBUG
-    private const string GlobalSetupFolder = "PCLCEDebug"; // 社区开发版的注册表与社区常规版的注册表隔离，以防数据冲突
+    public const string GlobalSetupFolder = "PCLCEDebug"; // 社区开发版的注册表与社区常规版的注册表隔离，以防数据冲突
 #else
-    private const string GlobalSetupFolder = "PCLCE"; // PCL 社区版的注册表与 PCL 的注册表隔离，以防数据冲突
+    public const string GlobalSetupFolder = "PCLCE"; // PCL 社区版的注册表与 PCL 的注册表隔离，以防数据冲突
 #endif
-    private static readonly FileItem _GlobalSetupFile =
-        new(Path.Combine($".{GlobalSetupFolder}", "Config.json"), FileType.SharedData);
-
-    private static readonly FileItem _LocalSetupFile = new("Setup.ini", FileType.Data);
+    private static readonly IFileSerializer<ConcurrentDictionary<string, string>> _JsonSerializer = new JsonDictSerializer();
+    private static readonly IFileSerializer<ConcurrentDictionary<string, string>> _IniSerializer = new IniDictSerializer();
+    public static IFileSerializer<ConcurrentDictionary<string, string>> GlobalFileSerializer => _JsonSerializer;
+    public static IFileSerializer<ConcurrentDictionary<string, string>> LocalFileSerializer => _IniSerializer;
+    public static IFileSerializer<ConcurrentDictionary<string, string>> InstanceFileSerializer => _IniSerializer;
     private static LifecycleContext _context = null!;
-    private static FileSetupSourceManager _globalSetupSource = null!;
+    private static Lazy<FileSetupSourceManager> _lazyGlobalSetupSource = null!;
+    private static Lazy<FileSetupSourceManager> _lazyLocalSetupSource = null!;
     private static RegisterSetupSourceManager _globalOldSetupSource = null!;
-    private static FileSetupSourceManager _localSetupSource = null!;
     private static InstanceSetupSourceManager _instanceSetupSource = null!;
     private static CombinedMigrationSetupSourceManager _migrationSetupSource = null!;
     private static CombinedMigrationSetupSourceManager _migrationSetupSourceEncrypted = null!;
@@ -215,50 +219,99 @@ public sealed class SetupService : GeneralService
     public override void Start()
     {
         // 全局配置源托管器
-        try
-        {
-            _globalSetupSource = new FileSetupSourceManager(_GlobalSetupFile, JsonDictSerializer.Instance);
-        }
-        catch (Exception ex)
-        {
-            _context.Fatal("全局配置源托管器初始化失败", ex);
-            _BackupFileAndShutdown(_GlobalSetupFile);
-        }
+        _lazyGlobalSetupSource = new Lazy<FileSetupSourceManager>(_CreateGlobalSetupSource);
         // 局部配置源托管器
-        try
-        {
-            _localSetupSource = new FileSetupSourceManager(_LocalSetupFile, IniDictSerializer.Instance);
-        }
-        catch (Exception ex)
-        {
-            _context.Fatal("局部配置源托管器初始化失败", ex);
-            _BackupFileAndShutdown(_LocalSetupFile);
-        }
+        _lazyLocalSetupSource = new Lazy<FileSetupSourceManager>(_CreateLocalSetupSource);
         // 来自注册表的旧全局源托管器、游戏实例源托管器、用来支持配置迁移的托管器
         _globalOldSetupSource = new RegisterSetupSourceManager(@$"Software\{GlobalSetupFolder}");
-        _instanceSetupSource = new InstanceSetupSourceManager(IniDictSerializer.Instance);
+        _instanceSetupSource = new InstanceSetupSourceManager(InstanceFileSerializer);
         _migrationSetupSource =
-            new CombinedMigrationSetupSourceManager(_globalOldSetupSource, _globalSetupSource)
+            new CombinedMigrationSetupSourceManager(_globalOldSetupSource, _lazyGlobalSetupSource.Value)
                 { ProcessValueAsEncrypted = false };
         _migrationSetupSourceEncrypted =
-            new CombinedMigrationSetupSourceManager(_globalOldSetupSource, _globalSetupSource)
+            new CombinedMigrationSetupSourceManager(_globalOldSetupSource, _lazyGlobalSetupSource.Value)
                 { ProcessValueAsEncrypted = true };
+        SetupListener.Load();
     }
 
     public override void Stop()
     {
         // 销毁源托管器
-        _globalSetupSource.Dispose();
-        _localSetupSource.Dispose();
+        if (_lazyGlobalSetupSource.IsValueCreated)
+            _lazyGlobalSetupSource.Value.Dispose();
+        if (_lazyLocalSetupSource.IsValueCreated)
+            _lazyLocalSetupSource.Value.Dispose();
         _instanceSetupSource.Dispose();
         // 删除 SetupChanged 事件处理器
+        SetupListener.Unload();
         SetupChanged = null;
-        SetupEntry.UnsubscribeAllChangedHandlers();
     }
 
     #endregion
 
-    private void _BackupFileAndShutdown(FileItem file)
+    public static FileTransfer MigrateGlobalSetupFile => (file, resultCallback) =>
+    {
+        var source = file.Sources!.First();
+        if (!File.Exists(source))
+        {
+            LogWrapper.Info("Setup", "无需处理全局配置文件迁移");
+            resultCallback.Invoke(file.TargetPath);
+            return;
+        }
+        try
+        {
+            if (File.Exists(file.TargetPath))
+            {
+                LogWrapper.Info("Setup", "全局配置文件在新旧路径均存在，将删除旧路径下的文件");
+                try { File.Delete(source); }
+                catch (Exception ex) { LogWrapper.Warn(ex, "Setup", "旧全局配置文件删除失败"); }
+            }
+            else
+            {
+                LogWrapper.Info("Setup", "将迁移全局配置文件");
+                file.CreateDirectory();
+                File.Move(source, file.TargetPath);
+            }
+        }
+        catch (Exception ex)
+        {
+            LogWrapper.Error(ex, "Setup", "全局配置文件迁移处理失败");
+            resultCallback.Invoke(null);
+            return;
+        }
+        LogWrapper.Info("Setup", "全局配置文件迁移处理完成");
+        resultCallback.Invoke(file.TargetPath);
+    };
+
+    private static FileSetupSourceManager _CreateGlobalSetupSource()
+    {
+        try
+        {
+            return new FileSetupSourceManager(PredefinedFileItems.GlobalSetup, GlobalFileSerializer, true);
+        }
+        catch (Exception ex)
+        {
+            LogWrapper.Fatal(ex, "Setup", "全局配置源托管器初始化失败");
+            _BackupFile(PredefinedFileItems.GlobalSetup);
+            throw new IOException("全局配置源托管器初始化失败");
+        }
+    }
+
+    private FileSetupSourceManager _CreateLocalSetupSource()
+    {
+        try
+        {
+            return new FileSetupSourceManager(PredefinedFileItems.LocalSetup, LocalFileSerializer, true);
+        }
+        catch (Exception ex)
+        {
+            LogWrapper.Fatal(ex, "Setup", "局部配置源托管器初始化失败");
+            _BackupFile(PredefinedFileItems.LocalSetup);
+            throw new IOException("局部配置源托管器初始化失败");
+        }
+    }
+
+    private static void _BackupFile(FileItem file)
     {
         var filePath = file.TargetPath;
         var bakPath = filePath + ".bak";
@@ -266,21 +319,58 @@ public sealed class SetupService : GeneralService
             File.Replace(filePath, bakPath, filePath + ".tmp");
         else
             File.Move(filePath, bakPath);
-        _context.Fatal(
+        LogWrapper.Fatal(
+            "Setup", 
             $"配置文件无法解析，可能已经损坏！{Environment.NewLine}" +
             $"请删除 {filePath}{Environment.NewLine}" +
-            $"并使用备份配置文件 {bakPath}",
-            actionLevel: LifecycleActionLevel.MsgBoxExit);
+            $"并使用备份配置文件 {bakPath}");
     }
 
     private static ISetupSourceManager _GetSourceManager(SetupEntry entry)
     {
         return entry.SourceType switch
         {
-            SetupEntrySource.PathLocal => _localSetupSource,
+            SetupEntrySource.PathLocal => _lazyLocalSetupSource.Value,
             SetupEntrySource.SystemGlobal => entry.IsEncrypted ? _migrationSetupSourceEncrypted : _migrationSetupSource,
             SetupEntrySource.GameInstance => _instanceSetupSource,
             _ => throw new ArgumentOutOfRangeException($"{nameof(SetupEntry)} 具有不正确的 {nameof(SetupEntry.SourceType)}")
         };
     }
+}
+
+file class IniDictSerializer : IFileSerializer<ConcurrentDictionary<string, string>>
+{
+    public ConcurrentDictionary<string, string> Deserialize(Stream source)
+    {
+        var result = new ConcurrentDictionary<string, string>();
+        using var reader = new StreamReader(source);
+        while (reader.ReadLine() is { } line)
+        {
+            var splitPos = line.IndexOf(':');
+            if (splitPos == -1)
+                continue;
+            var key = line[..splitPos];
+            var value = line[(splitPos + 1)..];
+            result.TryAdd(key, value);
+        }
+        return result;
+    }
+
+    public void Serialize(ConcurrentDictionary<string, string> input, Stream destination)
+    {
+        using var writer = new StreamWriter(destination);
+        foreach (var pair in input)
+            writer.WriteLine("{0}:{1}", pair.Key, pair.Value);
+    }
+}
+
+file class JsonDictSerializer : IFileSerializer<ConcurrentDictionary<string, string>>
+{
+    private static readonly JsonSerializerOptions _SerializerOptions = new() { WriteIndented = true };
+
+    public ConcurrentDictionary<string, string> Deserialize(Stream source) =>
+        JsonSerializer.Deserialize<ConcurrentDictionary<string, string>>(source) ?? new();
+
+    public void Serialize(ConcurrentDictionary<string, string> input, Stream destination) =>
+        JsonSerializer.Serialize(destination, input, _SerializerOptions);
 }
