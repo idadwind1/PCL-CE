@@ -252,6 +252,7 @@ public sealed class SetupService : GeneralService
     public static FileTransfer MigrateGlobalSetupFile => (file, resultCallback) =>
     {
         var source = file.Sources!.First();
+        file.CreateDirectory();
         if (!File.Exists(source))
         {
             LogWrapper.Info("Setup", "无需处理全局配置文件迁移");
@@ -269,7 +270,6 @@ public sealed class SetupService : GeneralService
             else
             {
                 LogWrapper.Info("Setup", "将迁移全局配置文件");
-                file.CreateDirectory();
                 File.Move(source, file.TargetPath);
             }
         }
