@@ -11,13 +11,11 @@ namespace PCL.Core.Net;
 [LifecycleService(LifecycleState.Loading)]
 public sealed class NetworkService : GeneralService {
 
-    // 上下文
-    private static LifecycleContext? _context;
     private static ServiceProvider? _provider;
     private static IHttpClientFactory? _factory = null;
 
 
-    private NetworkService() : base("netowork", "网络服务") { _context = ServiceContext; }
+    private NetworkService() : base("netowork", "网络服务") {}
 
     public override void Start()
     {
@@ -76,7 +74,7 @@ public sealed class NetworkService : GeneralService {
             .WaitAndRetryAsync(
                 retry,
                 attempt => retryPolicy?.Invoke(attempt) ?? _DefaultPolicy(attempt),
-                onRetryAsync: async (exception, _, _, context) =>
+                onRetryAsync: async (exception, _, _, _) =>
                 {
                     LogWrapper.Warn(exception, "Http", "发送可重试的网络请求失败。");
                     await Task.CompletedTask;
