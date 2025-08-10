@@ -4,28 +4,25 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using PCL.Core.Logging;
-using PCL.Core.Net;
 using Polly;
 
-namespace PCL.Core.App;
+namespace PCL.Core.Net;
 
-[LifecycleService(LifecycleState.Running)]
+[LifecycleService(LifecycleState.Loading)]
 public sealed class NetworkService : GeneralService {
 
     // 上下文
     private static LifecycleContext? _context;
-    private static LifecycleContext Context => _context!;
     private static ServiceProvider? _provider;
     private static IHttpClientFactory? _factory = null;
 
-    // 继承父类构造函数，此处 `asyncStart` 参数默认值为 `true`，因此省略
+
     private NetworkService() : base("netowork", "网络服务") { _context = ServiceContext; }
 
-    // 开始事件，可以不写 (虽然但是不写的话整这服务有啥用...)
     public override void Start()
     {
         var services = new ServiceCollection();
-        services.AddHttpClient("NetworkServices").ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler()
+        services.AddHttpClient("NetworkServices").ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
             {
                 UseProxy = true,
                 AutomaticDecompression =
@@ -33,12 +30,20 @@ public sealed class NetworkService : GeneralService {
                 Proxy = HttpProxyManager.Instance
             }
         );
+        services.AddHttpClient("CookieClient").ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                UseProxy = true,
+                AutomaticDecompression =
+                    DecompressionMethods.Deflate | DecompressionMethods.GZip | DecompressionMethods.None,
+                Proxy = HttpProxyManager.Instance,
+                UseCookies = false
+            }
+        );
         _provider = services.BuildServiceProvider();
         _factory = _provider.GetRequiredService<IHttpClientFactory>();
         
     }
 
-    // 结束事件，可以不写
     public override void Stop() {
         _provider?.Dispose();
     }
@@ -47,9 +52,10 @@ public sealed class NetworkService : GeneralService {
     /// 获取 HttpClient
     /// </summary>
     /// <returns>HttpClient 实例</returns>
-    public static HttpClient GetClient()
+    public static HttpClient GetClient(bool useCookie = false)
     {
-        return _factory.CreateClient("NetworkServices") ?? throw new InvalidOperationException("在初始化完成前的意外的调用");
+        return _factory?.CreateClient(useCookie ? "CookieClient":"NetworkServices") ??
+         throw new InvalidOperationException("在初始化完成前的意外调用");
     }
     
 
@@ -57,17 +63,22 @@ public sealed class NetworkService : GeneralService {
     {
         return TimeSpan.FromMilliseconds(retry * 150 + 150);
     }
+    /// <summary>
+    /// 获取重试策略
+    /// </summary>
+    /// <param name="retry">最大重试次数</param>
+    /// <param name="retryPolicy">定义重试器行为</param>
+    /// <returns>AsyncPolicy</returns>
     public static AsyncPolicy GetRetryPolicy(int retry,Func<int,TimeSpan>? retryPolicy = null)
     {
         return Policy
             .Handle<HttpRequestException>()
             .WaitAndRetryAsync(
                 retry,
-                attempt => retryPolicy is null  
-                    ? _DefaultPolicy(attempt):retryPolicy(attempt),
-                onRetryAsync: async (exception, timeSpan, retryCount, context) =>
+                attempt => retryPolicy?.Invoke(attempt) ?? _DefaultPolicy(attempt),
+                onRetryAsync: async (exception, _, _, context) =>
                 {
-                    LogWrapper.Warn(exception, "Http", $"发送可重试的网络请求失败。");
+                    LogWrapper.Warn(exception, "Http", "发送可重试的网络请求失败。");
                     await Task.CompletedTask;
                 });
     }
