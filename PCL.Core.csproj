@@ -43,7 +43,7 @@
     </PropertyGroup>
     <PropertyGroup Condition="'$(Configuration)' == 'CI'">
         <DebugType>pdbonly</DebugType>
-        <Optimize>true</Optimize>
+        <Optimize>false</Optimize>
         <OutputPath>bin\CI-$(Platform)\</OutputPath>
         <DefineConstants>CI;TRACE</DefineConstants>
         <PlatformTarget>$(Platform)</PlatformTarget>
