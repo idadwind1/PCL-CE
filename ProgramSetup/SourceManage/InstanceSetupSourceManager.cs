@@ -118,9 +118,12 @@ public sealed class InstanceSetupSourceManager : ISetupSourceManager, IDisposabl
                         break; // 收工
                     continue; // 接着等……
                 }
+                if (_cachesToSave.Count < 3)
+                {
+                    try { Task.Delay(500, _saveJobCts.Token).Wait(); } // 磨洋工
+                    catch (AggregateException ex) when (ex.InnerException is TaskCanceledException) { }
+                }
                 _saveEvent.Set();
-                try { Task.Delay(500, _saveJobCts.Token).Wait(); } // 磨洋工
-                catch (AggregateException ex) when (ex.InnerException is TaskCanceledException) {  }
                 if (!_cachesToSave.TryTake(out cache))
                     throw new InvalidOperationException("预料外的集合修改");
             }
