@@ -44,7 +44,7 @@
     "Telemetry": {"key": "SystemTelemetry", "source": "global", "value": false, "encrypted": false},
     "MirrorChyanKey": {"key": "SystemMirrorChyanKey", "source": "global", "value": "", "encrypted": true},
     "MaxGameLog": {"key": "SystemMaxLog", "source": "global", "value": 13, "encrypted": false},
-    "RandomUuid": {"key": "LaunchUuid", "source": "global", "value": "", "encrypted": false},
+    "LaunchUuid": {"key": "LaunchUuid", "source": "global", "value": "", "encrypted": false},
     "LoginLegacyName": {"key": "LoginLegacyName", "source": "global", "value": "", "encrypted": true},
     "LoginMsJson": {"key": "LoginMsJson", "source": "global", "value": "{}", "encrypted": true},
     "LoginMsAuthType": {"key": "LoginMsAuthType", "source": "global", "value": 1, "encrypted": false},

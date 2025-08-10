@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Management;
 using PCL.Core.Logging;
+using PCL.Core.ProgramSetup;
 using PCL.Core.Utils.Hash;
 
 namespace PCL.Core.Utils.Secret;
@@ -13,12 +14,15 @@ public static class Identify
     private static readonly Lazy<string> _LazyRawCode =
         new(() => CpuId is null ? DefaultRawCode : SHA256Provider.Instance.ComputeHash(CpuId).ToUpper());
 
+    private static readonly Lazy<string> _LaunchId = new(_GetLaunchId);
+
     private static readonly Lazy<string> _LazyEncryptKey =
         new(() => SHA512Provider.Instance.ComputeHash(RawCode).Substring(4, 32).ToUpper());
 
     public static string GetGuid() => Guid.NewGuid().ToString();
     public static string? CpuId => _LazyCpuId.Value;
     public static string RawCode => _LazyRawCode.Value;
+    public static string LaunchId => _LaunchId.Value;
     public static string EncryptKey => _LazyEncryptKey.Value;
 
     private static string? _GetCpuId()
@@ -32,12 +36,7 @@ public static class Identify
             {
                 try
                 {
-                    string? cpuId = item["ProcessorId"]?.ToString();
-
-                    if (!string.IsNullOrWhiteSpace(cpuId))
-                    {
-                        return cpuId;
-                    }
+                    return item["ProcessorId"]?.ToString();
                 }
                 catch (ManagementException ex)
                 {
@@ -75,5 +74,24 @@ public static class Identify
     public static string GetMachineId(string randomId)
     {
         return SHA512Provider.Instance.ComputeHash($"{randomId}|{CpuId}").ToUpper();
+    }
+
+    private static string _GetLaunchId()
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(Setup.System.LaunchUuid)) Setup.System.LaunchUuid = GetGuid();
+            var hashCode = GetMachineId(Setup.System.LaunchUuid)
+                .Substring(6, 16)
+                .Insert(4, "-")
+                .Insert(9, "-")
+                .Insert(14, "-");
+            return hashCode;
+        }
+        catch (Exception e)
+        {
+            LogWrapper.Error("Identify", $"无法获取短识别码");
+            return "PCL2-CECE-GOOD-2025";
+        }
     }
 }
