@@ -368,8 +368,12 @@ file class JsonDictSerializer : IFileSerializer<ConcurrentDictionary<string, str
 {
     private static readonly JsonSerializerOptions _SerializerOptions = new() { WriteIndented = true };
 
-    public ConcurrentDictionary<string, string> Deserialize(Stream source) =>
-        JsonSerializer.Deserialize<ConcurrentDictionary<string, string>>(source) ?? new();
+    public ConcurrentDictionary<string, string> Deserialize(Stream source)
+    {
+        if (source.Length == 0)
+            return new ConcurrentDictionary<string, string>();
+        return JsonSerializer.Deserialize<ConcurrentDictionary<string, string>>(source) ?? new();
+    }
 
     public void Serialize(ConcurrentDictionary<string, string> input, Stream destination) =>
         JsonSerializer.Serialize(destination, input, _SerializerOptions);
