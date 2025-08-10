@@ -12,9 +12,9 @@ public class HttpRequestBuilder
     private HttpResponseMessage? _response;
     private bool _useCookie;
     
-    protected HttpRequestBuilder(string url,HttpMethod method)
+    private HttpRequestBuilder(string url,HttpMethod method)
     {
-        this._request = new HttpRequestMessage(method,url);
+        _request = new HttpRequestMessage(method,url);
     }
     /// <summary>
     /// 创建一个 HttpRequestBuilder 对象
@@ -33,7 +33,7 @@ public class HttpRequestBuilder
     /// <returns>HttpRequestBuilder</returns>
     public HttpRequestBuilder WithContent(HttpContent content)
     {
-        this._request.Content = content;
+        _request.Content = content;
         return this;
     }
     /// <summary>
@@ -43,8 +43,8 @@ public class HttpRequestBuilder
     /// <returns>HttpRequestBuilder</returns>
     public HttpRequestBuilder WithCookie(string cookie)
     {
-        this._useCookie = true;
-        this._request.Headers.TryAddWithoutValidation("Cookie",cookie);
+        _useCookie = true;
+        _request.Headers.TryAddWithoutValidation("Cookie",cookie);
         return this;
     }
     /// <summary>
@@ -56,7 +56,7 @@ public class HttpRequestBuilder
     {
         foreach (var kvp in headers)
         {
-            this._request.Headers.Add(kvp.Key,kvp.Value);
+            _request.Headers.Add(kvp.Key,kvp.Value);
         }
 
         return this;
@@ -69,13 +69,13 @@ public class HttpRequestBuilder
     /// <returns>HttpRequestBuilder</returns>
     public HttpRequestBuilder SetHeader(string key, string value)
     {
-        if (key.StartsWith("Content", StringComparison.OrdinalIgnoreCase) && this._request.Content is not null)
+        if (key.StartsWith("Content", StringComparison.OrdinalIgnoreCase) && _request.Content is not null)
         {
-            this._request.Content.Headers.TryAddWithoutValidation(key, value);
+            _request.Content.Headers.TryAddWithoutValidation(key, value);
         }
         else
         {
-            this._request.Headers.TryAddWithoutValidation(key, value);
+            _request.Headers.TryAddWithoutValidation(key, value);
         }
 
         return this;
@@ -86,81 +86,65 @@ public class HttpRequestBuilder
     /// <returns>HttpRequestBuilder</returns>
     public async Task<HttpRequestBuilder> Build(int? retry = null,Func<int,TimeSpan>? retryPolicy =null)
     {
-        using var client = NetworkService.GetClient(this._useCookie);
-        this._response = await NetworkService.GetRetryPolicy(retry,retryPolicy)
-            .ExecuteAsync(async () => await client.SendAsync(this._request));
+        using var client = NetworkService.GetClient(_useCookie);
+        _response = await NetworkService.GetRetryPolicy(retry,retryPolicy)
+            .ExecuteAsync(async () => await client.SendAsync(_request));
         return this;
     }
     /// <summary>
     /// 获取响应的 HttpResponseMessage 对象，如果请求尚未完成，则返回 null
     /// </summary>
     /// <returns>HttpResponseMessage?</returns>
-    public HttpResponseMessage? GetResponse()
+    public HttpResponseMessage GetResponse()
     {
-        return this._response;
+        return _response ?? throw new InvalidOperationException("在请求完成前的意外调用");
     }
     /// <summary>
     /// 读取响应载荷
     /// </summary>
     /// <returns>string?</returns>
-    public string? ReadResponseAsString()
+    public string ReadResponseAsString()
     {
-        return this.ReadResponseAsStringAsync().GetAwaiter().GetResult();
+        return ReadResponseAsStringAsync().GetAwaiter().GetResult();
     }
     /// <summary>
     /// 读取响应载荷 （异步）
     /// </summary>
     /// <returns>string?</returns>
-    public async Task<string?> ReadResponseAsStringAsync()
+    public async Task<string> ReadResponseAsStringAsync()
     {
-        if (this._response?.Content is not null)
-        {
-            return await this._response.Content.ReadAsStringAsync();
-        }
-        
-
-        return null;
+        return await GetResponse().Content.ReadAsStringAsync();
     }
     /// <summary>
     /// 读取响应载荷
     /// </summary>
     /// <returns>byte[]?</returns>
-    public byte[]? ReadResponseAsByteArray()
+    public byte[] ReadResponseAsByteArray()
     {
-        return this.ReadResponseAsByteArrayAsync().GetAwaiter().GetResult();
+        return ReadResponseAsByteArrayAsync().GetAwaiter().GetResult();
     }
     /// <summary>
     /// 读取响应载荷（异步）
     /// </summary>
     /// <returns>string?</returns>
-    public async Task<byte[]?> ReadResponseAsByteArrayAsync()
-    {
-        if (this._response?.Content is not null)
-        {
-            return await this._response.Content.ReadAsByteArrayAsync();
-        }
-
-        return null;
+    public async Task<byte[]> ReadResponseAsByteArrayAsync()
+    { 
+        return await GetResponse().Content.ReadAsByteArrayAsync();
     }
     /// <summary>
     /// 读取响应流
     /// </summary>
     /// <returns>string?</returns>
-    public Stream? ReadResponseAsStream()
+    public Stream ReadResponseAsStream()
     {
-        return this.ReadResponseAsStreamAsync().GetAwaiter().GetResult();
+        return ReadResponseAsStreamAsync().GetAwaiter().GetResult();
     }
     /// <summary>
     /// 读取响应流（异步）
     /// </summary>
     /// <returns>string?</returns>
-    public async Task<Stream?> ReadResponseAsStreamAsync()
+    public async Task<Stream> ReadResponseAsStreamAsync()
     {
-        if (this._response?.Content is not null)
-        {
-            return await this._response.Content.ReadAsStreamAsync();
-        }
-
-        return null;
+        return await GetResponse().Content.ReadAsStreamAsync();
     }
 }
