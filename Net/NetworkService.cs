@@ -68,12 +68,12 @@ public sealed class NetworkService : GeneralService {
     /// <param name="retry">最大重试次数</param>
     /// <param name="retryPolicy">定义重试器行为</param>
     /// <returns>AsyncPolicy</returns>
-    public static AsyncPolicy GetRetryPolicy(int retry,Func<int,TimeSpan>? retryPolicy = null)
+    public static AsyncPolicy GetRetryPolicy(int? retry = null,Func<int,TimeSpan>? retryPolicy = null)
     {
         return Policy
             .Handle<HttpRequestException>()
             .WaitAndRetryAsync(
-                retry,
+                retry ?? 3,
                 attempt => retryPolicy?.Invoke(attempt) ?? _DefaultPolicy(attempt),
                 onRetryAsync: async (exception, _, _, _) =>
                 {
