@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using PCL.Core.IO;
 using PCL.Core.Logging;
@@ -22,8 +19,10 @@ public sealed class InstanceSetupSourceManager : ISetupSourceManager, IDisposabl
         if (gamePath is null)
             throw new ArgumentException("获取游戏实例配置时未提供游戏路径", nameof(gamePath));
         string? result = default;
-        _UseCache(_GetFilePath(gamePath),
-            cache => { result = cache.Content.TryGetValue(key, out var value) ? value : null; });
+        _UseCache(_GetFilePath(gamePath), cache =>
+        {
+            result = cache.Content.TryGetValue(key, out var value) ? value : null;
+        });
         return result;
     }
 
@@ -35,7 +34,8 @@ public sealed class InstanceSetupSourceManager : ISetupSourceManager, IDisposabl
         _UseCache(_GetFilePath(gamePath), cache =>
         {
             result = cache.Content.UpdateAndGetPrevious(key, value);
-            _pendingCaches.Add(cache);
+            _cachesToSave.Add(cache);
+            _saveEvent.Set();
         });
         return result;
     }
@@ -48,7 +48,8 @@ public sealed class InstanceSetupSourceManager : ISetupSourceManager, IDisposabl
         _UseCache(_GetFilePath(gamePath), cache =>
         {
             result = cache.Content.TryRemove(key, out var value) ? value : null;
-            _pendingCaches.Add(cache);
+            _cachesToSave.Add(cache);
+            _saveEvent.Set();
         });
         return result;
     }
@@ -58,14 +59,14 @@ public sealed class InstanceSetupSourceManager : ISetupSourceManager, IDisposabl
     private readonly IFileSerializer<ConcurrentDictionary<string, string>> _serializer;
     private readonly Dictionary<string, CacheEntry> _fileCache = new();
     private readonly Thread _saveJobThread;
-    private readonly ConcurrentSet<CacheEntry> _pendingCachesUnderlying = new() { IgnoreDuplicated = true };
-    private readonly BlockingCollection<CacheEntry> _pendingCaches;
+    private readonly ConcurrentSet<CacheEntry> _cachesToSave = new() { IgnoreDuplicated = true };
+    private readonly ManualResetEventSlim _saveEvent = new();
+    private readonly CancellationTokenSource _saveJobCts = new();
     private volatile int _disposed = 0;
 
     public InstanceSetupSourceManager(IFileSerializer<ConcurrentDictionary<string, string>> serializer)
     {
         _serializer = serializer;
-        _pendingCaches = new BlockingCollection<CacheEntry>(_pendingCachesUnderlying);
         _saveJobThread = new Thread(_SaveJob);
         _saveJobThread.Start();
     }
@@ -108,11 +109,17 @@ public sealed class InstanceSetupSourceManager : ISetupSourceManager, IDisposabl
             CacheEntry cache;
             try
             {
-                cache = _pendingCaches.Take();
-            }
-            catch (InvalidOperationException)
-            {
-                break; /* 完事，收工 */
+                try { _saveEvent.Wait(_saveJobCts.Token); }
+                catch (OperationCanceledException) { }
+                _saveEvent.Reset();
+                if (_cachesToSave.TryTake(out cache))
+                    _saveEvent.Set();
+                else
+                {
+                    if (_saveJobCts.IsCancellationRequested)
+                        break; // 完事，收工
+                    continue; // 接着等……
+                }
             }
             catch (Exception ex)
             {
@@ -138,11 +145,11 @@ public sealed class InstanceSetupSourceManager : ISetupSourceManager, IDisposabl
                     _serializer.Serialize(cache.Content, fs);
                 // 替换文件
                 File.Replace(tmpPath, cache.FilePath, null);
+                // 如果没要求保存这个缓存就先删掉缓存，下次使用时再加载
+                // 否则就把这个缓存的写入时间更新一下
                 lock (_fileCache)
                 {
-                    // 如果没要求保存这个缓存就先删掉缓存，下次使用时再加载
-                    // 否则就把这个缓存的写入时间更新一下
-                    if (!_pendingCachesUnderlying.Contains(cache))
+                    if (!_cachesToSave.Contains(cache))
                         _fileCache.Remove(cache.FilePath);
                     else
                         cache.UpdateLastWriteTime();
@@ -160,9 +167,10 @@ public sealed class InstanceSetupSourceManager : ISetupSourceManager, IDisposabl
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0)
             return;
-        _pendingCaches.CompleteAdding();
+        _saveJobCts.Cancel();
         _saveJobThread.Join();
-        _pendingCaches.Dispose();
+        _saveJobCts.Dispose();
+        _saveEvent.Dispose();
         _fileCache.Clear();
     }
 
