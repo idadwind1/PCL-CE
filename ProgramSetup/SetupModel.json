@@ -35,7 +35,7 @@
     "SetupVersionLocal": {"key": "SystemSetupVersionIni", "source": "local", "value": 1, "encrypted": false},
     "CacheDirectory": {"key": "SystemSystemCache", "source": "global", "value": "", "encrypted": false},
     "UpdateSolution": {"key": "SystemSystemUpdate", "source": "local", "value": 0, "encrypted": false},
-    "UpdateBranch": {"key": "SystemSystemUpdateBranch", "source": "local", "value": 0, "encrypted": false},
+    "dyn:UpdateBranch": {"key": "SystemSystemUpdateBranch", "source": "local", "value": 0, "encrypted": false},
     "AnnounceSolution": {"key": "SystemSystemActivity", "source": "local", "value": 0, "encrypted": false},
     "ShowedAnnouncements": {"key": "SystemSystemAnnouncement", "source": "local", "value": "", "encrypted": false},
     "HttpProxy": {"key": "SystemHttpProxy", "source": "global", "value": "", "encrypted": true},

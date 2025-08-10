@@ -19,6 +19,7 @@ $setupJson = Get-Content -Path $setupModelFilePath -Raw | ConvertFrom-Json
 $entryModelCode = [System.Text.StringBuilder]::new()
 $propertyModelCode = [System.Text.StringBuilder]::new()
 $allSetupEntries = [System.Collections.Generic.Dictionary[string, string]]::new()
+$entryDictionaryCode = [System.Text.StringBuilder]::new()
 
 function Format-Value($value)
 {
@@ -73,7 +74,8 @@ function Process-Namespace($namespaceStore, $currentJson) {
             [void] $propertyModelCode.Append($indent).AppendLine('}')
         } else { # 子条目
             # 获取子条目的信息
-            $entryName = $childPSProp.Name
+            $isEntryDynamic = $childPSProp.Name -like 'dyn:*'
+            $entryName = $childPSProp.Name -replace '^dyn:'
             $childEntry = $childPSProp.Value
             $entrySource = $childEntry.source
             $formattedEntrySource = Format-EntrySource $entrySource
@@ -82,8 +84,13 @@ function Process-Namespace($namespaceStore, $currentJson) {
             $namespaceStr = $namespaceStore -join '.'
             $formattedEntrypted = $childEntry.encrypted.ToString().ToLower()
             # 输出 EntryModel 代码
-            [void] $entryModelCode.Append($indent).AppendLine(
-                    "public static readonly SetupEntry $entryName = new SetupEntry($formattedEntrySource, `"$entryKey`", $($entryValue.FormattedValue), $formattedEntrypted);")
+            if ($isEntryDynamic) {
+                [void] $entryModelCode.Append($indent).AppendLine(
+                        "public static SetupEntry $entryName => global::PCL.Core.ProgramSetup.SetupEntries.ForKeyName(`"$entryKey`")!;")
+            } else {
+                [void] $entryModelCode.Append($indent).AppendLine(
+                        "public static readonly SetupEntry $entryName = new SetupEntry($formattedEntrySource, `"$entryKey`", $($entryValue.FormattedValue), $formattedEntrypted);")
+            }
             # 输出 PropertyModel 代码
             if ($entrySource -ne 'instance') {
                 [void] $propertyModelCode.Append($indent).AppendLine("public static $($entryValue.Type) $entryName")
@@ -98,23 +105,15 @@ function Process-Namespace($namespaceStore, $currentJson) {
                 [void] $propertyModelCode.Append($indent).AppendLine("    SetValue = (gamePath, value) => SetupService.$($entryValue.SetMethod)(SetupEntries.$namespaceStr.$entryName, value, gamePath)")
                 [void] $propertyModelCode.Append($indent).AppendLine('};')
             }
-            # 记录 SetupEntry 的旧名和新名的键值对
-            $allSetupEntries.Add($entryKey, $namespaceStr + '.' + $entryName)
+            # 输出 EntryDictionary 字典初始化代码
+            if (-not $isEntryDynamic) {
+                [void] $entryDictionaryCode.AppendLine("        [`"$entryKey`"] = $namespaceStr.$entryName,")
+            }
         }
     }
 }
 
 Process-Namespace @() $setupJson
-
-# EntryDictionary 字典
-
-$entryDictionaryCode = [System.Text.StringBuilder]::new()
-
-$allSetupEntries.GetEnumerator() | ForEach-Object {
-    $keyName = $_.Key
-    $entryPath = $_.Value
-    [void] $entryDictionaryCode.AppendLine("        [`"$keyName`"] = $entryPath,")
-}
 
 # 输出 SetupEntries.g.cs & Setup.g.cs
 
