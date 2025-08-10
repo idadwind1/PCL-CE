@@ -76,7 +76,7 @@ public sealed class NetworkService : GeneralService {
                 attempt => retryPolicy?.Invoke(attempt) ?? _DefaultPolicy(attempt),
                 onRetryAsync: async (exception, _, _, _) =>
                 {
-                    LogWrapper.Warn(exception, "Http", "发送可重试的网络请求失败。");
+                    LogWrapper.Error(exception, "Http", "发送可重试的网络请求失败。");
                     await Task.CompletedTask;
                 });
     }
