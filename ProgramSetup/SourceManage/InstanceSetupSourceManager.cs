@@ -8,6 +8,7 @@ using System.Linq;
 using System.Threading;
 using PCL.Core.IO;
 using PCL.Core.Logging;
+using PCL.Core.Utils;
 using PCL.Core.Utils.Exts;
 
 namespace PCL.Core.ProgramSetup.SourceManage;
@@ -21,10 +22,8 @@ public sealed class InstanceSetupSourceManager : ISetupSourceManager, IDisposabl
         if (gamePath is null)
             throw new ArgumentException("获取游戏实例配置时未提供游戏路径", nameof(gamePath));
         string? result = default;
-        _UseCache(_GetFilePath(gamePath), cache =>
-        {
-            result = cache.Content.TryGetValue(key, out var value) ? value : null;
-        });
+        _UseCache(_GetFilePath(gamePath),
+            cache => { result = cache.Content.TryGetValue(key, out var value) ? value : null; });
         return result;
     }
 
@@ -36,7 +35,7 @@ public sealed class InstanceSetupSourceManager : ISetupSourceManager, IDisposabl
         _UseCache(_GetFilePath(gamePath), cache =>
         {
             result = cache.Content.UpdateAndGetPrevious(key, value);
-            _waitingToSave.Add(cache);
+            _pendingCaches.Add(cache);
         });
         return result;
     }
@@ -49,7 +48,7 @@ public sealed class InstanceSetupSourceManager : ISetupSourceManager, IDisposabl
         _UseCache(_GetFilePath(gamePath), cache =>
         {
             result = cache.Content.TryRemove(key, out var value) ? value : null;
-            _waitingToSave.Add(cache);
+            _pendingCaches.Add(cache);
         });
         return result;
     }
@@ -59,14 +58,14 @@ public sealed class InstanceSetupSourceManager : ISetupSourceManager, IDisposabl
     private readonly IFileSerializer<ConcurrentDictionary<string, string>> _serializer;
     private readonly Dictionary<string, CacheEntry> _fileCache = new();
     private readonly Thread _saveJobThread;
-    private readonly ProducerConsumerSet<CacheEntry> _waitingToSaveUnderlying = new();
-    private readonly BlockingCollection<CacheEntry> _waitingToSave;
+    private readonly ConcurrentSet<CacheEntry> _pendingCachesUnderlying = new() { IgnoreDuplicated = true };
+    private readonly BlockingCollection<CacheEntry> _pendingCaches;
     private volatile int _disposed = 0;
 
     public InstanceSetupSourceManager(IFileSerializer<ConcurrentDictionary<string, string>> serializer)
     {
         _serializer = serializer;
-        _waitingToSave = new BlockingCollection<CacheEntry>(_waitingToSaveUnderlying);
+        _pendingCaches = new BlockingCollection<CacheEntry>(_pendingCachesUnderlying);
         _saveJobThread = new Thread(_SaveJob);
         _saveJobThread.Start();
     }
@@ -107,8 +106,14 @@ public sealed class InstanceSetupSourceManager : ISetupSourceManager, IDisposabl
         while (true)
         {
             CacheEntry cache;
-            try { cache = _waitingToSave.Take(); }
-            catch (InvalidOperationException) { break; /* 完事，收工 */ }
+            try
+            {
+                cache = _pendingCaches.Take();
+            }
+            catch (InvalidOperationException)
+            {
+                break; /* 完事，收工 */
+            }
             catch (Exception ex)
             {
                 LogWrapper.Error(ex, "Setup", "处理实例保存队列时的意外错误");
@@ -133,11 +138,14 @@ public sealed class InstanceSetupSourceManager : ISetupSourceManager, IDisposabl
                     _serializer.Serialize(cache.Content, fs);
                 // 替换文件
                 File.Replace(tmpPath, cache.FilePath, null);
-                // 如果没要求保存这个缓存就先删掉缓存，下次使用时再加载
                 lock (_fileCache)
                 {
-                    if (!_waitingToSaveUnderlying.Contains(cache))
+                    // 如果没要求保存这个缓存就先删掉缓存，下次使用时再加载
+                    // 否则就把这个缓存的写入时间更新一下
+                    if (!_pendingCachesUnderlying.Contains(cache))
                         _fileCache.Remove(cache.FilePath);
+                    else
+                        cache.UpdateLastWriteTime();
                 }
                 LogWrapper.Debug("Setup", "向硬盘同步游戏实例配置文件：" + cache.FilePath);
             }
@@ -152,9 +160,9 @@ public sealed class InstanceSetupSourceManager : ISetupSourceManager, IDisposabl
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0)
             return;
-        _waitingToSave.CompleteAdding();
+        _pendingCaches.CompleteAdding();
         _saveJobThread.Join();
-        _waitingToSave.Dispose();
+        _pendingCaches.Dispose();
         _fileCache.Clear();
     }
 
@@ -164,55 +172,7 @@ public sealed class InstanceSetupSourceManager : ISetupSourceManager, IDisposabl
         public readonly ConcurrentDictionary<string, string> Content = content;
         private volatile object _lastWriteTime = File.GetLastWriteTimeUtc(filePath);
 
-        public bool VerifyLastWriteTime() => File.GetLastWriteTimeUtc(FilePath) == (DateTime) _lastWriteTime;
+        public bool VerifyLastWriteTime() => File.GetLastWriteTimeUtc(FilePath) == (DateTime)_lastWriteTime;
         public void UpdateLastWriteTime() => _lastWriteTime = File.GetLastWriteTimeUtc(FilePath);
     }
-
-    /// <summary>
-    /// 一个用于应付 BlockingCollection 的会自动去重的并发集合
-    /// </summary>
-    /// <typeparam name="T">元素类型</typeparam>
-    private sealed class ProducerConsumerSet<T> : IProducerConsumerCollection<T>
-    {
-        private readonly ConcurrentDictionary<T, object?> _dictionary = new();
-
-        public bool Contains(T item) => _dictionary.ContainsKey(item);
-
-        bool IProducerConsumerCollection<T>.TryAdd(T item)
-        {
-            _dictionary.TryAdd(item, null);
-            return true;
-        }
-
-        bool IProducerConsumerCollection<T>.TryTake([UnscopedRef] out T item)
-        {
-            while (true)
-            {
-                var pair = _dictionary.FirstOrDefault();
-                if (pair.Key is null)
-                {
-                    item = default!;
-                    return false;
-                }
-                if (_dictionary.TryRemove(pair.Key, out _))
-                {
-                    item = pair.Key;
-                    return true;
-                }
-            }
-        }
-
-        // ReSharper disable once NotDisposedResourceIsReturned
-        IEnumerator<T> IEnumerable<T>.GetEnumerator() => _dictionary.Keys.GetEnumerator();
-
-        // ReSharper disable once NotDisposedResourceIsReturned
-        IEnumerator IEnumerable.GetEnumerator() => _dictionary.Keys.GetEnumerator();
-        int ICollection.Count => _dictionary.Count;
-        object ICollection.SyncRoot => ((ICollection)_dictionary).SyncRoot;
-        bool ICollection.IsSynchronized => ((ICollection)_dictionary).IsSynchronized;
-        void ICollection.CopyTo(Array array, int index) => _dictionary.Keys.CopyTo((T[])array, index);
-        void IProducerConsumerCollection<T>.CopyTo(T[] array, int index) => _dictionary.Keys.CopyTo(array, index);
-        T[] IProducerConsumerCollection<T>.ToArray() => _dictionary.Keys.ToArray();
-    }
 }
-

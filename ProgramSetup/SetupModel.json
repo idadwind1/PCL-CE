@@ -244,9 +244,9 @@
     "ForgeVersion": {"key": "VersionForge", "source": "instance", "value": "", "encrypted": false},
     "NeoForgeVersion": {"key": "VersionNeoForge", "source": "instance", "value": "", "encrypted": false},
     "CleanroomVersion": {"key": "VersionCleanroom", "source": "instance", "value": "", "encrypted": false},
-    "SortCode": {"key": "VersionApiCode", "source": "instance", "value": 0, "encrypted": false},
-    "McVersion": {"key": "VersionOriginal", "source": "instance", "value": "", "encrypted": false},
-    "VersionMajor": {"key": "VersionOriginalMain", "source": "instance", "value": 0, "encrypted": false},
-    "VersionMinor": {"key": "VersionOriginalSub", "source": "instance", "value": 0, "encrypted": false}
+    "SortCode": {"key": "VersionApiCode", "source": "instance", "value": -1, "encrypted": false},
+    "McVersion": {"key": "VersionOriginal", "source": "instance", "value": "Unknown", "encrypted": false},
+    "VersionMajor": {"key": "VersionOriginalMain", "source": "instance", "value": -1, "encrypted": false},
+    "VersionMinor": {"key": "VersionOriginalSub", "source": "instance", "value": -1, "encrypted": false}
   }
 }
