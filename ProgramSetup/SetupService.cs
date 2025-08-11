@@ -10,6 +10,7 @@ using PCL.Core.IO;
 using PCL.Core.App;
 using PCL.Core.Logging;
 using PCL.Core.ProgramSetup.SourceManage;
+using PCL.Core.Utils.Exts;
 using PCL.Core.Utils.Secret;
 
 namespace PCL.Core.ProgramSetup;
@@ -284,7 +285,7 @@ public sealed class SetupService : GeneralService
                     continue;
                 if (globalSource.Get(valueName) is null)
                 {
-                    var value = Regex.Replace(rawValue.ToString(), "\r\n|\r|\n", "");
+                    var value = rawValue.ToString().ReplaceLineBreak("");
                     globalSource.Set(valueName,
                         !setupEntry.IsEncrypted
                             ? value
