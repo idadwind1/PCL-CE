@@ -2,6 +2,7 @@
 using System.Text.RegularExpressions;
 using Microsoft.Win32;
 using PCL.Core.Logging;
+using PCL.Core.Utils.Exts;
 
 namespace PCL.Core.ProgramSetup.SourceManage;
 
@@ -78,9 +79,9 @@ public sealed class RegisterSetupSourceManager(string regPath) : ISetupSourceMan
     #endregion
 
     private readonly object _regProcLock = new();
-
+    
     private static string? _ProcessRegRawValue(object? rawValue)
     {
-        return rawValue is null ? null : Regex.Replace(rawValue.ToString(), "\r\n|\r|\n", "");
+        return rawValue?.ToString()?.ReplaceLineBreak("");
     }
 }
