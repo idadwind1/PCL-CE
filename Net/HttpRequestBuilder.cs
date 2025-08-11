@@ -94,7 +94,7 @@ public class HttpRequestBuilder
     /// <summary>
     /// 获取响应的 HttpResponseMessage 对象，如果请求尚未完成，则返回 null
     /// </summary>
-    /// <returns>HttpResponseMessage?</returns>
+    /// <returns>HttpResponseMessage</returns>
     public HttpResponseMessage GetResponse()
     {
         return _response ?? throw new InvalidOperationException("在请求完成前的意外调用");
@@ -102,7 +102,7 @@ public class HttpRequestBuilder
     /// <summary>
     /// 读取响应载荷
     /// </summary>
-    /// <returns>string?</returns>
+    /// <returns>string</returns>
     public string ReadResponseAsString()
     {
         return ReadResponseAsStringAsync().GetAwaiter().GetResult();
@@ -110,7 +110,7 @@ public class HttpRequestBuilder
     /// <summary>
     /// 读取响应载荷 （异步）
     /// </summary>
-    /// <returns>string?</returns>
+    /// <returns>string</returns>
     public async Task<string> ReadResponseAsStringAsync()
     {
         return await GetResponse().Content.ReadAsStringAsync();
@@ -118,7 +118,7 @@ public class HttpRequestBuilder
     /// <summary>
     /// 读取响应载荷
     /// </summary>
-    /// <returns>byte[]?</returns>
+    /// <returns>byte[]</returns>
     public byte[] ReadResponseAsByteArray()
     {
         return ReadResponseAsByteArrayAsync().GetAwaiter().GetResult();
@@ -126,7 +126,7 @@ public class HttpRequestBuilder
     /// <summary>
     /// 读取响应载荷（异步）
     /// </summary>
-    /// <returns>string?</returns>
+    /// <returns>byte[]</returns>
     public async Task<byte[]> ReadResponseAsByteArrayAsync()
     { 
         return await GetResponse().Content.ReadAsByteArrayAsync();
@@ -134,7 +134,7 @@ public class HttpRequestBuilder
     /// <summary>
     /// 读取响应流
     /// </summary>
-    /// <returns>string?</returns>
+    /// <returns>Stream</returns>
     public Stream ReadResponseAsStream()
     {
         return ReadResponseAsStreamAsync().GetAwaiter().GetResult();
@@ -142,7 +142,7 @@ public class HttpRequestBuilder
     /// <summary>
     /// 读取响应流（异步）
     /// </summary>
-    /// <returns>string?</returns>
+    /// <returns>tream</returns>
     public async Task<Stream> ReadResponseAsStreamAsync()
     {
         return await GetResponse().Content.ReadAsStreamAsync();
