@@ -306,8 +306,8 @@ public sealed class SetupService : GeneralService
     {
         return entry.SourceType switch
         {
-            SetupEntrySource.PathLocal => SetupSourceDispatcher.GlobalSourceManager,
-            SetupEntrySource.SystemGlobal => SetupSourceDispatcher.LocalSourceManager,
+            SetupEntrySource.PathLocal => SetupSourceDispatcher.LocalSourceManager,
+            SetupEntrySource.SystemGlobal => SetupSourceDispatcher.GlobalSourceManager,
             SetupEntrySource.GameInstance => SetupSourceDispatcher.InstanceSourceManager,
             _ => throw new ArgumentOutOfRangeException($"{nameof(SetupEntry)} 具有不正确的 {nameof(SetupEntry.SourceType)}")
         };
