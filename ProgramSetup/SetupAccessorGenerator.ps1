@@ -23,29 +23,58 @@ $entryDictionaryCode = [System.Text.StringBuilder]::new()
 
 function Format-Value($value)
 {
+    if ($null -eq $value) {
+        throw "SetupModel.json 中某个默认值为 null，不受支持。"
+    }
+
     if ($value -is [string]) {
         return [PSCustomObject]@{
             FormattedValue = "`"$value`""
-            Type = 'string'
-            GetMethod = 'GetString'
-            SetMethod = 'SetString'
+            Type          = 'string'
+            GetMethod     = 'GetString'
+            SetMethod     = 'SetString'
         }
     }
+
     if ($value -is [bool]) {
         return [PSCustomObject]@{
-            FormattedValue = $value.ToString().ToLower()
-            Type = 'bool'
-            GetMethod = 'GetBool'
-            SetMethod = 'SetBool'
+            FormattedValue = $value.ToString().ToLowerInvariant()
+            Type          = 'bool'
+            GetMethod     = 'GetBool'
+            SetMethod     = 'SetBool'
         }
     }
+
+    # 仅支持 C# 侧的 Int32：在 PowerShell 7+/非 Windows 下，JSON 数字常为 [long]/[double]/[decimal]
+    $i = $null
     if ($value -is [int]) {
-        return [PSCustomObject]@{
-            FormattedValue = $value.ToString()
-            Type = 'int'
-            GetMethod = 'GetInt32'
-            SetMethod = 'SetInt32'
+        $i = [int]$value
+    }
+    elseif ($value -is [long]) {
+        if ($value -lt [int]::MinValue -or $value -gt [int]::MaxValue) {
+            throw "SetupModel.json 中存在超出 Int32 范围的整数值：$value"
         }
+        $i = [int]$value
+    }
+    elseif ($value -is [double] -or $value -is [decimal]) {
+        $d = [double]$value
+        if ($d -ne [math]::Truncate($d)) {
+            throw "SetupModel.json 中存在非整数数值：$value"
+        }
+        if ($d -lt [double][int]::MinValue -or $d -gt [double][int]::MaxValue) {
+            throw "SetupModel.json 中存在超出 Int32 范围的整数值：$value"
+        }
+        $i = [int][math]::Truncate($d)
+    }
+    else {
+        throw "不支持的默认值类型：$($value.GetType().FullName)"
+    }
+
+    return [PSCustomObject]@{
+        FormattedValue = $i.ToString()
+        Type          = 'int'
+        GetMethod     = 'GetInt32'
+        SetMethod     = 'SetInt32'
     }
 }
 
