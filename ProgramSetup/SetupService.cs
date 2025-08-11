@@ -4,6 +4,8 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.RegularExpressions;
+using Microsoft.Win32;
 using PCL.Core.IO;
 using PCL.Core.App;
 using PCL.Core.Logging;
@@ -207,10 +209,7 @@ public sealed class SetupService : GeneralService
     private static LifecycleContext _context = null!;
     private static Lazy<FileSetupSourceManager> _lazyGlobalSetupSource = null!;
     private static Lazy<FileSetupSourceManager> _lazyLocalSetupSource = null!;
-    private static RegisterSetupSourceManager _globalOldSetupSource = null!;
     private static InstanceSetupSourceManager _instanceSetupSource = null!;
-    private static CombinedMigrationSetupSourceManager _migrationSetupSource = null!;
-    private static CombinedMigrationSetupSourceManager _migrationSetupSourceEncrypted = null!;
 
     #region ILifecycleService
 
@@ -222,15 +221,8 @@ public sealed class SetupService : GeneralService
         _lazyGlobalSetupSource = new Lazy<FileSetupSourceManager>(_CreateGlobalSetupSource);
         // 局部配置源托管器
         _lazyLocalSetupSource = new Lazy<FileSetupSourceManager>(_CreateLocalSetupSource);
-        // 来自注册表的旧全局源托管器、游戏实例源托管器、用来支持配置迁移的托管器
-        _globalOldSetupSource = new RegisterSetupSourceManager(@$"Software\{GlobalSetupFolder}");
+        // 游戏实例源托管器
         _instanceSetupSource = new InstanceSetupSourceManager(InstanceFileSerializer);
-        _migrationSetupSource =
-            new CombinedMigrationSetupSourceManager(_globalOldSetupSource, _lazyGlobalSetupSource.Value)
-                { ProcessValueAsEncrypted = false };
-        _migrationSetupSourceEncrypted =
-            new CombinedMigrationSetupSourceManager(_globalOldSetupSource, _lazyGlobalSetupSource.Value)
-                { ProcessValueAsEncrypted = true };
         SetupListener.Load();
     }
 
@@ -283,11 +275,45 @@ public sealed class SetupService : GeneralService
         resultCallback.Invoke(file.TargetPath);
     };
 
+    private static void _MigrateGlobalSetupRegister(ISetupSourceManager globalSource)
+    {
+        try
+        {
+            using var regKey = Registry.CurrentUser.OpenSubKey(@$"Software\{GlobalSetupFolder}", writable: true);
+            if (regKey == null)
+                return;
+            foreach (var valueName in regKey.GetValueNames())
+            {
+                var setupEntry = SetupEntries.ForKeyName(valueName);
+                if (setupEntry is null || setupEntry.SourceType != SetupEntrySource.SystemGlobal)
+                    continue;
+                var rawValue = regKey.GetValue(valueName);
+                if (rawValue is null)
+                    continue;
+                if (globalSource.Get(valueName) is null)
+                {
+                    var value = Regex.Replace(rawValue.ToString(), "\r\n|\r|\n", "");
+                    globalSource.Set(valueName,
+                        !setupEntry.IsEncrypted
+                            ? value
+                            : EncryptHelper.SecretEncrypt(EncryptHelper.SecretDecryptOld(value)));
+                }
+                regKey.DeleteValue(valueName, throwOnMissingValue: false);
+            }
+        }
+        catch (Exception ex)
+        {
+            LogWrapper.Error(ex, "Setup", "从注册表迁移全局配置时出错");
+        }
+    }
+
     private static FileSetupSourceManager _CreateGlobalSetupSource()
     {
         try
         {
-            return new FileSetupSourceManager(PredefinedFileItems.GlobalSetup, GlobalFileSerializer, true);
+            var result = new FileSetupSourceManager(PredefinedFileItems.GlobalSetup, GlobalFileSerializer, true);
+            _MigrateGlobalSetupRegister(result);
+            return result;
         }
         catch (Exception ex)
         {
@@ -331,7 +357,7 @@ public sealed class SetupService : GeneralService
         return entry.SourceType switch
         {
             SetupEntrySource.PathLocal => _lazyLocalSetupSource.Value,
-            SetupEntrySource.SystemGlobal => entry.IsEncrypted ? _migrationSetupSourceEncrypted : _migrationSetupSource,
+            SetupEntrySource.SystemGlobal => _lazyGlobalSetupSource.Value,
             SetupEntrySource.GameInstance => _instanceSetupSource,
             _ => throw new ArgumentOutOfRangeException($"{nameof(SetupEntry)} 具有不正确的 {nameof(SetupEntry.SourceType)}")
         };
