@@ -201,7 +201,7 @@ public class DownloadSegment(Uri sourceUri, string targetPath, int chunkSize = 1
                     StartPosition = startPosition;
                     NextPosition = startPosition;
                 }
-                using var resp = await HttpRequest
+                using var resp = await NetworkService.GetClient()
                     .SendAsync(req, HttpCompletionOption.ResponseHeadersRead, cToken);
                 RealUri = resp.RequestMessage.RequestUri;
                 var status = resp.StatusCode;
