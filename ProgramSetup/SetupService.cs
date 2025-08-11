@@ -207,9 +207,6 @@ public sealed class SetupService : GeneralService
     public static IFileSerializer<ConcurrentDictionary<string, string>> LocalFileSerializer => _IniSerializer;
     public static IFileSerializer<ConcurrentDictionary<string, string>> InstanceFileSerializer => _IniSerializer;
     private static LifecycleContext _context = null!;
-    private static Lazy<FileSetupSourceManager> _lazyGlobalSetupSource = null!;
-    private static Lazy<FileSetupSourceManager> _lazyLocalSetupSource = null!;
-    private static InstanceSetupSourceManager _instanceSetupSource = null!;
 
     #region ILifecycleService
 
@@ -217,29 +214,24 @@ public sealed class SetupService : GeneralService
 
     public override void Start()
     {
-        // 全局配置源托管器
-        _lazyGlobalSetupSource = new Lazy<FileSetupSourceManager>(_CreateGlobalSetupSource);
-        // 局部配置源托管器
-        _lazyLocalSetupSource = new Lazy<FileSetupSourceManager>(_CreateLocalSetupSource);
-        // 游戏实例源托管器
-        _instanceSetupSource = new InstanceSetupSourceManager(InstanceFileSerializer);
+        // 初始化源托管器
+        SetupSourceDispatcher.Load();
+        // 初始化配置更改监听器
         SetupListener.Load();
     }
 
     public override void Stop()
     {
         // 销毁源托管器
-        if (_lazyGlobalSetupSource.IsValueCreated)
-            _lazyGlobalSetupSource.Value.Dispose();
-        if (_lazyLocalSetupSource.IsValueCreated)
-            _lazyLocalSetupSource.Value.Dispose();
-        _instanceSetupSource.Dispose();
+        SetupSourceDispatcher.Unload();
         // 删除 SetupChanged 事件处理器
         SetupListener.Unload();
         SetupChanged = null;
     }
 
     #endregion
+
+    #region 全局配置文件迁移
 
     public static FileTransfer MigrateGlobalSetupFile => (file, resultCallback) =>
     {
@@ -275,7 +267,7 @@ public sealed class SetupService : GeneralService
         resultCallback.Invoke(file.TargetPath);
     };
 
-    private static void _MigrateGlobalSetupRegister(ISetupSourceManager globalSource)
+    public static void MigrateGlobalSetupRegister(ISetupSourceManager globalSource)
     {
         try
         {
@@ -307,58 +299,15 @@ public sealed class SetupService : GeneralService
         }
     }
 
-    private static FileSetupSourceManager _CreateGlobalSetupSource()
-    {
-        try
-        {
-            var result = new FileSetupSourceManager(PredefinedFileItems.GlobalSetup, GlobalFileSerializer, true);
-            _MigrateGlobalSetupRegister(result);
-            return result;
-        }
-        catch (Exception ex)
-        {
-            LogWrapper.Fatal(ex, "Setup", "全局配置源托管器初始化失败");
-            _BackupFile(PredefinedFileItems.GlobalSetup);
-            throw new IOException("全局配置源托管器初始化失败");
-        }
-    }
-
-    private FileSetupSourceManager _CreateLocalSetupSource()
-    {
-        try
-        {
-            return new FileSetupSourceManager(PredefinedFileItems.LocalSetup, LocalFileSerializer, true);
-        }
-        catch (Exception ex)
-        {
-            LogWrapper.Fatal(ex, "Setup", "局部配置源托管器初始化失败");
-            _BackupFile(PredefinedFileItems.LocalSetup);
-            throw new IOException("局部配置源托管器初始化失败");
-        }
-    }
-
-    private static void _BackupFile(FileItem file)
-    {
-        var filePath = file.TargetPath;
-        var bakPath = filePath + ".bak";
-        if (File.Exists(bakPath))
-            File.Replace(filePath, bakPath, filePath + ".tmp");
-        else
-            File.Move(filePath, bakPath);
-        LogWrapper.Fatal(
-            "Setup", 
-            $"配置文件无法解析，可能已经损坏！{Environment.NewLine}" +
-            $"请删除 {filePath}{Environment.NewLine}" +
-            $"并使用备份配置文件 {bakPath}");
-    }
+    #endregion
 
     private static ISetupSourceManager _GetSourceManager(SetupEntry entry)
     {
         return entry.SourceType switch
         {
-            SetupEntrySource.PathLocal => _lazyLocalSetupSource.Value,
-            SetupEntrySource.SystemGlobal => _lazyGlobalSetupSource.Value,
-            SetupEntrySource.GameInstance => _instanceSetupSource,
+            SetupEntrySource.PathLocal => SetupSourceDispatcher.GlobalSourceManager,
+            SetupEntrySource.SystemGlobal => SetupSourceDispatcher.LocalSourceManager,
+            SetupEntrySource.GameInstance => SetupSourceDispatcher.InstanceSourceManager,
             _ => throw new ArgumentOutOfRangeException($"{nameof(SetupEntry)} 具有不正确的 {nameof(SetupEntry.SourceType)}")
         };
     }
