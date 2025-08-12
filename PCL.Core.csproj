@@ -13,7 +13,7 @@
     <PropertyGroup>
         <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
         <Platform Condition="'$(Platform)' == ''">AnyCPU</Platform>
-        <Configurations>Debug;CI;Publish</Configurations>
+        <Configurations>Debug;CI;Release;Beta</Configurations>
         <Platforms>AnyCPU;x64;ARM64</Platforms>
         <ProjectGuid>{A0C2209D-64FB-4C11-9459-8E86304B6F94}</ProjectGuid>
         <RootNamespace>PCL.Core</RootNamespace>
@@ -23,32 +23,25 @@
         <Nullable>enable</Nullable>
         <ErrorReport>prompt</ErrorReport>
         <WarningLevel>4</WarningLevel>
+        <OutputPath>bin\$(Configuration)-$(Platform)\</OutputPath>
+        <PlatformTarget>$(Platform)</PlatformTarget>
     </PropertyGroup>
     <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0-windows10.0.17763.0'">
         <UseWPF>true</UseWPF>
     </PropertyGroup>
     <!-- 构建配置 -->
-    <PropertyGroup Condition="'$(Configuration)' == 'Debug' ">
+    <PropertyGroup Condition="'$(Configuration)' == 'Debug' Or '$(Configuration)' == 'CI' Or '$(Configuration)' == 'DebugCI'">
         <DebugSymbols>true</DebugSymbols>
         <DebugType>full</DebugType>
         <Optimize>false</Optimize>
-        <OutputPath>bin\Debug-$(Platform)\</OutputPath>
-        <DefineConstants>DEBUG;TRACE</DefineConstants>
-        <PlatformTarget>$(Platform)</PlatformTarget>
+        <DefineConstants Condition="'$(Configuration)' == 'Debug'">DEBUG;TRACE</DefineConstants>
+        <DefineConstants Condition="'$(Configuration)' == 'CI' Or '$(Configuration)' == 'DebugCI'">CI;TRACE</DefineConstants>
     </PropertyGroup>
-    <PropertyGroup Condition="'$(Configuration)' == 'Publish'">
+    <PropertyGroup Condition="'$(Configuration)' == 'Beta' Or '$(Configuration)' == 'Release' Or '$(Configuration)' == 'Publish'">
         <DebugType>none</DebugType>
         <Optimize>true</Optimize>
-        <OutputPath>bin\Publish-$(Platform)\</OutputPath>
-        <DefineConstants>PUBLISH</DefineConstants>
-        <PlatformTarget>$(Platform)</PlatformTarget>
-    </PropertyGroup>
-    <PropertyGroup Condition="'$(Configuration)' == 'CI'">
-        <DebugType>embedded</DebugType>
-        <Optimize>false</Optimize>
-        <OutputPath>bin\CI-$(Platform)\</OutputPath>
-        <DefineConstants>CI;TRACE</DefineConstants>
-        <PlatformTarget>$(Platform)</PlatformTarget>
+        <DefineConstants Condition="'$(Configuration)' == 'Release'">RELEASE;PUBLISH</DefineConstants>
+        <DefineConstants Condition="'$(Configuration)' == 'Beta'">BETA;PUBLISH</DefineConstants>
     </PropertyGroup>
     <!-- 通用引用 -->
     <ItemGroup>
@@ -97,6 +90,9 @@
               ContinueOnError="false" />
         <Message Text="Generating setup accessors..." Importance="normal" />
         <Exec Command="pwsh -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\ProgramSetup\SetupAccessorGenerator.ps1&quot; &quot;$(MSBuildProjectDirectory)&quot;"
+              ContinueOnError="false" />
+        <Message Text="Generating environment secrets..." Importance="normal" />
+        <Exec Command="pwsh -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\Utils\OS\EnvironmentInteropGenerator.ps1&quot; &quot;$(MSBuildProjectDirectory)&quot;"
               ContinueOnError="false" />
         <ItemGroup>
             <Compile Include="**\*.g.cs" Exclude="bin\**;obj\**;publish\**" />
