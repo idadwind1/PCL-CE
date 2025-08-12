@@ -32,11 +32,11 @@ public static partial class EnvironmentInterop
         return true;
     }
 
-    public static string? GetSecret(string key, bool readEnv = false, bool debugOnly = false)
+    public static string? GetSecret(string key, bool readEnv = true, bool readEnvDebugOnly = false)
     {
         SecretDictionary.TryGetValue(key, out var result);
 #if !DEBUG
-        if (debugOnly) return result;
+        if (readEnvDebugOnly) return result;
 #endif
         if (readEnv) ReadVariable($"PCL_{key}", ref result, false);
         return result;
