@@ -1191,14 +1191,7 @@ Re:
             'If IgnoreOnDownloading AndAlso NetManage.Files.ContainsKey(FilePath) AndAlso NetManage.Files(FilePath).State <= NetState.Merge Then Return ""
             '获取 SHA512
             Using fs As New FileStream(FilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)
-                Using hasher = SHA512.Create()
-                    Dim retval As Byte() = hasher.ComputeHash(fs)
-                    Dim Result As New StringBuilder(retval.Length * 2) '预设容量，避免多次扩容导致性能问题
-                    For i As Integer = 0 To retval.Length - 1
-                        Result.Append(retval(i).ToString("x2"))
-                    Next
-                    Return Result.ToString
-                End Using
+                Return Core.Utils.Hash.SHA512Provider.Instance.ComputeHash(fs)
             End Using
         Catch ex As Exception
             If Retry OrElse TypeOf ex Is FileNotFoundException Then
@@ -1223,14 +1216,7 @@ Re:
             'If IgnoreOnDownloading AndAlso NetManage.Files.ContainsKey(FilePath) AndAlso NetManage.Files(FilePath).State <= NetState.Merge Then Return ""
             '获取 SHA256
             Using fs As New FileStream(FilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)
-                Using hasher = SHA256.Create()
-                    Dim retval As Byte() = hasher.ComputeHash(fs)
-                    Dim Result As New StringBuilder(retval.Length * 2) '预设容量，避免多次扩容导致性能问题
-                    For i As Integer = 0 To retval.Length - 1
-                        Result.Append(retval(i).ToString("x2"))
-                    Next
-                    Return Result.ToString
-                End Using
+                Return Core.Utils.Hash.SHA256Provider.Instance.ComputeHash(fs)
             End Using
         Catch ex As Exception
             If Retry OrElse TypeOf ex Is FileNotFoundException Then
@@ -1253,14 +1239,7 @@ Re:
         Try
             '获取 SHA1
             Using fs As New FileStream(FilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)
-                Using hasher = SHA1.Create()
-                    Dim retval As Byte() = hasher.ComputeHash(fs)
-                    Dim Result As New StringBuilder(retval.Length * 2) '预设容量，避免多次扩容导致性能问题
-                    For i As Integer = 0 To retval.Length - 1
-                        Result.Append(retval(i).ToString("x2"))
-                    Next
-                    Return Result.ToString
-                End Using
+                Return Core.Utils.Hash.SHA1Provider.Instance.ComputeHash(fs)
             End Using
         Catch ex As Exception
             If Retry OrElse TypeOf ex Is FileNotFoundException Then
@@ -1277,16 +1256,9 @@ Re:
     ''' <summary>
     ''' 获取流的 SHA1，若失败则返回空字符串。
     ''' </summary>
-    Public Function GetAuthSHA1(Stream As Stream) As String
+    Public Function GetAuthSHA1(inputStream As Stream) As String
         Try
-            Using hasher = SHA1.Create()
-                Dim retval As Byte() = hasher.ComputeHash(Stream)
-                Dim Result As New StringBuilder(retval.Length * 2) '预设容量，避免多次扩容导致性能问题
-                For i As Integer = 0 To retval.Length - 1
-                    Result.Append(retval(i).ToString("x2"))
-                Next
-                Return Result.ToString
-            End Using
+            Return Core.Utils.Hash.SHA1Provider.Instance.ComputeHash(inputStream)
         Catch ex As Exception
             Log(ex, "获取流 SHA1 失败")
             Return ""
@@ -1759,14 +1731,7 @@ RetryDir:
     ''' 获取字符串 MD5。
     ''' </summary>
     Public Function GetStringMD5(Str As String) As String
-        Dim md5Hasher As New MD5CryptoServiceProvider
-        Dim hashedDataBytes As Byte()
-        hashedDataBytes = md5Hasher.ComputeHash(Encoding.GetEncoding("gb2312").GetBytes(Str))
-        Dim tmp As New StringBuilder()
-        For Each i As Byte In hashedDataBytes
-            tmp.Append(i.ToString("x2"))
-        Next
-        Return tmp.ToString()
+        Return Core.Utils.Hash.MD5Provider.Instance.ComputeHash(Str)
     End Function
     ''' <summary>
     ''' 检查字符串中的字符是否均为 ASCII 字符。
