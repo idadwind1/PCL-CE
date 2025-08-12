@@ -96,4 +96,20 @@ public static class Basics
     /// <param name="path">路径文本</param>
     /// <returns>父路径文本，或默认 (<see cref="CurrentDirectory"/>)</returns>
     public static string GetParentPathOrDefault(string path) => GetParentPath(path) ?? CurrentDirectory;
+
+    /// <summary>
+    /// 以默认方式打开一个路径 (文件或目录)
+    /// </summary>
+    /// <param name="path">路径文本</param>
+    /// <param name="workingDirectory">执行工作目录</param>
+    public static void OpenPath(string path, string? workingDirectory = null)
+    {
+        var psi = new ProcessStartInfo(path)
+        {
+            WorkingDirectory = workingDirectory ?? CurrentDirectory,
+            UseShellExecute = true,
+            CreateNoWindow = true
+        };
+        Process.Start(psi);
+    }
 }
