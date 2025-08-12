@@ -5,7 +5,6 @@ using System.Linq;
 using System.Threading;
 using PCL.Core.Logging;
 using PCL.Core.Utils;
-using PCL.Core.Utils.OS;
 
 namespace PCL.Core.App;
 
@@ -24,7 +23,11 @@ public static class Basics
     /// <summary>
     /// 当前进程可执行文件的绝对路径。
     /// </summary>
-    public static readonly string ExecutablePath = ProcessInterop.GetExecutablePath(CurrentProcess)!;
+#if NET8_0_OR_GREATER
+    public static readonly string ExecutablePath = Environment.ProcessPath!;
+#else
+    public static readonly string ExecutablePath = Utils.OS.ProcessInterop.GetExecutablePath(CurrentProcess)!;
+#endif
 
     /// <summary>
     /// 当前进程可执行文件所在的目录。若有需求，请使用 <see cref="Path.Combine(string[])"/> 而不是自行拼接路径。
