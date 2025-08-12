@@ -99,7 +99,7 @@
         <Exec Command="pwsh -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\ProgramSetup\SetupAccessorGenerator.ps1&quot; &quot;$(MSBuildProjectDirectory)&quot;"
               ContinueOnError="false" />
         <ItemGroup>
-            <Compile Include="**\*.g.cs" />
+            <Compile Include="**\*.g.cs" Exclude="bin\**;obj\**;publish\**" />
         </ItemGroup>
     </Target>
 </Project>
