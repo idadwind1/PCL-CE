@@ -22,7 +22,7 @@ public static partial class EnvironmentInterop
         if (envValue == null) return false;
         var valueLog = detailLog ? $" = {envValue}" : string.Empty;
         LogWrapper.Debug(LogModule, $"读取到环境变量 {key}{valueLog}");
-        var value = key.Convert<TValue>();
+        var value = envValue.Convert<TValue>();
         if (value == null)
         {
             LogWrapper.Warn(LogModule, $"环境变量 {key} 类型转换失败");
