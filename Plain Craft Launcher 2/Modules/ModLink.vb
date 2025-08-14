@@ -969,18 +969,17 @@ PortRetry:
     Private fw_c As Socket = Nothing
     Private Async Function Forward(localSocket As Socket, remoteSocket As Socket) As Task
         Log($"[Link] 开始转发任务 {localSocket.RemoteEndPoint} <-> {remoteSocket.RemoteEndPoint}")
-        Dim localStream As NetworkStream
-        Dim remoteStream As NetworkStream
-        Dim forwardToRemote As Task
-        Dim forwardToLocal As Task
         Try
-            localStream = New NetworkStream(localSocket, False)
-            remoteStream = New NetworkStream(remoteSocket, False)
-
-            forwardToRemote = localStream.CopyToAsync(remoteStream)
-            forwardToLocal = remoteStream.CopyToAsync(localStream)
-            Await Task.WhenAny(forwardToLocal, forwardToRemote)
-            Await Task.Delay(500) '给个 500ms 用于剩余数据的发送
+            Dim forwardToRemote As Task
+            Dim forwardToLocal As Task
+            Using localStream = New NetworkStream(localSocket, False)
+                Using remoteStream = New NetworkStream(remoteSocket, False)
+                    forwardToRemote = localStream.CopyToAsync(remoteStream)
+                    forwardToLocal = remoteStream.CopyToAsync(localStream)
+                    Await Task.WhenAny(forwardToLocal, forwardToRemote)
+                    Await Task.Delay(500) '给个 500ms 用于剩余数据的发送
+                End Using
+            End Using
             Log($"[Link] 转发任务已结束")
         Catch ex As ObjectDisposedException
             ' 流已被释放，正常情况
@@ -995,15 +994,6 @@ PortRetry:
             ' 其他未预期异常
             Log(ex, $"[Link] 意外的异常")
         Finally
-            ' 确保资源释放
-            Try
-                localStream?.Dispose()
-            Catch ' 忽略 dispose 错误
-            End Try
-            Try
-                remoteStream?.Dispose()
-            Catch ' 忽略
-            End Try
             Try
                 If remoteSocket.Connected Then
                     remoteSocket.Shutdown(SocketShutdown.Both)
