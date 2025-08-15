@@ -21,7 +21,8 @@
     "MaxGameLog": {"key": "HintMaxLog", "source": "global", "value": false, "encrypted": false},
     "NonAsciiGamePath": {"key": "HintDisableGamePathCheckTip", "source": "global", "value": false, "encrypted": false},
     "CommunityEdition": {"key": "UiLauncherCEHint", "source": "global", "value": false, "encrypted": false},
-    "CommunityEditionCount": {"key": "UiLauncherCEHintCount", "source": "global", "value": false, "encrypted": false}
+    "CommunityEditionCount": {"key": "UiLauncherCEHintCount", "source": "global", "value": false, "encrypted": false},
+    "SchematicFirstTime": {"key": "UiSchematicFirstTimeHintShown", "source": "global", "value": false, "encrypted": false}
   },
   "ns:System": {
     "Eula": {"key": "SystemEula", "source": "global", "value": false, "encrypted": false},
