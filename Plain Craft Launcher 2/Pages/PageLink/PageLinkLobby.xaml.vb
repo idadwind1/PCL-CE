@@ -351,7 +351,7 @@ Retry:
                        End Sub, "EasyTier Status Watcher", ThreadPriority.BelowNormal)
     End Sub
     'EasyTier Cli 信息获取
-    Private Sub GetETInfo(Optional RemainRetry As Integer = 10)
+    Private Sub GetETInfo(Optional RemainRetry As Integer = 8)
         Dim ETCliProcess As New Process With {
                                    .StartInfo = New ProcessStartInfo With {
                                        .FileName = $"{ETPath}\easytier-cli.exe",
@@ -407,7 +407,7 @@ Retry:
             If HostInfo Is Nothing Then
                 If RemainRetry > 0 Then
                     Log($"[Link] 未找到大厅创建者 IP，放弃前再重试 {RemainRetry} 次")
-                    Thread.Sleep(1000)
+                    Thread.Sleep(600)
                     GetETInfo(RemainRetry - 1)
                     Exit Sub
                 End If
