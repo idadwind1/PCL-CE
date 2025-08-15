@@ -97,6 +97,7 @@
     <Compile Include="ByteHelperTest.cs" />
     <Compile Include="DiffTest.cs" />
     <Compile Include="DynamicJsonTest.cs" />
+    <Compile Include="EncodingDetectorTest.cs" />
     <Compile Include="JavaTest.cs" />
     <Compile Include="LoggerTest.cs" />
     <Compile Include="Minecraft\McPing.cs" />
