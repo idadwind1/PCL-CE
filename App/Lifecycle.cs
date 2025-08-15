@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using PCL.Core.Logging;
 using PCL.Core.Utils.OS;
 
 namespace PCL.Core.App;
@@ -424,7 +425,6 @@ public sealed class Lifecycle : ILifecycleService
     public static void OnException(object ex)
     {
         Context.Fatal("未捕获的异常", ex as Exception);
-        _Exit();
     }
     
     /// <summary>
@@ -650,6 +650,7 @@ public sealed class Lifecycle : ILifecycleService
                 if (_logService == null) _PendingLogs.Add(item);
                 else _PushLog(item, _logService);
             }
+            if (item.ActionLevel == ActionLevel.MsgBoxFatal) _Exit(1);
         },
         onRequestExit: statusCode =>
         {
