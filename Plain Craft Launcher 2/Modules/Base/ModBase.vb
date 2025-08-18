@@ -2840,7 +2840,7 @@ NextElement:
     Public Sub SetLaunchFont(Optional FontName As String = Nothing)
         Try
             Dim TargetFont As FontFamily
-            If FontName Is Nothing Then
+            If String.IsNullOrEmpty(FontName) Then
                 TargetFont = New FontFamily(New Uri("pack://application:,,,/"), "./Resources/#PCL English, Segoe UI, Microsoft YaHei UI")
             Else
                 TargetFont = New FontFamily($"{FontName}, Segoe UI, Microsoft YaHei UI")
