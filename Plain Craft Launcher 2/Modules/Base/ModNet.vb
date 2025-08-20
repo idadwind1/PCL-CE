@@ -15,9 +15,7 @@ Public Module ModNet
                                                 .Proxy = HttpProxyManager.Instance,
                                                 .MaxConnectionsPerServer = 256,
                                                 .SslProtocols = System.Security.Authentication.SslProtocols.Tls13 Or
-                                                    System.Security.Authentication.SslProtocols.Tls12 Or
-                                                    System.Security.Authentication.SslProtocols.Tls11 Or
-                                                    System.Security.Authentication.SslProtocols.Tls,
+                                                    System.Security.Authentication.SslProtocols.Tls12,
                                                 .AutomaticDecompression = DecompressionMethods.GZip Or DecompressionMethods.Deflate,
                                                 .AllowAutoRedirect = True,
                                                 .UseCookies = False
@@ -26,9 +24,7 @@ Public Module ModNet
     Public ReadOnly MyHttpCacheClient As HttpClient = ClientExtensions.CreateClient(New NetCacheStorage(IO.Path.Combine(PathTemp, "Cache", "Net")), New HttpClientHandler() With {
                                                 .Proxy = HttpProxyManager.Instance,
                                                 .SslProtocols = System.Security.Authentication.SslProtocols.Tls13 Or
-                                                    System.Security.Authentication.SslProtocols.Tls12 Or
-                                                    System.Security.Authentication.SslProtocols.Tls11 Or
-                                                    System.Security.Authentication.SslProtocols.Tls,
+                                                    System.Security.Authentication.SslProtocols.Tls12,
                                                 .AutomaticDecompression = DecompressionMethods.GZip Or DecompressionMethods.Deflate,
                                                 .AllowAutoRedirect = True,
                                                 .UseCookies = False
