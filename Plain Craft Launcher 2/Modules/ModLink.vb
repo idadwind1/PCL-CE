@@ -8,6 +8,7 @@ Imports PCL.Core.Link
 Imports PCL.Core.Net
 Imports PCL.Core.Utils.Exts
 Imports PCL.Core.Utils.OS
+Imports PCL.Core.Utils
 Imports STUN
 
 Public Module ModLink
@@ -351,7 +352,7 @@ Public Module ModLink
             End If
             Log($"[Link] EasyTier 路径: {ETPath}")
 
-            Dim Arguments As String = Nothing
+            Dim arguments As New ArgumentsBuilder
 
             '大厅设置
             Dim lobbyId As String
@@ -367,21 +368,33 @@ Public Module ModLink
                 PageLinkLobby.JoinerLocalPort = NetworkHelper.NewTcpPort()
                 Log("[Link] ET 本地端口转发端口: " & PageLinkLobby.JoinerLocalPort)
             End If
+
+            arguments.Add("network-name", Name)
+            arguments.Add("network-secret", Secret)
+            arguments.AddFlag("no-tun")
+            arguments.Add("relay-network-whitelist", Name)
+            arguments.Add("private-mode", "true")
+
             If IsHost Then '创建者
                 Log($"[Link] 本机作为创建者创建大厅，EasyTier 网络名称: {Name}")
-                Arguments = $"-i 10.114.51.41 --network-name {Name} --network-secret {Secret} --no-tun --relay-network-whitelist ""{Name}"" --private-mode true --tcp-whitelist {LocalPort} --udp-whitelist {LocalPort}" '创建者
+                arguments.Add("i", "10.114.51.41")
+                arguments.Add("tcp-whitelist", LocalPort)
+                arguments.Add("udp-whitelist", LocalPort)
             Else
                 Log($"[Link] 本机作为加入者加入大厅，EasyTier 网络名称: {Name}")
-                Arguments = $"-d --network-name {Name} --network-secret {Secret} --no-tun --relay-network-whitelist ""{Name}"" --private-mode true --tcp-whitelist 0 --udp-whitelist 0" '加入者
+                arguments.AddFlag("d")
+                arguments.Add("tcp-whitelist", "0")
+                arguments.Add("udp-whitelist", "0")
                 Dim ip As String = Nothing
                 If TcInfo IsNot Nothing Then
                     ip = "10.144.144.1"
                 Else
                     ip = "10.114.51.41"
                 End If
-                Arguments += $" --port-forward=tcp://127.0.0.1:{PageLinkLobby.JoinerLocalPort}/{ip}:{remotePort}" 'TCP
-                Arguments += $" --port-forward=udp://127.0.0.1:{PageLinkLobby.JoinerLocalPort}/{ip}:{remotePort}" 'UDP
+                arguments.Add("port-forward", $"tcp://127.0.0.1:{PageLinkLobby.JoinerLocalPort}/{ip}:{remotePort}")
+                arguments.Add("port-forward", $"udp://127.0.0.1:{PageLinkLobby.JoinerLocalPort}/{ip}:{remotePort}")
             End If
+
 
             '节点设置
             Dim ServerList As String = Setup.Get("LinkRelayServer")
@@ -406,38 +419,41 @@ Public Module ModLink
 
             '中继行为设置
             For Each Server In Servers
-                Arguments += $" -p {Server}"
+                arguments.Add("p", Server)
             Next
             If Setup.Get("LinkRelayType") = 1 Then
-                Arguments += " --disable-p2p"
+                arguments.AddFlag("disable-p2p")
             End If
             '数据处理设置
             Dim proxyType As Integer = Setup.Get("LinkProxyType")
             If proxyType = 0 Then
-                Arguments += " --enable-quic-proxy"
+                arguments.AddFlag("enable-quic-proxy")
             ElseIf proxyType = 1 Then
-                Arguments += " --enable-kcp-proxy"
+                arguments.AddFlag("enable-kcp-proxy")
             Else
-                Arguments += " --enable-quic-proxy --enable-kcp-proxy"
+                arguments.AddFlag("enable-quic-proxy")
+                arguments.AddFlag("enable-kcp-proxy")
             End If
 
             '用户名与其他参数
-            Arguments += $" --latency-first --compression=zstd --multi-thread"
+            'arguments.AddFlag("latency-first")
+            arguments.AddFlag("compression=zstd")
+            arguments.AddFlag("multi-thread")
             Dim Hostname As String = Nothing
             Hostname = If(IsHost, "H|", "J|") & NaidProfile.Username
             If SelectedProfile IsNot Nothing Then
                 Hostname += $"|{SelectedProfile.Username}"
             End If
-            Arguments += $" --hostname ""{Hostname}"""
+            arguments.Add("hostname", Hostname)
 
             '指定 RPC 端口避免多 ET 实例冲突
             ETRpcPort = NetworkHelper.NewTcpPort()
-            Arguments += $" --rpc-portal 127.0.0.1:{ETRpcPort}"
+            arguments.Add("rpc-portal", $"127.0.0.1:{ETRpcPort}")
 
             '启动
             Log($"[Link] 启动 EasyTier")
-            'Log($"[Link] EasyTier 参数: {Arguments}")
-            ETProcess.StartInfo.Arguments = Arguments
+            'Log($"[Link] EasyTier 参数: {arguments}")
+            ETProcess.StartInfo.Arguments = arguments.GetResult()
             RunInUi(Sub() FrmLinkLobby.LabFinishId.Text = lobbyId)
             ETProcess.Start()
             IsETRunning = True
