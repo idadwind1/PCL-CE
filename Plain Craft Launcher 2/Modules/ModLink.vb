@@ -371,8 +371,8 @@ Public Module ModLink
 
             arguments.Add("network-name", Name)
             arguments.Add("network-secret", Secret)
-            arguments.AddFlag("no-tun")
             arguments.Add("relay-network-whitelist", Name)
+            arguments.AddFlag("no-tun")
             arguments.Add("private-mode", "true")
 
             If IsHost Then '创建者
@@ -397,46 +397,36 @@ Public Module ModLink
 
 
             '节点设置
-            Dim ServerList As String = Setup.Get("LinkRelayServer")
-            Dim Servers As New List(Of String)
+            Dim serverList As String = Setup.Get("LinkRelayServer")
+            Dim servers As New List(Of String)
             If TcInfo IsNot Nothing Then
-                ServerList = "tcp://public.easytier.top:11010;tcp://8.138.6.53:11010;tcp://119.23.65.180:11010;tcp://ah.nkbpal.cn:11010;tcp://gz.minebg.top:11010;tcp://39.108.52.138:11010;tcp://turn.hb.629957.xyz:11010;tcp://turn.sc.629957.xyz:11010;tcp://8.148.29.206:11010;tcp://turn.js.629957.xyz:11012;tcp://103.194.107.246:11010;tcp://sh.993555.xyz:11010;tcp://et.993555.xyz:11010;tcp://turn.bj.629957.xyz:11010;tcp://et.sh.suhoan.cn:11010;tcp://96.9.229.212:11010;tcp://et-hk.clickor.click:11010;tcp://47.113.227.73:11010;tcp://et.01130328.xyz:11010;tcp://et.ie12vps.xyz:11010;tcp://103.40.14.90:35971;tcp://154.9.255.133:11010;tcp://47.103.35.100:11010;tcp://et.gbc.moe:11011;tcp://116.206.178.250:11010"
-                For Each Server In ServerList.Split(";")
-                    If Not String.IsNullOrWhiteSpace(Server) Then Servers.Add(Server)
-                Next
+                serverList = "tcp://public.easytier.top:11010;tcp://8.138.6.53:11010;tcp://119.23.65.180:11010;tcp://ah.nkbpal.cn:11010;tcp://gz.minebg.top:11010;tcp://39.108.52.138:11010;tcp://turn.hb.629957.xyz:11010;tcp://turn.sc.629957.xyz:11010;tcp://8.148.29.206:11010;tcp://turn.js.629957.xyz:11012;tcp://103.194.107.246:11010;tcp://sh.993555.xyz:11010;tcp://et.993555.xyz:11010;tcp://turn.bj.629957.xyz:11010;tcp://et.sh.suhoan.cn:11010;tcp://96.9.229.212:11010;tcp://et-hk.clickor.click:11010;tcp://47.113.227.73:11010;tcp://et.01130328.xyz:11010;tcp://et.ie12vps.xyz:11010;tcp://103.40.14.90:35971;tcp://154.9.255.133:11010;tcp://47.103.35.100:11010;tcp://et.gbc.moe:11011;tcp://116.206.178.250:11010"
+                servers.AddRange(From s In serverList.Split(";") Where Not String.IsNullOrWhiteSpace(s))
             Else
-                For Each Server In ServerList.Split(";")
-                    If Not String.IsNullOrWhiteSpace(Server) Then Servers.Add(Server)
-                Next
-                If Not Setup.Get("LinkServerType") = 2 Then
-                    Dim AllowCommunity As Boolean = Setup.Get("LinkServerType") = 1
-                    For Each Server In ETServerDefList
-                        If Server.Type = "community" AndAlso Not AllowCommunity Then Continue For
-                        Servers.Add(Server.Url)
-                    Next
+                servers.AddRange(From s In serverList.Replace("；", ";").Split(";") Where Not String.IsNullOrWhiteSpace(s))
+                If Setup.Get("LinkServerType") = 2 Then
+                    Log("[Link] 当前选择不使用任何中继，这将极大概率导致无法连接")
+                Else
+                    Dim allowCommunity As Boolean = Setup.Get("LinkServerType") = 1
+                    servers.AddRange(From relay In ETServerDefList Where relay.Type <> "community" OrElse allowCommunity Select relay.Url)
                 End If
             End If
 
             '中继行为设置
-            For Each Server In Servers
+            For Each Server In servers
                 arguments.Add("p", Server)
             Next
             If Setup.Get("LinkRelayType") = 1 Then
                 arguments.AddFlag("disable-p2p")
             End If
             '数据处理设置
-            Dim proxyType As Integer = Setup.Get("LinkProxyType")
-            If proxyType = 0 Then
-                arguments.AddFlag("enable-quic-proxy")
-            ElseIf proxyType = 1 Then
-                arguments.AddFlag("enable-kcp-proxy")
-            Else
-                arguments.AddFlag("enable-quic-proxy")
-                arguments.AddFlag("enable-kcp-proxy")
-            End If
+            arguments.AddFlag("enable-quic-proxy")
+            arguments.AddFlag("enable-kcp-proxy")
+            arguments.AddFlag("use-smoltcp")
 
             '用户名与其他参数
-            'arguments.AddFlag("latency-first")
+            If Setup.Get("LinkLatencyFirstMode") Then arguments.AddFlag("latency-first")
+            arguments.Add("encryption-algorithm", "chacha20")
             arguments.AddFlag("compression=zstd")
             arguments.AddFlag("multi-thread")
             Dim Hostname As String = Nothing
@@ -855,7 +845,7 @@ PortRetry:
     Private BoardcastClient As Socket
     Private IsMcPortForwardRunning As Boolean = False
     Private PortForwardRetryTimes As Integer = 0
-    Public Async Sub McPortForward(remoteIp As String, Optional remotePort As Integer = 25565, Optional desc As String = "§ePCL CE 局域网广播", Optional isRetry As Boolean = False)
+    Public Sub McPortForward(remoteIp As String, Optional remotePort As Integer = 25565, Optional desc As String = "§ePCL CE 局域网广播", Optional isRetry As Boolean = False)
         If IsMcPortForwardRunning Then Exit Sub
         If isRetry Then PortForwardRetryTimes += 1
         Log($"[Link] 开始 MC 端口转发，远程 IP: {remoteIp}, 远程端口: {remotePort}")
