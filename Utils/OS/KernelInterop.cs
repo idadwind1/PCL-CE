@@ -110,7 +110,7 @@ public static class KernelInterop
         }
 
         var list = new List<ProcessorCore>();
-        IntPtr buffer = Marshal.AllocHGlobal((int)returnedLength);
+        var buffer = Marshal.AllocHGlobal((int)returnedLength);
         try
         {
             if (!GetLogicalProcessorInformationEx(
@@ -121,18 +121,18 @@ public static class KernelInterop
                 throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
             }
 
-            IntPtr ptr = buffer;
-            IntPtr end = IntPtr.Add(buffer, (int)returnedLength);
+            var ptr = buffer;
+            var end = IntPtr.Add(buffer, (int)returnedLength);
 
             // SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX 头部：Relationship (4 字节) + Size (4 字节)
             const int headerSize = sizeof(uint) + sizeof(uint);
             // GROUP_AFFINITY 大小 = KAFFINITY (平台指针大小) + WORD Group + WORD[3] Reserved
-            int groupAffinitySize = IntPtr.Size + 8;
+            var groupAffinitySize = IntPtr.Size + 8;
 
             while (ptr.ToInt64() < end.ToInt64())
             {
-                uint relationship = (uint)Marshal.ReadInt32(ptr);
-                uint size = (uint)Marshal.ReadInt32(ptr, sizeof(uint));
+                var relationship = (uint)Marshal.ReadInt32(ptr);
+                var size = (uint)Marshal.ReadInt32(ptr, sizeof(uint));
 
                 if (relationship == (uint)LOGICAL_PROCESSOR_RELATIONSHIP.RelationProcessorCore)
                 {
@@ -143,9 +143,9 @@ public static class KernelInterop
                     // GroupCount           WORD @ offset 30
                     // GroupMask[ANYSIZE]   GROUP_AFFINITY 从 offset 32 开始
 
-                    byte efficiencyClass = Marshal.ReadByte(ptr, headerSize + 1);
-                    ushort groupCount = (ushort)Marshal.ReadInt16(ptr, headerSize + 2 + 20);
-                    IntPtr maskBase = IntPtr.Add(ptr, headerSize + 2 + 20 + sizeof(ushort));
+                    var efficiencyClass = Marshal.ReadByte(ptr, headerSize + 1);
+                    var groupCount = (ushort)Marshal.ReadInt16(ptr, headerSize + 2 + 20);
+                    var maskBase = IntPtr.Add(ptr, headerSize + 2 + 20 + sizeof(ushort));
 
                     for (var i = 0; i < groupCount; i++)
                     {

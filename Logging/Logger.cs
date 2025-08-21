@@ -36,8 +36,8 @@ public sealed class Logger : IDisposable
     private void _CreateNewFile()
     {
         var nameFormat = (Configuration.FileNameFormat ?? $"Launch-{DateTime.Now:yyyy-M-d}-{{0}}") + ".log";
-        string filename = nameFormat.Replace("{0}", $"{DateTime.Now:HHmmssfff}");
-        string filePath = Path.Combine(Configuration.StoreFolder, filename);
+        var filename = nameFormat.Replace("{0}", $"{DateTime.Now:HHmmssfff}");
+        var filePath = Path.Combine(Configuration.StoreFolder, filename);
         _files.Add(filePath);
         var lastWriter = _currentStream;
         var lastFile = _currentFile;
@@ -148,7 +148,6 @@ public sealed class Logger : IDisposable
     public void Dispose()
     {
         if (_disposed) return;
-        GC.SuppressFinalize(this);
         _disposed = true;
         _cts.Cancel();
         _logEvent.Set();
