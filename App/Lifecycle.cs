@@ -283,7 +283,7 @@ public sealed class Lifecycle : ILifecycleService
 #if TRACE
         // 输出仍在运行的线程
         Console.WriteLine("[Lifecycle] Thread(s) still in working:");
-        var currentThreadId = KernelInterop.GetCurrentThreadId();
+        var currentThreadId = KernelInterop.CurrentNativeThreadId;
         foreach (ProcessThread processThread in Process.GetCurrentProcess().Threads)
         {
             var threadId = processThread.Id;

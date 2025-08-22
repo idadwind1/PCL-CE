@@ -20,6 +20,7 @@
         <TargetFramework>net8.0-windows</TargetFramework>
         <UseWPF>true</UseWPF>
         <EnableWindowsTargeting>true</EnableWindowsTargeting>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <LangVersion>13.0</LangVersion>
         <Nullable>enable</Nullable>
         <ErrorReport>prompt</ErrorReport>
