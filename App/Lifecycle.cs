@@ -452,12 +452,8 @@ public sealed class Lifecycle : ILifecycleService
         {
             var instance = _CreateService(service);
             var identifier = instance.Identifier;
-            if (_ManualServiceMap.ContainsKey(identifier))
-            {
-                Context.Warn($"{_ServiceName(instance, LifecycleState.Manual)} 标识符重复，已跳过");
-                continue;
-            }
-            _ManualServiceMap[identifier] = instance;
+            if (_ManualServiceMap.TryAdd(identifier, instance)) continue;
+            Context.Warn($"{_ServiceName(instance, LifecycleState.Manual)} 标识符重复，已跳过");
         }
         // 运行预加载服务
         _StartStateFlow(LifecycleState.BeforeLoading);
