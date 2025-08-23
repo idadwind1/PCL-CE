@@ -23,7 +23,7 @@
 
 </div>
 
-基于 PCL2 开源代码二次开发的社区版本，包括了主线暂未制作的功能和改进！<br />
+基于 PCL 开源代码二次开发的社区版本，包括了主线暂未制作的功能和改进！<br />
 代码会在主线发布更新时与主线同步一次，但来自社区的功能会保持自己的更新节奏。<br />
 同时需注意，社区版的版本号与主线并非严格对应关系。<br />
 欢迎大家来用用看！
@@ -31,6 +31,18 @@
 开发群：599620549
 
 用户群 1 群：1028074835
+
+### 💻 支持平台
+
+PCL CE 始终建议使用最新版本的操作系统以获得最佳体验。
+
+| 操作系统 | 支持的最新启动器版本 | 环境要求 | 社区支持 |
+|---|---|---|---|
+| Windows 10 20H2 (19041) 或更高 | [2.12.3](https://github.com/PCL-Community/PCL2-CE/releases/tag/2.12.3) | [.NET Framework 4.8.1](https://dotnet.microsoft.com/zh-cn/download/dotnet-framework/thank-you/net481-offline-installer) | ✅ 仅对最新版本提供完整支持 |
+| Windows 10 1809 (17763) 或更高 | 2.13.0 (尚未发布) | [.NET 8 Desktop Runtime](http://get.dot.net/8) | 🚧 在正式发布后对最新版本提供完整支持 |
+| Windows 10 1809 (17763) 以下 | [2.9.5](https://github.com/PCL-Community/PCL2-CE/releases/tag/2.9.5) | [.NET Framework 4.8](https://dotnet.microsoft.com/zh-cn/download/dotnet-framework/thank-you/net48-offline-installer) | ❌ 不提供社区支持 |
+| Windows 7 / 8 / 8.1 等 | [2.9.5](https://github.com/PCL-Community/PCL2-CE/releases/tag/2.9.5) | [.NET Framework 4.8](https://dotnet.microsoft.com/zh-cn/download/dotnet-framework/thank-you/net48-offline-installer) | ❌ 不提供社区支持 |
+| macOS / Linux / 其他操作系统 | 暂不支持 | [.NET 8 SDK](http://get.dot.net/8) | ⚠️ 仅跨平台开发支持（交叉编译） |
 
 ### ✨ 隐藏提示
 
