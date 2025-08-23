@@ -42,7 +42,7 @@ PCL CE 始终建议使用最新版本的操作系统以获得最佳体验。
 | Windows 10 1809 (17763) 或更高 | 2.13.0 (尚未发布) | [.NET 8 Desktop Runtime](http://get.dot.net/8) | 🚧 在正式发布后对最新版本提供完整支持 |
 | Windows 10 1809 (17763) 以下 | [2.9.5](https://github.com/PCL-Community/PCL2-CE/releases/tag/2.9.5) | [.NET Framework 4.8](https://dotnet.microsoft.com/zh-cn/download/dotnet-framework/thank-you/net48-offline-installer) | ❌ 不提供社区支持 |
 | Windows 7 / 8 / 8.1 等 | [2.9.5](https://github.com/PCL-Community/PCL2-CE/releases/tag/2.9.5) | [.NET Framework 4.8](https://dotnet.microsoft.com/zh-cn/download/dotnet-framework/thank-you/net48-offline-installer) | ❌ 不提供社区支持 |
-| macOS / Linux / 其他操作系统 | 暂不支持 | [.NET 8 SDK](http://get.dot.net/8) | ⚠️ 仅跨平台开发支持（交叉编译） |
+| macOS / Linux / 其他操作系统 | 暂不支持 | [.NET 9 SDK](http://get.dot.net/9) | ⚠️ 仅跨平台开发支持（交叉编译） |
 
 ### ✨ 隐藏提示
 
