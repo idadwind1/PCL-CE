@@ -3,6 +3,7 @@ Imports System.Runtime.InteropServices
 Imports System.Windows.Interop
 Imports PCL.Core.App
 Imports PCL.Core.Logging
+Imports PCL.Core.Link.Lobby
 
 Public Class FormMain
 
@@ -375,9 +376,8 @@ Public Class FormMain
                 Return
             End If
         End If
-        '关闭 EasyTier 联机
-        ModLink.ExitEasyTier()
-        StopMcPortForward()
+        '关闭联机大厅
+        LobbyController.Close()
         '存储上次使用的档案编号
         SaveProfile()
         '关闭
@@ -415,9 +415,8 @@ Public Class FormMain
     Private Shared IsLogShown As Boolean = False
     Public Shared Sub EndProgramForce(Optional ReturnCode As ProcessReturnValues = ProcessReturnValues.Success)
         On Error Resume Next
-        '关闭 EasyTier 联机
-        ModLink.ExitEasyTier()
-        StopMcPortForward()
+        '关闭联机大厅
+        LobbyController.Close()
         IsProgramEnded = True
         AniControlEnabled += 1
         If IsUpdateWaitingRestart Then UpdateRestart(False)
