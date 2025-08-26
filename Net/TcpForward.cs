@@ -176,9 +176,7 @@ public sealed class TcpForward(
 
     private static async Task _ForwardDataAsync(Socket source, Socket destination, CancellationToken cancellationToken)
     {
-        // 使用 ArrayPool 共享缓冲区以减少内存分配
-        var bufferOwner = MemoryPool<byte>.Shared.Rent(8192);
-
+        using var bufferOwner = MemoryPool<byte>.Shared.Rent(8192);
         try
         {
             var buffer = bufferOwner.Memory;
@@ -190,10 +188,7 @@ public sealed class TcpForward(
                 await destination.SendAsync(buffer[..bytesRead], SocketFlags.None, cancellationToken);
             }
         }
-        finally
-        {
-            bufferOwner.Dispose();
-        }
+        catch {/* 忽略错误 */}
     }
 
     private bool _disposed;
