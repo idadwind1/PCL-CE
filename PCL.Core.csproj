@@ -66,11 +66,11 @@
         <Compile Include="**\*.cs" Exclude="bin\**;obj\**;publish\**;**\*.g.cs;SourceGenerators\**" />
         <Page Include="**\*.xaml" Exclude="bin\**;obj\**;publish\**" />
     </ItemGroup>
-    <!-- 自定义代码生成目标 -->
+    <!-- 源代码生成器 -->
     <ItemGroup>
         <AdditionalFiles Include="ProgramSetup\SetupModel.json" />
         <AdditionalFiles Include="App\LifecycleState.cs" />
-        <ProjectReference Include="SourceGenerators\PCL.SourceGenerators.csproj" 
+        <ProjectReference Include="SourceGenerators\PCL.Core.SourceGenerators.csproj" 
                           OutputItemType="Analyzer" 
                           ReferenceOutputAssembly="false"
                           Properties="Platform=AnyCPU" />

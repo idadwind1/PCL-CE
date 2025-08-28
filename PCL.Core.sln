@@ -2,7 +2,7 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PCL.Core", "PCL.Core.csproj", "{A0C2209D-64FB-4C11-9459-8E86304B6F94}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PCL.SourceGenerators", "SourceGenerators\PCL.SourceGenerators.csproj", "{B8C6D0A1-4E1F-4B3D-A9C7-8F2D1E6F4A5C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PCL.Core.SourceGenerators", "SourceGenerators\PCL.SourceGenerators.csproj", "{B8C6D0A1-4E1F-4B3D-A9C7-8F2D1E6F4A5C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
