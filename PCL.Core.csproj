@@ -71,9 +71,7 @@
     <ItemGroup>
         <AdditionalFiles Include="ProgramSetup\SetupModel.json" />
         <AdditionalFiles Include="App\LifecycleState.cs" />
-        <ProjectReference Include="SourceGenerators\PCL.Core.SourceGenerators.csproj" 
-                          OutputItemType="Analyzer" 
-                          ReferenceOutputAssembly="false"
-                          Properties="Platform=AnyCPU" />
+        <ProjectReference Include="SourceGenerators\PCL.Core.SourceGenerators.csproj" OutputItemType="Analyzer"
+                          ReferenceOutputAssembly="false" Properties="Platform=AnyCPU" />
     </ItemGroup>
 </Project>
