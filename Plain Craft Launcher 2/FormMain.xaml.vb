@@ -1046,6 +1046,7 @@ Public Class FormMain
         VersionShader = 8
         VersionSchematic = 9
         VersionInstall = 10
+        VersionServer = 11
         VersionSavesInfo = 0
         VersionSavesBackup = 1
     End Enum
