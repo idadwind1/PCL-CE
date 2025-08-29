@@ -1,7 +1,5 @@
 using System;
-using System.Buffers;
 using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
@@ -72,11 +70,11 @@ public sealed class OptimizedBlurEffect : Freezable
 
     public static readonly DependencyProperty RadiusProperty =
         DependencyProperty.Register(nameof(Radius), typeof(double), typeof(OptimizedBlurEffect),
-            new UIPropertyMetadata(16.0, OnEffectPropertyChanged), ValidateRadius);
+            new UIPropertyMetadata(16.0, OnEffectPropertyChanged), _ValidateRadius);
 
     public static readonly DependencyProperty SamplingRateProperty =
         DependencyProperty.Register(nameof(SamplingRate), typeof(double), typeof(OptimizedBlurEffect),
-            new UIPropertyMetadata(0.7, OnEffectPropertyChanged), ValidateSamplingRate);
+            new UIPropertyMetadata(0.7, OnEffectPropertyChanged), _ValidateSamplingRate);
 
     public static readonly DependencyProperty RenderingBiasProperty =
         DependencyProperty.Register(nameof(RenderingBias), typeof(RenderingBias), typeof(OptimizedBlurEffect),
@@ -87,22 +85,22 @@ public sealed class OptimizedBlurEffect : Freezable
             new UIPropertyMetadata(KernelType.Gaussian, OnEffectPropertyChanged));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool ValidateRadius(object value) =>
-        value is double radius && radius >= 0.0 && radius <= 300.0;
+    private static bool _ValidateRadius(object value) =>
+        value is >= 0.0 and <= 300.0;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool ValidateSamplingRate(object value) =>
-        value is double rate && rate >= 0.1 && rate <= 1.0;
+    private static bool _ValidateSamplingRate(object value) =>
+        value is >= 0.1 and <= 1.0;
 
     private static void OnEffectPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is OptimizedBlurEffect effect)
         {
-            effect.InvalidateCachedResult();
+            effect._InvalidateCachedResult();
         }
     }
 
-    private void InvalidateCachedResult()
+    private void _InvalidateCachedResult()
     {
         lock (_renderLock)
         {
@@ -157,7 +155,7 @@ public sealed class OptimizedBlurEffect : Freezable
     /// <summary>
     /// 应用优化的模糊效果到指定的图像源
     /// </summary>
-    public WriteableBitmap? ApplyBlur(BitmapSource source)
+    public WriteableBitmap? ApplyBlur(BitmapSource? source)
     {
         if (source == null || Radius < 0.5)
             return null;
@@ -165,7 +163,7 @@ public sealed class OptimizedBlurEffect : Freezable
         lock (_renderLock)
         {
             var currentSize = new Size(source.PixelWidth, source.PixelHeight);
-            bool needsRerender = _cachedResult == null ||
+            var needsRerender = _cachedResult == null ||
                                 !Size.Equals(_lastRenderSize, currentSize) ||
                                 Math.Abs(_lastRadius - Radius) > 0.1 ||
                                 Math.Abs(_lastSamplingRate - SamplingRate) > 0.05;
@@ -190,7 +188,7 @@ public sealed class OptimizedBlurEffect : Freezable
     /// <summary>
     /// 高性能模糊渲染，支持智能采样率控制
     /// </summary>
-    public WriteableBitmap? RenderBlurredBitmap(Visual visual, Size size)
+    public WriteableBitmap? RenderBlurredBitmap(Visual? visual, Size size)
     {
         if (visual == null || size.Width <= 0 || size.Height <= 0)
             return null;
@@ -216,7 +214,7 @@ public sealed class OptimizedBlurEffect : Freezable
     /// <summary>
     /// 使用原生BlurEffect作为回退方案
     /// </summary>
-    private BlurEffect GetFallbackEffect()
+    private BlurEffect _GetFallbackEffect()
     {
         return new BlurEffect
         {
@@ -234,16 +232,16 @@ public sealed class OptimizedBlurEffect : Freezable
         // 对于高采样率场景，直接使用原生BlurEffect获得最佳质量
         if (SamplingRate >= 0.98)
         {
-            return GetFallbackEffect();
+            return _GetFallbackEffect();
         }
 
         // 否则也使用原生版本 (Freezable 不能直接作为 Effect 使用)
-        return GetFallbackEffect();
+        return _GetFallbackEffect();
     }
 
     public void Dispose()
     {
-        _processor?.Dispose();
+        _processor.Dispose();
         _cachedResult = null;
     }
 

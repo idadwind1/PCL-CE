@@ -1,10 +1,9 @@
 using System;
 using System.Buffers;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
@@ -12,6 +11,7 @@ using System.Windows.Media.Effects;
 using System.Windows.Media.Imaging;
 
 namespace PCL.Core.UI.Effects;
+// ReSharper disable UnusedMember.Local, NotAccessedField.Local, UnusedParameter.Local, UnusedVariable
 
 /// <summary>
 /// 高性能采样模糊处理器，支持智能采样算法和多线程优化
@@ -19,9 +19,9 @@ namespace PCL.Core.UI.Effects;
 /// </summary>
 internal sealed class SamplingBlurProcessor : IDisposable
 {
-    private static readonly ArrayPool<uint> UintPool = ArrayPool<uint>.Create();
-    private static readonly ArrayPool<float> FloatPool = ArrayPool<float>.Create();
-    private static readonly ConcurrentDictionary<string, CachedBlurResult> Cache = new();
+    private static readonly ArrayPool<uint> _UintPool = ArrayPool<uint>.Create();
+    private static readonly ArrayPool<float> _FloatPool = ArrayPool<float>.Create();
+    private static readonly ConcurrentDictionary<string, CachedBlurResult> _Cache = new();
     
     private readonly object _lockObject = new();
     private bool _disposed;
@@ -36,60 +36,57 @@ internal sealed class SamplingBlurProcessor : IDisposable
     /// <summary>
     /// 预计算的泊松盘采样点，优化内存访问模式
     /// </summary>
-    private static readonly Vector2[] PoissonSamples = GeneratePoissonDiskSamples();
+    private static readonly Vector2[] _PoissonSamples = _GeneratePoissonDiskSamples();
 
     /// <summary>
     /// 预计算的高斯权重表，避免运行时计算
     /// </summary>
-    private static readonly float[] GaussianWeights = GenerateGaussianWeights();
+    private static readonly float[] _GaussianWeights = _GenerateGaussianWeights();
 
     public void InvalidateCache()
     {
         lock (_lockObject)
         {
-            Cache.Clear();
+            _Cache.Clear();
         }
     }
 
     /// <summary>
     /// 应用采样模糊效果到位图
     /// </summary>
-    public WriteableBitmap? ApplySamplingBlur(BitmapSource source, double radius, double samplingRate, 
+    public WriteableBitmap? ApplySamplingBlur(BitmapSource? source, double radius, double samplingRate, 
         RenderingBias renderingBias, KernelType kernelType)
     {
         if (source == null || radius <= 0)
             return null;
 
-        var cacheKey = GenerateCacheKey(source, radius, samplingRate, renderingBias, kernelType);
+        var cacheKey = _GenerateCacheKey(source, radius, samplingRate, renderingBias, kernelType);
         
         lock (_lockObject)
         {
-            if (Cache.TryGetValue(cacheKey, out var cached))
+            if (_Cache.TryGetValue(cacheKey, out var cached))
             {
                 cached.LastUsed = DateTime.UtcNow;
-                Cache[cacheKey] = cached;
+                _Cache[cacheKey] = cached;
                 return cached.Bitmap;
             }
         }
 
-        var result = ProcessBlur(source, radius, samplingRate, renderingBias, kernelType);
-        
-        if (result != null)
-        {
-            lock (_lockObject)
-            {
-                Cache[cacheKey] = new CachedBlurResult
-                {
-                    Bitmap = result,
-                    LastUsed = DateTime.UtcNow,
-                    Key = cacheKey
-                };
+        var result = _ProcessBlur(source, radius, samplingRate, renderingBias, kernelType);
 
-                // 清理过期缓存
-                if (Cache.Count > 50)
-                {
-                    CleanExpiredCache();
-                }
+        lock (_lockObject)
+        {
+            _Cache[cacheKey] = new CachedBlurResult
+            {
+                Bitmap = result,
+                LastUsed = DateTime.UtcNow,
+                Key = cacheKey
+            };
+
+            // 清理过期缓存
+            if (_Cache.Count > 50)
+            {
+                _CleanExpiredCache();
             }
         }
 
@@ -100,7 +97,7 @@ internal sealed class SamplingBlurProcessor : IDisposable
     /// 核心模糊处理算法，支持多种优化策略
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-    private WriteableBitmap? ProcessBlur(BitmapSource source, double radius, double samplingRate,
+    private WriteableBitmap _ProcessBlur(BitmapSource source, double radius, double samplingRate,
         RenderingBias renderingBias, KernelType kernelType)
     {
         var width = source.PixelWidth;
@@ -108,24 +105,24 @@ internal sealed class SamplingBlurProcessor : IDisposable
         var stride = (width * source.Format.BitsPerPixel + 7) / 8;
 
         // 创建源图像数据缓冲区
-        var sourceBuffer = UintPool.Rent(width * height);
-        var targetBuffer = UintPool.Rent(width * height);
+        var sourceBuffer = _UintPool.Rent(width * height);
+        var targetBuffer = _UintPool.Rent(width * height);
 
         try
         {
             // 复制源图像数据
             var sourceBytes = new byte[stride * height];
             source.CopyPixels(sourceBytes, stride, 0);
-            CopyBytesToUints(sourceBytes, sourceBuffer, width * height);
+            _CopyBytesToUints(sourceBytes, sourceBuffer, width * height);
 
             // 根据渲染偏向选择算法
             if (renderingBias == RenderingBias.Quality)
             {
-                ApplyQualityBlur(sourceBuffer, targetBuffer, width, height, radius, samplingRate, kernelType);
+                _ApplyQualityBlur(sourceBuffer, targetBuffer, width, height, radius, samplingRate, kernelType);
             }
             else
             {
-                ApplyPerformanceBlur(sourceBuffer, targetBuffer, width, height, radius, samplingRate, kernelType);
+                _ApplyPerformanceBlur(sourceBuffer, targetBuffer, width, height, radius, samplingRate, kernelType);
             }
 
             // 创建结果位图
@@ -154,8 +151,8 @@ internal sealed class SamplingBlurProcessor : IDisposable
         }
         finally
         {
-            UintPool.Return(sourceBuffer);
-            UintPool.Return(targetBuffer);
+            _UintPool.Return(sourceBuffer);
+            _UintPool.Return(targetBuffer);
         }
     }
 
@@ -163,7 +160,7 @@ internal sealed class SamplingBlurProcessor : IDisposable
     /// 质量优先的模糊算法，使用完整的高斯卷积
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-    private void ApplyQualityBlur(uint[] source, uint[] target, int width, int height, 
+    private void _ApplyQualityBlur(uint[] source, uint[] target, int width, int height, 
         double radius, double samplingRate, KernelType kernelType)
     {
         var intRadius = (int)Math.Ceiling(radius);
@@ -172,12 +169,12 @@ internal sealed class SamplingBlurProcessor : IDisposable
 
         Parallel.For(0, height, y =>
         {
-            for (int x = 0; x < width; x++)
+            for (var x = 0; x < width; x++)
             {
-                var (a, r, g, b) = SamplePixelQuality(source, width, height, x, y, 
+                var (a, r, g, b) = _SamplePixelQuality(source, width, height, x, y, 
                     intRadius, twoSigmaSquared, samplingRate, kernelType);
                 
-                target[y * width + x] = PackColor(a, r, g, b);
+                target[y * width + x] = _PackColor(a, r, g, b);
             }
         });
     }
@@ -186,7 +183,7 @@ internal sealed class SamplingBlurProcessor : IDisposable
     /// 性能优先的模糊算法，使用优化的采样策略
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-    private void ApplyPerformanceBlur(uint[] source, uint[] target, int width, int height,
+    private void _ApplyPerformanceBlur(uint[] source, uint[] target, int width, int height,
         double radius, double samplingRate, KernelType kernelType)
     {
         var intRadius = (int)Math.Ceiling(radius);
@@ -205,15 +202,15 @@ internal sealed class SamplingBlurProcessor : IDisposable
                 return;
             }
 
-            for (int x = 0; x < width; x += skipPattern)
+            for (var x = 0; x < width; x += skipPattern)
             {
-                var (a, r, g, b) = SamplePixelPerformance(source, width, height, x, y,
+                var (a, r, g, b) = _SamplePixelPerformance(source, width, height, x, y,
                     intRadius, samplingRate, kernelType);
 
                 // 填充采样点及其邻居
-                for (int dx = 0; dx < skipPattern && x + dx < width; dx++)
+                for (var dx = 0; dx < skipPattern && x + dx < width; dx++)
                 {
-                    target[y * width + (x + dx)] = PackColor(a, r, g, b);
+                    target[y * width + (x + dx)] = _PackColor(a, r, g, b);
                 }
             }
         });
@@ -223,19 +220,19 @@ internal sealed class SamplingBlurProcessor : IDisposable
     /// 高质量像素采样，使用完整的高斯权重
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private (byte a, byte r, byte g, byte b) SamplePixelQuality(uint[] source, int width, int height,
+    private (byte a, byte r, byte g, byte b) _SamplePixelQuality(uint[] source, int width, int height,
         int centerX, int centerY, int radius, double twoSigmaSquared, double samplingRate, KernelType kernelType)
     {
         double totalA = 0, totalR = 0, totalG = 0, totalB = 0;
         double totalWeight = 0;
 
         var sampleCount = kernelType == KernelType.Gaussian ? 
-            Math.Min(PoissonSamples.Length, (int)(32 * samplingRate)) : 
+            Math.Min(_PoissonSamples.Length, (int)(32 * samplingRate)) : 
             Math.Min(16, (int)(16 * samplingRate));
 
-        for (int i = 0; i < sampleCount; i++)
+        for (var i = 0; i < sampleCount; i++)
         {
-            var offset = PoissonSamples[i % PoissonSamples.Length] * (float)radius;
+            var offset = _PoissonSamples[i % _PoissonSamples.Length] * radius;
             var sampleX = centerX + (int)Math.Round(offset.X);
             var sampleY = centerY + (int)Math.Round(offset.Y);
 
@@ -280,21 +277,21 @@ internal sealed class SamplingBlurProcessor : IDisposable
     /// 高性能像素采样，使用优化的快速算法
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private (byte a, byte r, byte g, byte b) SamplePixelPerformance(uint[] source, int width, int height,
+    private (byte a, byte r, byte g, byte b) _SamplePixelPerformance(uint[] source, int width, int height,
         int centerX, int centerY, int radius, double samplingRate, KernelType kernelType)
     {
         var sampleCount = Math.Max(4, (int)(8 * samplingRate));
         var radiusSquared = radius * radius;
 
         double totalA = 0, totalR = 0, totalG = 0, totalB = 0;
-        int validSamples = 0;
+        var validSamples = 0;
 
         // 使用高性能泊松盘采样模式，确保最佳质量分布
-        var effectiveSamples = Math.Min(sampleCount, PoissonSamples.Length);
+        var effectiveSamples = Math.Min(sampleCount, _PoissonSamples.Length);
         
-        for (int i = 0; i < effectiveSamples; i++)
+        for (var i = 0; i < effectiveSamples; i++)
         {
-            var poissonOffset = PoissonSamples[i] * (float)radius;
+            var poissonOffset = _PoissonSamples[i] * radius;
             var sampleX = centerX + (int)Math.Round(poissonOffset.X);
             var sampleY = centerY + (int)Math.Round(poissonOffset.Y);
 
@@ -335,12 +332,12 @@ internal sealed class SamplingBlurProcessor : IDisposable
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static uint PackColor(byte a, byte r, byte g, byte b) =>
+    private static uint _PackColor(byte a, byte r, byte g, byte b) =>
         ((uint)a << 24) | ((uint)r << 16) | ((uint)g << 8) | b;
 
-    private static void CopyBytesToUints(byte[] source, uint[] target, int count)
+    private static void _CopyBytesToUints(byte[] source, uint[] target, int count)
     {
-        for (int i = 0; i < count; i++)
+        for (var i = 0; i < count; i++)
         {
             var baseIndex = i * 4;
             if (baseIndex + 3 < source.Length)
@@ -353,7 +350,7 @@ internal sealed class SamplingBlurProcessor : IDisposable
         }
     }
 
-    private static Vector2[] GeneratePoissonDiskSamples()
+    private static Vector2[] _GeneratePoissonDiskSamples()
     {
         const int sampleCount = 32;
         const float minDistance = 0.7f;
@@ -375,8 +372,8 @@ internal sealed class SamplingBlurProcessor : IDisposable
                 continue;
             }
 
-            bool valid = true;
-            for (int i = 0; i < validSamples; i++)
+            var valid = true;
+            for (var i = 0; i < validSamples; i++)
             {
                 if (Vector2.DistanceSquared(candidate, samples[i]) < minDistance * minDistance)
                 {
@@ -406,7 +403,7 @@ internal sealed class SamplingBlurProcessor : IDisposable
         return samples;
     }
 
-    private static float[] GenerateGaussianWeights()
+    private static float[] _GenerateGaussianWeights()
     {
         const int kernelSize = 33;
         var weights = new float[kernelSize];
@@ -415,7 +412,7 @@ internal sealed class SamplingBlurProcessor : IDisposable
         var normalization = 1.0f / (float)Math.Sqrt(Math.PI * twoSigmaSquared);
         float totalWeight = 0;
 
-        for (int i = 0; i < kernelSize; i++)
+        for (var i = 0; i < kernelSize; i++)
         {
             var x = i - kernelSize / 2;
             var weight = normalization * (float)Math.Exp(-(x * x) / twoSigmaSquared);
@@ -427,7 +424,7 @@ internal sealed class SamplingBlurProcessor : IDisposable
         if (totalWeight > 0)
         {
             var invTotal = 1.0f / totalWeight;
-            for (int i = 0; i < kernelSize; i++)
+            for (var i = 0; i < kernelSize; i++)
             {
                 weights[i] *= invTotal;
             }
@@ -436,36 +433,29 @@ internal sealed class SamplingBlurProcessor : IDisposable
         return weights;
     }
 
-    private static string GenerateCacheKey(BitmapSource source, double radius, double samplingRate,
+    private static string _GenerateCacheKey(BitmapSource source, double radius, double samplingRate,
         RenderingBias renderingBias, KernelType kernelType)
     {
         return $"{source.GetHashCode()}_{radius:F1}_{samplingRate:F2}_{renderingBias}_{kernelType}";
     }
 
-    private void CleanExpiredCache()
+    private void _CleanExpiredCache()
     {
         var cutoff = DateTime.UtcNow.AddMinutes(-5);
-        var keysToRemove = new List<string>();
+        var keysToRemove = (
+            from kvp in _Cache
+            where kvp.Value.LastUsed < cutoff
+            select kvp.Key
+        ).ToList();
 
-        foreach (var kvp in Cache)
-        {
-            if (kvp.Value.LastUsed < cutoff)
-            {
-                keysToRemove.Add(kvp.Key);
-            }
-        }
-
-        foreach (var key in keysToRemove)
-        {
-            Cache.TryRemove(key, out _);
-        }
+        foreach (var key in keysToRemove) _Cache.TryRemove(key, out _);
     }
 
     public void Dispose()
     {
         if (!_disposed)
         {
-            Cache.Clear();
+            _Cache.Clear();
             _disposed = true;
         }
         GC.SuppressFinalize(this);

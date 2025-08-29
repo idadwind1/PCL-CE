@@ -1,7 +1,6 @@
 using System;
 using System.Runtime.CompilerServices;
 using System.Windows;
-using System.Windows.Media;
 using System.Windows.Media.Effects;
 
 namespace PCL.Core.UI.Effects;
@@ -72,11 +71,11 @@ public sealed class EnhancedBlurEffect : Freezable
     // Dependency Properties
     public static readonly DependencyProperty RadiusProperty =
         DependencyProperty.Register(nameof(Radius), typeof(double), typeof(EnhancedBlurEffect),
-            new PropertyMetadata(16.0, OnEffectPropertyChanged), ValidateRadius);
+            new PropertyMetadata(16.0, OnEffectPropertyChanged), _ValidateRadius);
 
     public static readonly DependencyProperty SamplingRateProperty =
         DependencyProperty.Register(nameof(SamplingRate), typeof(double), typeof(EnhancedBlurEffect),
-            new PropertyMetadata(0.7, OnEffectPropertyChanged), ValidateSamplingRate);
+            new PropertyMetadata(0.7, OnEffectPropertyChanged), _ValidateSamplingRate);
 
     public static readonly DependencyProperty RenderingBiasProperty =
         DependencyProperty.Register(nameof(RenderingBias), typeof(RenderingBias), typeof(EnhancedBlurEffect),
@@ -87,23 +86,23 @@ public sealed class EnhancedBlurEffect : Freezable
             new PropertyMetadata(KernelType.Gaussian, OnEffectPropertyChanged));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool ValidateRadius(object value) =>
-        value is double radius && radius >= 0.0 && radius <= 300.0;
+    private static bool _ValidateRadius(object value) =>
+        value is >= 0.0 and <= 300.0;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool ValidateSamplingRate(object value) =>
-        value is double rate && rate >= 0.1 && rate <= 1.0;
+    private static bool _ValidateSamplingRate(object value) =>
+        value is >= 0.1 and <= 1.0;
 
     private static void OnEffectPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is EnhancedBlurEffect effect)
         {
-            effect.UpdateNativeBlur();
+            effect._UpdateNativeBlur();
             effect._processor.InvalidateCache();
         }
     }
 
-    private void UpdateNativeBlur()
+    private void _UpdateNativeBlur()
     {
         _nativeBlur.Radius = Radius;
         _nativeBlur.RenderingBias = RenderingBias;
@@ -162,12 +161,12 @@ public sealed class EnhancedBlurEffect : Freezable
         // 如果采样率接近1.0，直接使用原生BlurEffect以获得最佳质量
         if (SamplingRate >= 0.95)
         {
-            UpdateNativeBlur();
+            _UpdateNativeBlur();
             return _nativeBlur;
         }
 
         // 否则返回原生效果 (Freezable 不能直接作为 Effect 使用)
-        UpdateNativeBlur();
+        _UpdateNativeBlur();
         return _nativeBlur;
     }
 }

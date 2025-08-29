@@ -2,12 +2,12 @@ using System;
 using System.Buffers;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
 
 namespace PCL.Core.UI.Effects;
+// ReSharper disable UnusedMember.Local, UnusedParameter.Local
 
 /// <summary>
 /// 高性能自适应采样模糊效果，支持采样深度控制
@@ -15,17 +15,19 @@ namespace PCL.Core.UI.Effects;
 /// </summary>
 public sealed class AdaptiveBlurEffect : ShaderEffect
 {
-    private static readonly MemoryPool<byte> MemoryPool = MemoryPool<byte>.Shared;
-    private static readonly object ShaderLock = new();
+    private const string PixelShaderUri = "pack://application:,,,/PCL.Core;component/UI/Assets/Shaders/AdaptiveBlur.ps";
+    
+    private static readonly MemoryPool<byte> _MemoryPool = MemoryPool<byte>.Shared;
+    private static readonly object _ShaderLock = new();
     private static PixelShader? _cachedShader;
     
     // 预计算的采样点模式，优化GPU访问
-    private static readonly Vector2[] GaussianSampleOffsets = GenerateOptimalSamplePattern();
-    private static readonly float[] GaussianWeights = GenerateGaussianWeights();
+    private static readonly Vector2[] _GaussianSampleOffsets = _GenerateOptimalSamplePattern();
+    private static readonly float[] _GaussianWeights = _GenerateGaussianWeights();
 
     static AdaptiveBlurEffect()
     {
-        EnsureShaderInitialized();
+        _EnsureShaderInitialized();
     }
 
     public AdaptiveBlurEffect()
@@ -82,11 +84,11 @@ public sealed class AdaptiveBlurEffect : ShaderEffect
 
     public static readonly DependencyProperty RadiusProperty = 
         DependencyProperty.Register(nameof(Radius), typeof(double), typeof(AdaptiveBlurEffect), 
-            new UIPropertyMetadata(16.0, PixelShaderConstantCallback(0)), ValidateRadius);
+            new UIPropertyMetadata(16.0, PixelShaderConstantCallback(0)), _ValidateRadius);
 
     public static readonly DependencyProperty SamplingRateProperty = 
         DependencyProperty.Register(nameof(SamplingRate), typeof(double), typeof(AdaptiveBlurEffect), 
-            new UIPropertyMetadata(1.0, PixelShaderConstantCallback(1)), ValidateSamplingRate);
+            new UIPropertyMetadata(1.0, PixelShaderConstantCallback(1)), _ValidateSamplingRate);
 
     public static readonly DependencyProperty QualityBiasProperty = 
         DependencyProperty.Register("QualityBias", typeof(double), typeof(AdaptiveBlurEffect), 
@@ -111,12 +113,12 @@ public sealed class AdaptiveBlurEffect : ShaderEffect
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool ValidateRadius(object value) => 
-        value is double radius && radius >= 0.0 && radius <= 300.0;
+    private static bool _ValidateRadius(object value) => 
+        value is >= 0.0 and <= 300.0;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool ValidateSamplingRate(object value) => 
-        value is double rate && rate >= 0.1 && rate <= 1.0;
+    private static bool _ValidateSamplingRate(object value) => 
+        value is >= 0.1 and <= 1.0;
 
     private static void OnRenderingBiasChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
@@ -128,11 +130,11 @@ public sealed class AdaptiveBlurEffect : ShaderEffect
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private static void EnsureShaderInitialized()
+    private static void _EnsureShaderInitialized()
     {
         if (_cachedShader != null) return;
 
-        lock (ShaderLock)
+        lock (_ShaderLock)
         {
             if (_cachedShader == null)
             {
@@ -140,7 +142,7 @@ public sealed class AdaptiveBlurEffect : ShaderEffect
                 {
                     _cachedShader = new PixelShader
                     {
-                        UriSource = new Uri("pack://application:,,,/PCL.Core;component/UI/Effects/AdaptiveBlur.ps", UriKind.Absolute)
+                        UriSource = new Uri(PixelShaderUri, UriKind.Absolute)
                     };
                 }
                 catch
@@ -191,7 +193,7 @@ public sealed class AdaptiveBlurEffect : ShaderEffect
     /// 生成优化的采样点模式，基于泊松盘分布减少缓存未命中
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-    private static Vector2[] GenerateOptimalSamplePattern()
+    private static Vector2[] _GenerateOptimalSamplePattern()
     {
         const int maxSamples = 32; // 平衡质量和性能
         const float minDistance = 0.8f;
@@ -216,8 +218,8 @@ public sealed class AdaptiveBlurEffect : ShaderEffect
                 continue;
             }
             
-            bool valid = true;
-            for (int i = 0; i < sampleCount; i++)
+            var valid = true;
+            for (var i = 0; i < sampleCount; i++)
             {
                 if (Vector2.DistanceSquared(candidate, samples[i]) < minDistance * minDistance)
                 {
@@ -240,7 +242,7 @@ public sealed class AdaptiveBlurEffect : ShaderEffect
     /// 生成高斯权重，使用SIMD优化的数学计算
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-    private static float[] GenerateGaussianWeights()
+    private static float[] _GenerateGaussianWeights()
     {
         const int kernelSize = 33; // 对应最大半径
         var weights = new float[kernelSize];
@@ -250,7 +252,7 @@ public sealed class AdaptiveBlurEffect : ShaderEffect
         var totalWeight = 0.0f;
         
         // 使用向量化计算权重
-        for (int i = 0; i < kernelSize; i++)
+        for (var i = 0; i < kernelSize; i++)
         {
             var x = i - kernelSize / 2;
             var weight = normalization * MathF.Exp(-(x * x) / twoSigmaSquared);
@@ -262,7 +264,7 @@ public sealed class AdaptiveBlurEffect : ShaderEffect
         if (totalWeight > 0)
         {
             var invTotal = 1.0f / totalWeight;
-            for (int i = 0; i < kernelSize; i++)
+            for (var i = 0; i < kernelSize; i++)
             {
                 weights[i] *= invTotal;
             }
@@ -277,20 +279,20 @@ public sealed class AdaptiveBlurEffect : ShaderEffect
 /// </summary>
 internal static class PerformanceOptimizations
 {
-    private static readonly ArrayPool<Vector4> VectorPool = ArrayPool<Vector4>.Create();
-    private static readonly ArrayPool<float> FloatPool = ArrayPool<float>.Create();
+    private static readonly ArrayPool<Vector4> _VectorPool = ArrayPool<Vector4>.Create();
+    private static readonly ArrayPool<float> _FloatPool = ArrayPool<float>.Create();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Vector4[] RentVectorArray(int size) => VectorPool.Rent(size);
+    public static Vector4[] RentVectorArray(int size) => _VectorPool.Rent(size);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void ReturnVectorArray(Vector4[] array) => VectorPool.Return(array);
+    public static void ReturnVectorArray(Vector4[] array) => _VectorPool.Return(array);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static float[] RentFloatArray(int size) => FloatPool.Rent(size);
+    public static float[] RentFloatArray(int size) => _FloatPool.Rent(size);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void ReturnFloatArray(float[] array) => FloatPool.Return(array);
+    public static void ReturnFloatArray(float[] array) => _FloatPool.Return(array);
 
     /// <summary>
     /// 使用SIMD指令优化的向量数学运算
@@ -301,7 +303,7 @@ internal static class PerformanceOptimizations
     {
         if (!System.Numerics.Vector.IsHardwareAccelerated || input.Length != output.Length)
         {
-            FallbackBlur(input, output, weights, width, height, radius, samplingRate);
+            _FallbackBlur(input, output, weights, width, height, radius, samplingRate);
             return;
         }
 
@@ -310,21 +312,21 @@ internal static class PerformanceOptimizations
         var stride = width;
         
         // 处理每一行
-        for (int y = 0; y < height; y++)
+        for (var y = 0; y < height; y++)
         {
             var rowStart = y * stride;
             var rowEnd = Math.Min(rowStart + width, input.Length);
             var vectorizedLength = (rowEnd - rowStart) - ((rowEnd - rowStart) % vectorCount);
             
             // 向量化处理行内像素
-            for (int i = 0; i < vectorizedLength; i += vectorCount)
+            for (var i = 0; i < vectorizedLength; i += vectorCount)
             {
                 var pixelIndex = rowStart + i;
                 var result = Vector<float>.Zero;
                 var totalWeight = 0.0f;
                 
                 // 应用高斯卷积核
-                for (int k = 0; k < weights.Length; k++)
+                for (var k = 0; k < weights.Length; k++)
                 {
                     var offset = k - kernelRadius;
                     var sampleIndex = Math.Max(0, Math.Min(input.Length - vectorCount, pixelIndex + offset));
@@ -354,16 +356,16 @@ internal static class PerformanceOptimizations
             }
             
             // 处理行内剩余的非向量化像素
-            for (int i = vectorizedLength; i < (rowEnd - rowStart); i++)
+            for (var i = vectorizedLength; i < (rowEnd - rowStart); i++)
             {
                 var pixelIndex = rowStart + i;
-                output[pixelIndex] = ProcessPixelBlur(input[pixelIndex], weights, samplingRate, input, pixelIndex, width, height);
+                output[pixelIndex] = _ProcessPixelBlur(input[pixelIndex], weights, samplingRate, input, pixelIndex, width, height);
             }
         }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static Vector<float> ProcessVectorizedBlur(Vector<float> input, 
+    private static Vector<float> _ProcessVectorizedBlur(Vector<float> input, 
         ReadOnlySpan<float> weights, float samplingRate)
     {
         // 完整的向量化高斯模糊处理
@@ -372,7 +374,7 @@ internal static class PerformanceOptimizations
         var totalWeight = 0.0f;
         
         // 应用高斯权重到向量化数据
-        for (int i = 0; i < kernelSize; i++)
+        for (var i = 0; i < kernelSize; i++)
         {
             var weight = weights[i] * samplingRate;
             result += input * new Vector<float>(weight);
@@ -389,7 +391,7 @@ internal static class PerformanceOptimizations
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static float ProcessPixelBlur(float centerPixel, ReadOnlySpan<float> weights, float samplingRate,
+    private static float _ProcessPixelBlur(float centerPixel, ReadOnlySpan<float> weights, float samplingRate,
         ReadOnlySpan<float> imageData, int centerIndex, int width, int height)
     {
         // 完整的单像素高斯模糊处理，支持邻域采样
@@ -400,9 +402,9 @@ internal static class PerformanceOptimizations
         var centerX = centerIndex % width;
         
         // 应用二维高斯卷积核
-        for (int ky = -kernelRadius; ky <= kernelRadius; ky++)
+        for (var ky = -kernelRadius; ky <= kernelRadius; ky++)
         {
-            for (int kx = -kernelRadius; kx <= kernelRadius; kx++)
+            for (var kx = -kernelRadius; kx <= kernelRadius; kx++)
             {
                 var sampleY = Math.Max(0, Math.Min(height - 1, centerY + ky));
                 var sampleX = Math.Max(0, Math.Min(width - 1, centerX + kx));
@@ -440,12 +442,12 @@ internal static class PerformanceOptimizations
         return result;
     }
 
-    private static void FallbackBlur(ReadOnlySpan<float> input, Span<float> output, 
+    private static void _FallbackBlur(ReadOnlySpan<float> input, Span<float> output, 
         ReadOnlySpan<float> weights, int width, int height, float radius, float samplingRate)
     {
-        for (int i = 0; i < input.Length; i++)
+        for (var i = 0; i < input.Length; i++)
         {
-            output[i] = ProcessPixelBlur(input[i], weights, samplingRate, input, i, width, height);
+            output[i] = _ProcessPixelBlur(input[i], weights, samplingRate, input, i, width, height);
         }
     }
 }
