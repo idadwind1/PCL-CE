@@ -13,11 +13,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup GitHub CLI
-        run: |
-          gh extension install github/gh-copilot
-          gh auth setup-git
-
       - name: Get latest release info
         id: get_release
         env:
