@@ -540,7 +540,7 @@ Public Class PageInstanceExport
             CopyDirectory(McInstance.Path & "PCL\", OverridesFolder & "PCL\")
 #If RELEASE Then
             '复制 PCL 本体
-            If IncludePCL Then CopyFile(PathWithName, CacheFolder & "Plain Craft Launcher.exe")
+            If IncludePCL Then CopyFile(ExePathWithName, CacheFolder & "Plain Craft Launcher.exe")
 #End If
             '复制 PCL 个性化内容
             If IncludePCLCustom Then

@@ -28,7 +28,7 @@ Public Class Application
     End Sub
 
     '开始
-    Private Async Sub Application_Startup() '(sender As Object, e As StartupEventArgs) Handles Me.Startup
+    Private Sub Application_Startup() '(sender As Object, e As StartupEventArgs) Handles Me.Startup
         Try
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance)
             '创建自定义跟踪监听器，用于检测是否存在 Binding 失败
