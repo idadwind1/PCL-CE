@@ -52,14 +52,9 @@ jobs:
           path: bin/${{ inputs.configuration }}-${{ inputs.architecture }}/**
 
       - name: Qodana Scan
-        if: inputs.qodana
+        if: ${{ inputs.qodana }}
         uses: JetBrains/qodana-action@v2025.2
+        with:
+          args: --linter, qodana-dotnet, --within-docker, false
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
-
-      - name: Upload Qodana Report
-        if: inputs.qodana
-        uses: actions/upload-artifact@v4
-        with:
-          name: Qodana_Report_${{ env.SHORT_SHA }}
-          path: ./*.html
