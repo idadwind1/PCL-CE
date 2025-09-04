@@ -38,8 +38,8 @@ jobs:
           echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
           # Build
           dotnet build "PCL.Core.csproj" \
-          -p:Configuration=${{ inputs.configuration }} -p:Platform=${{ inputs.architecture }}\
-          -p:EmitCompilerGeneratedFiles=true -p:IncludeGeneratedFiles=true
+          -p:Configuration=${{ inputs.configuration }} -p:Platform=${{ inputs.architecture }} \
+          -p:EmitCompilerGeneratedFiles=true -p:IncludeGeneratedFiles=true \
           -p:CompilerGeneratedFilesOutputPath=./obj/generated
           # List generated files for debug
           echo "Generated files:"
