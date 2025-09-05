@@ -52,7 +52,7 @@ jobs:
           path: bin/${{ inputs.configuration }}-${{ inputs.architecture }}/**
 
       - name: Qodana Scan
-        if: ${{ inputs.qodana }}
+        if: ${{ fromJSON(inputs.qodana) && secrets.QODANA_TOKEN != '' }}
         uses: JetBrains/qodana-action@v2025.2
         with:
           args: --linter, qodana-dotnet, --within-docker, false
