@@ -53,7 +53,7 @@ jobs:
           path: bin/${{ inputs.configuration }}-${{ inputs.architecture }}/**
 
       - name: Qodana Scan
-        if: ${{ inputs.qodana == 'true' }}
+        if: inputs.qodana == 'true'
         uses: JetBrains/qodana-action@v2025.2
         with:
           args: --linter, qodana-dotnet, --within-docker, false
