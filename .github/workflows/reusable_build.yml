@@ -9,10 +9,11 @@ on:
       architecture:
         required: true
         type: string
+      # 不用 boolean 因为没妈的 GitHub 不认 boolean 类型
       qodana:
         required: false
-        type: boolean
-        default: false
+        type: string
+        default: 'false'
 
 jobs:
   build:
@@ -52,7 +53,7 @@ jobs:
           path: bin/${{ inputs.configuration }}-${{ inputs.architecture }}/**
 
       - name: Qodana Scan
-        if: ${{ fromJSON(inputs.qodana) }}
+        if: ${{ inputs.qodana == 'true' }}
         uses: JetBrains/qodana-action@v2025.2
         with:
           args: --linter, qodana-dotnet, --within-docker, false
