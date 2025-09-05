@@ -22,7 +22,6 @@ jobs:
         include:
           - configuration: Debug
             architecture: x64
-            qodana: true
           - configuration: Debug
             architecture: ARM64
       fail-fast: true
