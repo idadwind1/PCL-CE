@@ -106,7 +106,7 @@ public class JsonFileProvider : CommonFileProvider, IEnumerableKeyProvider
     {
         if (!File.Exists(FilePath)) Directory.CreateDirectory(Basics.GetParentPath(FilePath)!);
         var tmpFile = $"{FilePath}.tmp";
-        var bakFile = $"{FilePath}.tmp";
+        var bakFile = $"{FilePath}.bak";
         {
             using var stream = new FileStream(tmpFile, FileMode.Create, FileAccess.Write, FileShare.Read);
             using var writer = new Utf8JsonWriter(stream, _WriterOptions);
