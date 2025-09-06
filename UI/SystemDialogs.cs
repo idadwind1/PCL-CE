@@ -15,7 +15,7 @@ public static class SystemDialogs {
     /// </summary>
     /// <param name="title">对话框标题。</param>
     /// <param name="fileName">默认文件名。</param>
-    /// <param name="fileFilter">文件格式过滤器，例如 "常用图片文件(*.png;*.jpg)|*.png;*.jpg"，默认为 null。</param>
+    /// <param name="fileFilter">文件格式过滤器，例如 "常用图片文件|*.png;*.jpg"，默认为 null。</param>
     /// <param name="initialDirectory">初始目录，默认为 null。</param>
     /// <returns>用户选择的完整文件路径，如果取消则返回 null。</returns>
     /// <exception cref="ArgumentNullException">当 <paramref name="title"/> 或 <paramref name="fileName"/> 为 null 时抛出。</exception>
@@ -24,7 +24,7 @@ public static class SystemDialogs {
             AddExtension = true,
             Title = title,
             FileName = fileName,
-            Filter = fileFilter ?? "所有文件(*.*)|*.*",
+            Filter = fileFilter ?? "所有文件|*.*",
             InitialDirectory = !string.IsNullOrEmpty(initialDirectory) && Directory.Exists(initialDirectory) ? initialDirectory : null
         };
 
