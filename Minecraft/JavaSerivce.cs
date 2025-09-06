@@ -37,7 +37,7 @@ public sealed class JavaSerivce : GeneralService
             return;
         }
 
-        _javaManager.ScanJava().ContinueWith((_) =>
+        _javaManager.ScanJavaAsync().ContinueWith((_) =>
         {
             _SetCache(_javaManager.GetCache());
 
