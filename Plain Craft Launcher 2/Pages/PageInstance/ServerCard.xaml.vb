@@ -162,7 +162,6 @@ Public Class ServerCard
 
             ' Validate server data
             If String.IsNullOrEmpty(result.Name) OrElse String.IsNullOrEmpty(result.Address) Then
-                Hint("服务器名称或地址无效", HintType.Critical)
                 Exit Sub
             End If
 
@@ -228,10 +227,6 @@ Public Class ServerCard
                 Hint("无法读取服务器数据文件", HintType.Critical)
                 Exit Sub
             End If
-            
-            Log(index)
-            Log(nbtData.Count)
-            Log(nbtData.ToString())
 
             ' Verify server data
             Dim server = TryCast(nbtData(index), NbtCompound)
