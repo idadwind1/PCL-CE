@@ -6,6 +6,7 @@ using PCL.Core.App;
 using PCL.Core.Logging;
 using PCL.Core.Net;
 using PCL.Core.Utils;
+using PCL.Core.Utils.Secret;
 using static PCL.Core.Link.EasyTier.ETInfoProvider;
 using static PCL.Core.Link.Lobby.LobbyInfoProvider;
 using static PCL.Core.Link.Natayark.NatayarkProfileManager;
@@ -147,6 +148,8 @@ public static class ETController
             arguments.AddFlagIf(Config.Link.LatencyFirstMode, "latency-first");
             arguments.Add("compression", "zstd");
             arguments.AddFlag("multi-thread");
+            arguments.Add("machine-id", Identify.LaunchId);
+
             // TODO: 等待玩家档案迁移以获取正在使用的档案名称
             var showName = "default";
             if (AllowCustomName && !string.IsNullOrWhiteSpace(Config.Link.Username))
