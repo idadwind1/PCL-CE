@@ -145,7 +145,9 @@ Public Class ServerCard
     ''' 刷新服务器状态
     ''' </summary>
     Private Async Sub BtnRefresh_Click(sender As Object, e As RoutedEventArgs)
-        Await RefreshServerStatus(True)
+        Await Task.Run(Async Function() 
+            Await RefreshServerStatus(True)
+        End Function)
     End Sub
     
     ''' <summary>
