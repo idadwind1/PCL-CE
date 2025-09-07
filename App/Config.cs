@@ -1,4 +1,5 @@
 ﻿using PCL.Core.App.Configuration;
+using PCL.Core.Link;
 
 namespace PCL.Core.App;
 
@@ -104,6 +105,7 @@ public static partial class Config
         [ConfigItem<string>("LinkNaidRefreshToken", "", ConfigSource.SharedEncrypt)] public partial string NaidRefreshToken { get; set; }
         [ConfigItem<string>("LinkNaidRefreshExpiresAt", "", ConfigSource.SharedEncrypt)] public partial string NaidRefreshExpireTime { get; set; }
         [ConfigItem<bool>("LinkFirstTimeNetTest", true, ConfigSource.SharedEncrypt)] public partial bool DoFirstTimeNetTest { get; set; }
+        [ConfigItem<LinkProtocolPreference>("LinkProtocolPreference", LinkProtocolPreference.Tcp)] public partial LinkProtocolPreference ProtocolPreference { get; set; }
     }
 
     [ConfigGroup("Tool")] partial class ToolConfigGroup
