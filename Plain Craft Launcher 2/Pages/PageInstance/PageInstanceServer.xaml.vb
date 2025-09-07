@@ -1,4 +1,5 @@
-﻿Imports System.IO
+﻿Imports System.Collections.ObjectModel
+Imports System.IO
 Imports System.Threading.Tasks
 Imports fNbt
 Imports PCL.Core.Link
@@ -82,33 +83,42 @@ Public Class PageInstanceServer
             ServerCardList.Add(serverCard)
             PanServers.Children.Add(serverCard)
 
-            Await serverCard.RefreshServerStatus(False)
-
-            Dim nbtData = Await NbtFileHandler.ReadNbtFileAsync(Of NbtList)(Path.Combine(PageInstanceLeft.Instance.PathIndie, "servers.dat"), "servers")
+            Task.Run(Async Function() 
+                Await serverCard.RefreshServerStatus(False)
+            End Function)
+            
+            Dim serversDatPath = Path.Combine(PageInstanceLeft.Instance.PathIndie, "servers.dat")
+            
+            Dim nbtData
+            if Not File.Exists(serversDatPath) Then
+                nbtData = New NbtList("servers", NbtTagType.Compound)
+            Else 
+                nbtData = Await NbtFileHandler.ReadTagInNbtFileAsync(Of NbtList)(serversDatPath, "servers")
+            End If
             If nbtData IsNot Nothing Then
                 Dim server = New NbtCompound()
                 server("name") = New NbtString("name", result.Name)
                 server("ip") = New NbtString("ip", result.Address)
                 nbtData.Add(server)
                 Dim clonedNbtData = CType(nbtData.Clone(), NbtList)
-                Await NbtFileHandler.WriteNbtFileAsync(clonedNbtData, Path.Combine(PageInstanceLeft.Instance.PathIndie, "servers.dat"))
+                Await NbtFileHandler.WriteTagInNbtFileAsync(clonedNbtData, serversDatPath)
             End If
         End If
     End Sub
 
     Public Shared Function GetServerInfo(server As MinecraftServerInfo) As (Name As String, Address As String, Success As Boolean)
-        Dim newName As String = MyMsgBoxInput("编辑服务器信息", "请输入新的服务器名称：", server.Name)
+        Dim newName As String = MyMsgBoxInput("编辑服务器信息", "请输入新的服务器名称：", server.Name, 
+                                              New Collection(Of Validate) From {New ValidateNullOrWhiteSpace()})
+        
         If String.IsNullOrEmpty(newName) Then 
-            Hint("服务器名称不能为空", HintType.Info)
             Return (String.Empty, String.Empty, False)
         End If
 
-        Dim newAddress As String = MyMsgBoxInput("编辑服务器信息", "请输入新的服务器地址：", server.Address)
+        Dim newAddress As String = MyMsgBoxInput("编辑服务器信息", "请输入新的服务器地址：", server.Address, 
+                                                 New Collection(Of Validate) From {New ValidateNullOrWhiteSpace()})
         If String.IsNullOrEmpty(newAddress) Then 
-            Hint("服务器地址不能为空", HintType.Info)
             Return (String.Empty, String.Empty, False)
         End If
-    
         Return (newName, newAddress, True)
     End Function
 
@@ -123,7 +133,7 @@ Public Class PageInstanceServer
 
         Try
             ' 读取NBT格式的servers.dat文件
-            Dim nbtData = await NbtFileHandler.ReadNbtFileAsync(Of NbtList)(serversFile, "servers")
+            Dim nbtData = await NbtFileHandler.ReadTagInNbtFileAsync(Of NbtList)(serversFile, "servers")
             ParseServersFromNBT(nbtData)
         Catch ex As Exception
             Log(ex, "读取servers.dat文件失败", LogLevel.Debug)
@@ -147,7 +157,7 @@ Public Class PageInstanceServer
                     Dim name As String = If(server.Get(Of NbtString)("name")?.Value, "Unknown")
                     Dim iconBase64 As String = server.Get(Of NbtString)("icon")?.Value
                     
-                    Log(vbCrLf & $"服务器 {i + 1}:")
+                    Log($"服务器 {i + 1}:")
                     Log($"  名字: {name}")
                     Log($"  IP: {ip}")
                     ' Log($"  Hidden: {If(hidden = 1, "Yes", "No")}")
@@ -211,13 +221,15 @@ Public Class PageInstanceServer
     ''' ping单个服务器
     ''' </summary>
     Public Async Shared Function PingServer(server As MinecraftServerInfo) As Task(of MinecraftServerInfo)
-        Dim addr = Await ServerAddressResolver.GetReachableAddressAsync(server.Address)
-        
         Try
             ' Ping服务器
+            Dim addr = Await ServerAddressResolver.GetReachableAddressAsync(server.Address)
+            
             Using query = New McPing(addr.Ip, addr.Port)
                 Dim result As McPingResult
+                Log("Pinging server: " & server.Address & ":" & addr.Port)
                 result = Await query.PingAsync()
+                Log("Ping result: " & If(result IsNot Nothing, "Success", "Failed"))
                 If result <> Nothing
                     server.Status = ServerStatus.Online
                     server.PlayerCount = result.Players.Online
@@ -240,8 +252,6 @@ Public Class PageInstanceServer
     Public Shared Sub RemoveServer(server As ServerCard)
         Dim index = GetServerIndex(server)
         ServerCardList.Remove(server)
-        Log("index: " & index)
-        Log("_serverList.Count: " & ServerList.Count)
         If index >= 0 AndAlso index < ServerList.Count Then
             ServerList.RemoveAt(index)
         End If

@@ -156,18 +156,11 @@ Public Class ServerCard
             ' Get server information
             Dim result = PageInstanceServer.GetServerInfo(_server)
             If Not result.Success Then
-                Hint("获取服务器信息失败", HintType.Critical)
-                Exit Sub
-            End If
-
-            ' Validate server data
-            If String.IsNullOrEmpty(result.Name) OrElse String.IsNullOrEmpty(result.Address) Then
-                Hint("服务器名称或地址无效", HintType.Critical)
                 Exit Sub
             End If
 
             ' Read NBT file
-            Dim nbtData As NbtList = await NbtFileHandler.ReadNbTFileAsync(Of NbtList)(PageInstanceLeft.Instance.PathIndie + "servers.dat", "servers")
+            Dim nbtData As NbtList = await NbtFileHandler.ReadTagInNbtFileAsync(Of NbtList)(PageInstanceLeft.Instance.PathIndie + "servers.dat", "servers")
             If nbtData Is Nothing Then
                 Hint("无法读取服务器数据文件", HintType.Critical)
                 Exit Sub
@@ -193,7 +186,7 @@ Public Class ServerCard
 
             ' Write updated NBT data
             Dim clonedNbtData = CType(nbtData.Clone(), NbtList)
-            If Not Await NbtFileHandler.WriteNbtFileAsync(clonedNbtData, PageInstanceLeft.Instance.PathIndie + "servers.dat") Then
+            If Not Await NbtFileHandler.WriteTagInNbtFileAsync(clonedNbtData, PageInstanceLeft.Instance.PathIndie + "servers.dat") Then
                 Hint("无法写入服务器数据文件", HintType.Critical)
                 Exit Sub
             End If
@@ -223,14 +216,14 @@ Public Class ServerCard
             End If
 
             ' Read NBT file
-            Dim nbtData As NbtList = Await NbtFileHandler.ReadNbTFileAsync(Of NbtList)(PageInstanceLeft.Instance.PathIndie + "servers.dat", "servers")
+            Dim nbtData As NbtList = Await NbtFileHandler.ReadTagInNbtFileAsync(Of NbtList)(IO.Path.Combine(PageInstanceLeft.Instance.PathIndie, "servers.dat"), "servers")
             If nbtData Is Nothing Then
                 Hint("无法读取服务器数据文件", HintType.Critical)
                 Exit Sub
             End If
 
             ' Verify server data
-            Dim server As NbtCompound = TryCast(nbtData(index), NbtCompound)
+            Dim server = TryCast(nbtData(index), NbtCompound)
             If server Is Nothing OrElse server.Get(Of NbtString)("name").Value <> _server.Name OrElse server.Get(Of NbtString)("ip").Value <> _server.Address Then
                 Hint("服务器数据验证失败", HintType.Critical)
                 Exit Sub
@@ -238,10 +231,10 @@ Public Class ServerCard
 
             ' Remove server from NBT data
             nbtData.RemoveAt(index)
-            Dim clonedNbtData As NbtList = CType(nbtData.Clone(), NbtList)
+            Dim clonedNbtData = CType(nbtData.Clone(), NbtList)
     
             ' Write back to NBT file
-            If Not await NbtFileHandler.WriteNbtFileAsync(clonedNbtData, PageInstanceLeft.Instance.PathIndie + "servers.dat") Then
+            If Not await NbtFileHandler.WriteTagInNbtFileAsync(clonedNbtData, PageInstanceLeft.Instance.PathIndie + "servers.dat") Then
                 Hint("无法写入服务器数据文件", HintType.Critical)
                 Exit Sub
             End If
