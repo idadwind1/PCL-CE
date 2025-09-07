@@ -113,10 +113,7 @@ Public Class PageInstanceServer
         End If
 
         Dim newAddress As String = MyMsgBoxInput("编辑服务器信息", "请输入新的服务器地址：", server.Address, 
-                                                 New Collection(Of Validate) From {New ValidateRegex(
-                                                     "^(?:(?:(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63})|localhost|(?:\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}))(?::([1-9]\d{0,4}))?$",
-                                                     "请输入有效的服务器地址")}
-                                                 )
+                                                 New Collection(Of Validate) From {New ValidateNullOrWhiteSpace()})
         If String.IsNullOrEmpty(newAddress) Then 
             Return (String.Empty, String.Empty, False)
         End If
@@ -158,7 +155,7 @@ Public Class PageInstanceServer
                     Dim name As String = If(server.Get(Of NbtString)("name")?.Value, "Unknown")
                     Dim iconBase64 As String = server.Get(Of NbtString)("icon")?.Value
                     
-                    Log(vbCrLf & $"服务器 {i + 1}:")
+                    Log($"服务器 {i + 1}:")
                     Log($"  名字: {name}")
                     Log($"  IP: {ip}")
                     ' Log($"  Hidden: {If(hidden = 1, "Yes", "No")}")
@@ -222,10 +219,10 @@ Public Class PageInstanceServer
     ''' ping单个服务器
     ''' </summary>
     Public Async Shared Function PingServer(server As MinecraftServerInfo) As Task(of MinecraftServerInfo)
-        Dim addr = Await ServerAddressResolver.GetReachableAddressAsync(server.Address)
-        
         Try
             ' Ping服务器
+            Dim addr = Await ServerAddressResolver.GetReachableAddressAsync(server.Address)
+            
             Using query = New McPing(addr.Ip, addr.Port)
                 Dim result As McPingResult
                 Log("Pinging server: " & server.Address & ":" & addr.Port)
