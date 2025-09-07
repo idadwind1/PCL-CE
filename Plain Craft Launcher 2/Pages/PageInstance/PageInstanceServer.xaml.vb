@@ -107,12 +107,19 @@ Public Class PageInstanceServer
     Public Shared Function GetServerInfo(server As MinecraftServerInfo) As (Name As String, Address As String, Success As Boolean)
         Dim newName As String = MyMsgBoxInput("编辑服务器信息", "请输入新的服务器名称：", server.Name, 
                                               New Collection(Of Validate) From {New ValidateNullOrWhiteSpace()})
+        
+        If String.IsNullOrEmpty(newName) Then 
+            Return (String.Empty, String.Empty, False)
+        End If
 
         Dim newAddress As String = MyMsgBoxInput("编辑服务器信息", "请输入新的服务器地址：", server.Address, 
                                                  New Collection(Of Validate) From {New ValidateRegex(
                                                      "^(?:(?:(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63})|localhost|(?:\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}))(?::([1-9]\d{0,4}))?$",
                                                      "请输入有效的服务器地址")}
                                                  )
+        If String.IsNullOrEmpty(newAddress) Then 
+            Return (String.Empty, String.Empty, False)
+        End If
         Return (newName, newAddress, True)
     End Function
 

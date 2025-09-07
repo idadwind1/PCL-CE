@@ -156,12 +156,6 @@ Public Class ServerCard
             ' Get server information
             Dim result = PageInstanceServer.GetServerInfo(_server)
             If Not result.Success Then
-                Hint("获取服务器信息失败", HintType.Critical)
-                Exit Sub
-            End If
-
-            ' Validate server data
-            If String.IsNullOrEmpty(result.Name) OrElse String.IsNullOrEmpty(result.Address) Then
                 Exit Sub
             End If
 
