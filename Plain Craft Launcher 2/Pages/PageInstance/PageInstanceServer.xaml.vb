@@ -31,12 +31,23 @@ Public Class PageInstanceServer
         Next
     End Sub
     
+    Private Sub PageInstanceServer_IsVisibleChanged(sender As Object, e As DependencyPropertyChangedEventArgs) Handles Me.IsVisibleChanged
+        If Not IsVisible Then
+            If _cts IsNot Nothing Then
+                _cts.Cancel()
+                _cts.Dispose() ' 清理旧的 CancellationTokenSource
+                _cts = Nothing
+            End If
+        End If
+    End Sub
+    
     Private Sub MyChild_ChildCountZero(sender As Object, e As EventArgs)
         RefreshTip()
     End Sub
     
     Public Shared Function GetServerIndex(serverCard) As Integer
         ' 查找服务器在列表中的索引
+        Log("ServerCardList Count: " & ServerCardList.Count, LogLevel.Debug)
         Return ServerCardList.IndexOf(serverCard)
     End Function
 
@@ -92,6 +103,7 @@ Public Class PageInstanceServer
             Dim nbtData
             if Not File.Exists(serversDatPath) Then
                 nbtData = New NbtList("servers", NbtTagType.Compound)
+                RefreshTip()
             Else 
                 nbtData = Await NbtFileHandler.ReadTagInNbtFileAsync(Of NbtList)(serversDatPath, "servers")
             End If
@@ -191,7 +203,7 @@ Public Class PageInstanceServer
         Next
     End Sub
     
-    Public Sub RefreshTip()
+    Private Sub RefreshTip()
         If ServerList.Count = 0 Then
             Log("没有找到任何服务器")
             PanNoServer.Visibility = Visibility.Visible
@@ -204,16 +216,26 @@ Public Class PageInstanceServer
         PanContent.Visibility = Visibility.Visible
         PanServers.Visibility = Visibility.Visible
     End Sub
+    
+    Private _cts As CancellationTokenSource = Nothing
 
     ''' <summary>
     ''' 异步ping所有服务器
     ''' </summary>
     Private Sub PingAllServers()
+        If _cts IsNot Nothing Then
+            _cts.Cancel()
+            _cts.Dispose() ' 清理旧的 CancellationTokenSource
+        End If
+
+        ' 创建新的 CancellationTokenSource
+        _cts = New CancellationTokenSource()
+        Dim token As CancellationToken = _cts.Token
         For Each server In ServerCardList
             Dim currentServer = server
             Task.Run(Async Function() 
                 Await currentServer.RefreshServerStatus(False) 
-            End Function)
+            End Function, token)
         Next
     End Sub
 
