@@ -185,22 +185,23 @@ Public Class PageLinkLobby
                     End If
                     '公告
                     Dim notices As JArray = jObj("notices")
-                    Dim noticeLatest As JObject = notices(0)
-                    Dim announceContent = noticeLatest("content").ToString()
-                    If Not String.IsNullOrWhiteSpace(announceContent) Then
-                        Dim announceType As LinkAnnounceType
-                        If noticeLatest("type") = "important" OrElse noticeLatest("type") = "red" Then
-                            announceType = LinkAnnounceType.Important
-                        ElseIf noticeLatest("type") = "warning" OrElse noticeLatest("type") = "yellow" Then
-                            announceType = LinkAnnounceType.Warning
-                        Else
-                            announceType = LinkAnnounceType.Notice
+                    For Each noticeLatest As JObject In notices
+                        Dim announceContent = noticeLatest("content").ToString()
+                        If Not String.IsNullOrWhiteSpace(announceContent) Then
+                            Dim announceType As LinkAnnounceType
+                            If noticeLatest("type") = "important" OrElse noticeLatest("type") = "red" Then
+                                announceType = LinkAnnounceType.Important
+                            ElseIf noticeLatest("type") = "warning" OrElse noticeLatest("type") = "yellow" Then
+                                announceType = LinkAnnounceType.Warning
+                            Else
+                                announceType = LinkAnnounceType.Notice
+                            End If
+                            Dim announces As String() = announceContent.Split(vbLf)
+                            For Each announce As String In announces
+                                _linkAnnounces.Add(New LinkAnnounceInfo(announceType, announce))
+                            Next
                         End If
-                        Dim announces As String() = announceContent.Split(vbLf)
-                        For Each announce As String In announces
-                            _linkAnnounces.Add(New LinkAnnounceInfo(announceType, announce))
-                        Next
-                    End If
+                    Next
                     '中继服务器
                     Dim relays As JArray = jObj("relays")
                     ETRelay.RelayList = New List(Of ETRelay)
