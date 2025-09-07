@@ -61,7 +61,7 @@ public static partial class Config
 
         [ConfigGroup("HttpProxy")] partial class HttpProxyConfigGroup
         {
-            [ConfigItem<string>("SystemHttpProxy", "", ConfigSource.SharedEncrypt)] public partial string IsEnabled { get; set; }
+            [ConfigItem<string>("SystemHttpProxy", "", ConfigSource.SharedEncrypt)] public partial string CustomAddress { get; set; }
             [ConfigItem<int>("SystemHttpProxyType", 1)] public partial int Type { get; set; }
             [ConfigItem<string>("SystemHttpProxyCustomUsername", "")] public partial string CustomUsername { get; set; }
             [ConfigItem<string>("SystemHttpProxyCustomPassword", "")] public partial string CustomPassword { get; set; }
