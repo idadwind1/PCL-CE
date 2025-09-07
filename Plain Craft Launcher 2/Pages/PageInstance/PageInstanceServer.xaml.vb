@@ -83,7 +83,9 @@ Public Class PageInstanceServer
             ServerCardList.Add(serverCard)
             PanServers.Children.Add(serverCard)
 
-            Await serverCard.RefreshServerStatus(False)
+            Task.Run(Async Function() 
+                Await serverCard.RefreshServerStatus(False)
+            End Function)
             
             Dim serversDatPath = Path.Combine(PageInstanceLeft.Instance.PathIndie, "servers.dat")
             
