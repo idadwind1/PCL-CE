@@ -140,6 +140,8 @@ public static class ETController
             arguments.AddFlag("use-smoltcp");
             arguments.Add("encryption-algorithm", "chacha20");
             arguments.Add("default-protocol", Config.Link.ProtocolPreference.ToString().ToLower());
+            arguments.AddFlagIf(!Config.Link.TryPunchSym, "disable-sym-hole-punching");
+            arguments.AddFlagIf(!Config.Link.EnableIPv6, "disable-ipv6");
 
             // 用户名与其他参数
             arguments.AddFlagIf(Config.Link.LatencyFirstMode, "latency-first");
