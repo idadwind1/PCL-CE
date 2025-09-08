@@ -103,13 +103,13 @@ Public Class ServerCard
     ''' <summary>
     ''' 刷新服务器状态
     ''' </summary>
-    Public Async Function RefreshServerStatus(withHint As Boolean) As Task
+    Public Async Function RefreshServerStatus(withHint As Boolean, Optional token As CancellationToken = Nothing) As Task
         If withHint Then
             Hint($"正在刷新服务器 {_server.Name} 的状态...", HintType.Info)
         End If
         _server.Status = ServerStatus.Pinging
         RunInUi(Sub() UpdateServerUi())
-        Dim server = Await PageInstanceServer.PingServer(_server)
+        Dim server = Await PageInstanceServer.PingServer(_server, token)
         UpdateServerInfo(server)
     End Function
     

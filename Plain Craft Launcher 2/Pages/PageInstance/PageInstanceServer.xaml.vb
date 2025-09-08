@@ -1,6 +1,7 @@
 ﻿Imports System.Collections.ObjectModel
 Imports System.IO
 Imports System.Threading.Tasks
+Imports System.Windows.Threading
 Imports fNbt
 Imports PCL.Core.Link
 Imports PCL.Core.Minecraft
@@ -10,25 +11,30 @@ Public Class PageInstanceServer
 
     Public ReadOnly Shared ServerList As New List(Of MinecraftServerInfo)
     Private ReadOnly Shared ServerCardList As New List(Of ServerCard)
+    
+    Private _lastRefresh As DateTime = DateTime.MinValue
+    Private Const DebounceInterval As Integer = 2000
 
     Private Async Sub PageLoaded(e As Object, sender As RoutedEventArgs) Handles Me.Loaded
         ServerList.Clear()
         ServerCardList.Clear()
         PanServers.Children.Clear()
-        
-        await LoadServersFromFile()
-        
+
+        Await LoadServersFromFile()
         RefreshTip()
+
+        PanServers.BeginInit() ' 暂停布局
         For Each server In ServerList
             Dim serverCard = New ServerCard()
             AddHandler serverCard.ChildCountZero, AddressOf MyChild_ChildCountZero
             serverCard.UpdateServerInfo(server)
             ServerCardList.Add(serverCard)
             PanServers.Children.Add(serverCard)
-            Task.Run(Async Function() 
-                Await serverCard.RefreshServerStatus(False)
-            End Function)
         Next
+        
+        PanServers.EndInit() ' 恢复布局
+        
+        PingAllServers()
     End Sub
     
     Private Sub PageInstanceServer_IsVisibleChanged(sender As Object, e As DependencyPropertyChangedEventArgs) Handles Me.IsVisibleChanged
@@ -72,8 +78,18 @@ Public Class PageInstanceServer
     End Sub
 
     Private Sub BtnRefresh_Click(sender As Object, e As MouseButtonEventArgs)
+        If (DateTime.Now - _lastRefresh).TotalMilliseconds < DebounceInterval Then
+            Hint("请勿频繁刷新！", HintType.Info)
+            Return
+        End If
+        _lastRefresh = DateTime.Now
         Hint("正在刷新服务器列表，请稍候...", HintType.Info)
-        RefreshServers()
+        Try
+            RefreshServers()
+        Catch ex As Exception
+            Log(ex, "刷新服务器列表失败", LogLevel.Feedback)
+            Hint("刷新服务器列表失败：" & ex.Message, HintType.Critical)
+        End Try
     End Sub
 
     Private Async Sub BtnAddServer_Click(sender As Object, e As MouseButtonEventArgs)
@@ -94,7 +110,7 @@ Public Class PageInstanceServer
             ServerCardList.Add(serverCard)
             PanServers.Children.Add(serverCard)
 
-            Task.Run(Async Function() 
+            Task.Run(Async Function()
                 Await serverCard.RefreshServerStatus(False)
             End Function)
             
@@ -126,7 +142,7 @@ Public Class PageInstanceServer
             Return (String.Empty, String.Empty, False)
         End If
 
-        Dim newAddress As String = MyMsgBoxInput("编辑服务器信息", "请输入新的服务器地址：", server.Address, 
+        Dim newAddress As String = MyMsgBoxInput("编辑服务器信息", "请输入新的服务器地址：", server.Address,
                                                  New Collection(Of Validate) From {New ValidateNullOrWhiteSpace()})
         If String.IsNullOrEmpty(newAddress) Then 
             Return (String.Empty, String.Empty, False)
@@ -168,7 +184,7 @@ Public Class PageInstanceServer
                     Dim ip As String = If(server.Get(Of NbtString)("ip")?.Value, "Unknown")
                     Dim name As String = If(server.Get(Of NbtString)("name")?.Value, "Unknown")
                     Dim iconBase64 As String = server.Get(Of NbtString)("icon")?.Value
-                    
+
                     Log($"服务器 {i + 1}:")
                     Log($"  名字: {name}")
                     Log($"  IP: {ip}")
@@ -191,9 +207,9 @@ Public Class PageInstanceServer
     ''' </summary>
     Private Sub UpdateServerUi()
         PanServers.Children.Clear()
-        
+
         RefreshTip()
-        
+
         For Each server In ServerList
             Dim serverCard = New ServerCard()
             AddHandler serverCard.ChildCountZero, AddressOf MyChild_ChildCountZero
@@ -222,37 +238,70 @@ Public Class PageInstanceServer
     ''' <summary>
     ''' 异步ping所有服务器
     ''' </summary>
-    Private Sub PingAllServers()
+'    Private Sub PingAllServers()
+'        If _cts IsNot Nothing Then
+'            _cts.Cancel()
+'            _cts.Dispose() ' 清理旧的 CancellationTokenSource
+'        End If
+'
+'        ' 创建新的 CancellationTokenSource
+'        _cts = New CancellationTokenSource()
+'        Dim token As CancellationToken = _cts.Token
+'        For Each server In ServerCardList
+'            Dim currentServer = server
+'            Task.Run(Async Function()
+'                Await currentServer.RefreshServerStatus(False) 
+'            End Function, token)
+'        Next
+'    End Sub
+    
+    Private Async Sub PingAllServers()
         If _cts IsNot Nothing Then
             _cts.Cancel()
-            _cts.Dispose() ' 清理旧的 CancellationTokenSource
+            _cts.Dispose()
         End If
 
-        ' 创建新的 CancellationTokenSource
         _cts = New CancellationTokenSource()
         Dim token As CancellationToken = _cts.Token
-        For Each server In ServerCardList
-            Dim currentServer = server
-            Task.Run(Async Function() 
-                Await currentServer.RefreshServerStatus(False) 
-            End Function, token)
-        Next
+        Dim semaphore As New SemaphoreSlim(5) ' 限制最多 5 个并发任务
+
+        Dim tasks As New List(Of Task)
+        Try
+            Dim snapshot = ServerCardList.ToList()
+            For Each server In snapshot
+                Dim currentServer = server
+                Await semaphore.WaitAsync(token)
+                tasks.Add(Task.Run(Async Function()
+                    Try
+                        Await currentServer.RefreshServerStatus(False, token)
+                    Catch ex As Exception
+                        Log(ex, $"Ping 服务器失败: {currentServer}", LogLevel.Debug)
+                    Finally
+                        semaphore.Release()
+                    End Try
+                End Function, token))
+            Next
+
+            Await Task.WhenAll(tasks) ' 等待所有任务完成
+        Catch ex As OperationCanceledException
+            Log("PingAllServers 被取消", LogLevel.Debug)
+        Catch ex As Exception
+            Log(ex, "PingAllServers 失败", LogLevel.Debug)
+        End Try
     End Sub
 
     ''' <summary>
     ''' ping单个服务器
     ''' </summary>
-    Public Async Shared Function PingServer(server As MinecraftServerInfo) As Task(of MinecraftServerInfo)
+    Public Async Shared Function PingServer(server As MinecraftServerInfo, token As CancellationToken) As Task(Of MinecraftServerInfo)
         Try
-            ' Ping服务器
-            Dim addr = Await ServerAddressResolver.GetReachableAddressAsync(server.Address)
-            
+            Dim addr = Await ServerAddressResolver.GetReachableAddressAsync(server.Address, token)
             Using query = New McPing(addr.Ip, addr.Port)
                 Dim result As McPingResult
                 Log("Pinging server: " & server.Address & ":" & addr.Port)
-                result = Await query.PingAsync()
+                result = Await query.PingAsync(token) ' 传递 token
                 Log("Ping result: " & If(result IsNot Nothing, "Success", "Failed"))
-                If result <> Nothing
+                If result IsNot Nothing Then
                     server.Status = ServerStatus.Online
                     server.PlayerCount = result.Players.Online
                     server.MaxPlayers = result.Players.Max
@@ -264,13 +313,16 @@ Public Class PageInstanceServer
                     server.Status = ServerStatus.Offline
                 End If
             End Using
+        Catch ex As OperationCanceledException
+            server.Status = ServerStatus.Offline
+            Log("Ping 服务器被取消: " & server.Address, LogLevel.Debug)
         Catch ex As Exception
             server.Status = ServerStatus.Offline
-            Log(ex, $"Ping服务器失败: {server.Address}:{server.Port}", LogLevel.Debug)
+            Log(ex, $"Ping 服务器失败: {server.Address}:{server.Port}", LogLevel.Debug)
         End Try
         Return server
     End Function
-    
+
     Public Shared Sub RemoveServer(server As ServerCard)
         Dim index = GetServerIndex(server)
         ServerCardList.Remove(server)
@@ -285,7 +337,7 @@ End Class
 ''' </summary>
 Public Class MinecraftServerInfo
     Public Property Name As String
-    Public Property Address As String  
+    Public Property Address As String
     Public Property Port As Integer = 25565
     Public Property Status As ServerStatus = ServerStatus.Unknown
     Public Property PlayerCount As Integer = 0
@@ -301,7 +353,9 @@ End Class
 ''' </summary>
 Public Enum ServerStatus
     Unknown
-    Online 
+    Online
     Offline
     Pinging
 End Enum
+
+
