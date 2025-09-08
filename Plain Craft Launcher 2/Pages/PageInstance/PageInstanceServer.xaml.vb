@@ -1,7 +1,6 @@
 ﻿Imports System.Collections.ObjectModel
 Imports System.IO
 Imports System.Threading.Tasks
-Imports System.Windows.Threading
 Imports fNbt
 Imports PCL.Core.Link
 Imports PCL.Core.Minecraft
@@ -26,7 +25,8 @@ Public Class PageInstanceServer
         PanServers.BeginInit() ' 暂停布局
         For Each server In ServerList
             Dim serverCard = New ServerCard()
-            AddHandler serverCard.ChildCountZero, AddressOf MyChild_ChildCountZero
+            AddHandler serverCard.RemoveServer, AddressOf RemoveServerEvent
+            AddHandler serverCard.EditServer, AddressOf EditServer
             serverCard.UpdateServerInfo(server)
             ServerCardList.Add(serverCard)
             PanServers.Children.Add(serverCard)
@@ -47,15 +47,84 @@ Public Class PageInstanceServer
         End If
     End Sub
     
-    Private Sub MyChild_ChildCountZero(sender As Object, e As EventArgs)
-        RefreshTip()
+    Private Async Sub RemoveServerEvent(sender As Object, e As EventArgs)
+        ' Get server index
+        Dim index As Integer = PanServers.Children.IndexOf(sender)
+        If index < 0 Then
+            Hint("无法找到服务器在列表中的索引", HintType.Critical)
+            Exit Sub
+        End If
+
+        ' Read NBT file
+        Dim nbtData As NbtList = Await NbtFileHandler.ReadTagInNbtFileAsync(Of NbtList)(IO.Path.Combine(PageInstanceLeft.Instance.PathIndie, "servers.dat"), "servers")
+        If nbtData Is Nothing Then
+            Hint("无法读取服务器数据文件", HintType.Critical)
+            Exit Sub
+        End If
+        
+        ' Remove server from NBT data
+        nbtData.RemoveAt(index)
+        Dim clonedNbtData = CType(nbtData.Clone(), NbtList)
+    
+        ' Write back to NBT file
+        If Not await NbtFileHandler.WriteTagInNbtFileAsync(clonedNbtData, PageInstanceLeft.Instance.PathIndie + "servers.dat") Then
+            Hint("无法写入服务器数据文件", HintType.Critical)
+            Exit Sub
+        End If
+
+        ' Remove server from list and UI
+        ServerList.RemoveAt(index)
+        ServerCardList.Remove(sender)
+        If ServerList.Count = 0 Then
+            RefreshTip()
+        End If
+
+        ' Remove UI element
+        PanServers.Children.Remove(sender)
+
+        ' Success message
+        Hint("服务器已移除", HintType.Finish)
     End Sub
     
-    Public Shared Function GetServerIndex(serverCard) As Integer
-        ' 查找服务器在列表中的索引
-        Log("ServerCardList Count: " & ServerCardList.Count, LogLevel.Debug)
-        Return ServerCardList.IndexOf(serverCard)
-    End Function
+    Private Async Sub EditServer(sender As Object, e As ServerCard.ResultEventArgs)
+        ' Read NBT file
+        Dim nbtData As NbtList = await NbtFileHandler.ReadTagInNbtFileAsync(Of NbtList)(PageInstanceLeft.Instance.PathIndie + "servers.dat", "servers")
+        If nbtData Is Nothing Then
+            Hint("无法读取服务器数据文件", HintType.Critical)
+            Exit Sub
+        End If
+
+        ' Get server index
+        Dim index As Integer = PanServers.Children.IndexOf(sender)
+        If index < 0 OrElse index >= nbtData.Count Then
+            Hint("无法找到服务器在列表中的索引", HintType.Critical)
+            Exit Sub
+        End If
+
+        ' Verify server data
+        Dim server = TryCast(nbtData(index), NbtCompound)
+
+        ' Update server data
+        server("name") = New NbtString("name", e.Param1)
+        server("ip") = New NbtString("ip", e.Param2)
+
+        ' Write updated NBT data
+        Dim clonedNbtData = CType(nbtData.Clone(), NbtList)
+        If Not Await NbtFileHandler.WriteTagInNbtFileAsync(clonedNbtData, PageInstanceLeft.Instance.PathIndie + "servers.dat") Then
+            Hint("无法写入服务器数据文件", HintType.Critical)
+            Exit Sub
+        End If
+        
+        Dim serverCard = TryCast(sender, ServerCard)
+        
+        serverCard.Server.Name = e.Param1
+        serverCard.Server.Address = e.Param2
+        
+        Await serverCard.RefreshServerStatus(True)
+
+        ' Success message
+        Hint("服务器信息已更新", HintType.Finish)
+    End Sub
 
     ''' <summary>
     ''' 刷新服务器列表
@@ -105,7 +174,8 @@ Public Class PageInstanceServer
             RefreshTip()
 
             Dim serverCard = New ServerCard()
-            AddHandler serverCard.ChildCountZero, AddressOf MyChild_ChildCountZero
+            AddHandler serverCard.RemoveServer, AddressOf RemoveServerEvent
+            AddHandler serverCard.EditServer, AddressOf EditServer
             serverCard.UpdateServerInfo(newServer)
             ServerCardList.Add(serverCard)
             PanServers.Children.Add(serverCard)
@@ -212,7 +282,8 @@ Public Class PageInstanceServer
 
         For Each server In ServerList
             Dim serverCard = New ServerCard()
-            AddHandler serverCard.ChildCountZero, AddressOf MyChild_ChildCountZero
+            AddHandler serverCard.RemoveServer, AddressOf RemoveServerEvent
+            AddHandler serverCard.EditServer, AddressOf EditServer
             serverCard.UpdateServerInfo(server)
             ServerCardList.Add(serverCard)
             PanServers.Children.Add(serverCard)
@@ -234,26 +305,6 @@ Public Class PageInstanceServer
     End Sub
     
     Private _cts As CancellationTokenSource = Nothing
-
-    ''' <summary>
-    ''' 异步ping所有服务器
-    ''' </summary>
-'    Private Sub PingAllServers()
-'        If _cts IsNot Nothing Then
-'            _cts.Cancel()
-'            _cts.Dispose() ' 清理旧的 CancellationTokenSource
-'        End If
-'
-'        ' 创建新的 CancellationTokenSource
-'        _cts = New CancellationTokenSource()
-'        Dim token As CancellationToken = _cts.Token
-'        For Each server In ServerCardList
-'            Dim currentServer = server
-'            Task.Run(Async Function()
-'                Await currentServer.RefreshServerStatus(False) 
-'            End Function, token)
-'        Next
-'    End Sub
     
     Private Async Sub PingAllServers()
         If _cts IsNot Nothing Then
@@ -322,14 +373,6 @@ Public Class PageInstanceServer
         End Try
         Return server
     End Function
-
-    Public Shared Sub RemoveServer(server As ServerCard)
-        Dim index = GetServerIndex(server)
-        ServerCardList.Remove(server)
-        If index >= 0 AndAlso index < ServerList.Count Then
-            ServerList.RemoveAt(index)
-        End If
-    End Sub
 End Class
 
 ''' <summary>
