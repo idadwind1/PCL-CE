@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using PCL.Core.App;
 using PCL.Core.Logging;
+using PCL.Core.Utils.Exts;
 using Polly;
 
 namespace PCL.Core.Net;
@@ -216,7 +217,7 @@ public class HttpRequestBuilder
         _request.VersionPolicy = HttpVersionPolicy.RequestVersionOrLower;
         _makeLog($"向 {_request.RequestUri} 发起 {_request.Method} 请求");
         var responseMessage = await NetworkService.GetRetryPolicy(retryTimes, retryPolicy)
-            .ExecuteAsync(async () => await client.SendAsync(_request, _completionOption));
+            .ExecuteAsync(async () => await client.SendAsync(_request.Clone(), _completionOption));
         var responseUri = responseMessage.RequestMessage?.RequestUri;
         if (responseUri != null && _request.RequestUri != responseUri) _makeLog($"已重定向至 {responseUri}");
         _makeLog($"已获取请求结果，返回 HTTP 状态码: {responseMessage.StatusCode}");
