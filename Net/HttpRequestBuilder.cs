@@ -60,7 +60,7 @@ public class HttpRequestBuilder
     }
 
     /// <summary>
-    /// 设置一个请求所用的 Cookie，如果已设置过对应的键，则旧的会被覆盖
+    /// 设置一个请求所用的 Cookie，如果已设置过对应的键，旧的则会被覆盖
     /// </summary>
     /// <param name="key"></param>
     /// <param name="value"></param>
@@ -72,7 +72,7 @@ public class HttpRequestBuilder
     }
 
     /// <summary>
-    /// 设置多个请求所用的 Cookie，如果已设置过对应的键，则旧的会被覆盖
+    /// 设置多个请求所用的 Cookie，如果已设置过对应的键，旧的则会被覆盖
     /// </summary>
     /// <param name="cookies"></param>
     /// <returns></returns>
