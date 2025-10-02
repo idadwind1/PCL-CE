@@ -41,11 +41,6 @@ Public Module ModJava
     '        End SyncLock
     '    End Function
 
-    Public Sub JavaSetCache(caches As List(Of JavaLocalCache))
-        Dim newCache = JToken.FromObject(caches).ToString(Newtonsoft.Json.Formatting.None)
-        Setup.Set("LaunchArgumentJavaUser", newCache)
-    End Sub
-
 
     '    Public Function JavaGetCache() As List(Of JavaLocalCache)
     '        Dim storeCache = Nothing
@@ -68,7 +63,6 @@ Public Module ModJava
                 Return False
             Else
                 Javas.Add(jPath)
-                JavaSetCache(Javas.GetCache())
                 Return True
             End If
         Catch ex As Exception

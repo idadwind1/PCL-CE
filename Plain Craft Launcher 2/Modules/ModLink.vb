@@ -1,14 +1,10 @@
 ﻿Imports System.Runtime.InteropServices
-Imports System.Net.Sockets
-Imports Makaretu.Nat
-Imports STUN
 Imports System.Threading.Tasks
 Imports PCL.Core.IO
 Imports PCL.Core.Link
 Imports PCL.Core.Link.EasyTier
 Imports PCL.Core.Link.Lobby
 Imports PCL.Core.Link.Natayark.NatayarkProfileManager
-Imports PCL.Core.Utils
 Imports PCL.Core.Utils.OS
 
 Public Module ModLink
