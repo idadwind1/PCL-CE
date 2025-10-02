@@ -86,6 +86,7 @@ Public Class PageSetupJava
                                                                         End If
                                                                         target.IsEnabled = Not target.IsEnabled
                                                                         UpdateEnableStyle(target.IsEnabled)
+                                                                        JavaService.SaveToConfig()
                                                                     Catch ex As Exception
                                                                         Log(ex, "调整 Java 启用状态失败", LogLevel.Hint)
                                                                     End Try
