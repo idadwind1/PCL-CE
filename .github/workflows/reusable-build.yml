@@ -29,9 +29,9 @@ jobs:
           echo "describe=$describe" >> $GITHUB_ENV
 
       - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '9.0.307'
+          global-json-file: dotnet_global.json
 
       - name: Update Help
         continue-on-error: true
