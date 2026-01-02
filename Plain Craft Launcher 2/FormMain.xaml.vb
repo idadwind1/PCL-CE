@@ -127,6 +127,7 @@ Public Class FormMain
         PageSetupUI.BackgroundRefresh(False, True)
         MusicRefreshPlay(False, True)
         '扩展按钮
+        BtnExtraUpdateRestart.ShowCheck = AddressOf BtnExtraUpdateRestart_ShowCheck
         BtnExtraDownload.ShowCheck = AddressOf BtnExtraDownload_ShowCheck
         BtnExtraBack.ShowCheck = AddressOf BtnExtraBack_ShowCheck
         BtnExtraApril.ShowCheck = AddressOf BtnExtraApril_ShowCheck
@@ -433,7 +434,7 @@ Public Class FormMain
         'Await LobbyController.CloseAsync().ConfigureAwait(False)
         IsProgramEnded = True
         AniControlEnabled += 1
-        If IsUpdateWaitingRestart Then UpdateRestart(False)
+        If IsUpdateWaitingRestart Then UpdateRestart(False, triggerRestart := False)
         If ReturnCode = ProcessReturnValues.Exception Then
             If Not IsLogShown Then
                 FeedbackInfo()
@@ -1031,6 +1032,7 @@ Public Class FormMain
         SetupLog = 5
         SetupFeedback = 6
         SetupGameLink = 7
+        SetupUpdate = 8
 
         ToolsGameLink = 1
         ToolsLauncherHelp = 2
@@ -1478,6 +1480,14 @@ Public Class FormMain
 
 #Region "附加按钮"
 
+    '更新重启
+    Private Sub BtnExtraUpdateRestart_Click() Handles BtnExtraUpdateRestart.Click
+        UpdateRestart(True, True)
+    End Sub
+    Private Function BtnExtraUpdateRestart_ShowCheck() As Boolean
+        Return IsUpdateWaitingRestart
+    End Function
+    
     '音乐
     Private Sub BtnExtraMusic_Click(sender As Object, e As EventArgs) Handles BtnExtraMusic.Click
         MusicControlPause()

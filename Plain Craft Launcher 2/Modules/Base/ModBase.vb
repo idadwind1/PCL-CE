@@ -2927,7 +2927,7 @@ NextElement:
                     $"你的 PCL 不是最新版，因此无法提交反馈。{vbCrLf}请在更新后，确认该问题在最新版中依然存在，然后再提交反馈。",
                     $"你的 PCL 检查更新失败，因此无法提交反馈。{vbCrLf}请连接到互联网，在检查更新后，确认该问题在最新版中依然存在，然后再提交反馈。"),
                     "无法提交反馈", If(stat = VersionStatus.NotLatest, "更新", "重新检查更新"), "取消") = 1 Then
-                    UpdateCheckByButton()
+                    FrmMain.PageChange(FormMain.PageType.Setup, FormMain.PageSubType.SetupUpdate)
                 End If
             End If
             Return False

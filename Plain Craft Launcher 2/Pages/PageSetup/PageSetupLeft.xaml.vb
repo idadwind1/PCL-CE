@@ -48,6 +48,8 @@ Public Class PageSetupLeft
             PageID = FormMain.PageSubType.SetupUI
         ElseIf Not Setup.Get("UiHiddenSetupSystem") Then
             PageID = FormMain.PageSubType.SetupSystem
+        ElseIf Not Setup.Get("UiHiddenSetupUpdate") Then
+            PageID = FormMain.PageSubType.SetupUpdate
         Else
             PageID = FormMain.PageSubType.SetupLaunch
         End If
@@ -56,7 +58,7 @@ Public Class PageSetupLeft
     ''' <summary>
     ''' 勾选事件改变页面。
     ''' </summary>
-    Private Sub PageCheck(sender As MyListItem, e As EventArgs) Handles ItemLaunch.Check, ItemSystem.Check, ItemUI.Check, ItemAbout.Check, ItemFeedback.Check, ItemLog.Check, ItemGameLink.Check
+    Private Sub PageCheck(sender As MyListItem, e As EventArgs) Handles ItemLaunch.Check, ItemSystem.Check, ItemUI.Check, ItemAbout.Check, ItemFeedback.Check, ItemLog.Check, ItemGameLink.Check, ItemUpdate.Check
         '尚未初始化控件属性时，sender.Tag 为 Nothing，会跳过切换，且由于 PageID 默认为 0 而切换到第一个页面
         '若使用 IsLoaded，则会导致模拟点击不被执行（模拟点击切换页面时，控件的 IsLoaded 为 False）
         If sender.Tag IsNot Nothing Then PageChange(Val(sender.Tag))
@@ -77,6 +79,9 @@ Public Class PageSetupLeft
             Case FormMain.PageSubType.SetupSystem
                 If FrmSetupSystem Is Nothing Then FrmSetupSystem = New PageSetupSystem
                 Return FrmSetupSystem
+            Case FormMain.PageSubType.SetupUpdate
+                If FrmSetupUpdate Is Nothing Then FrmSetupUpdate = New PageSetupUpdate
+                Return FrmSetupUpdate
             Case FormMain.PageSubType.SetupAbout
                 If FrmSetupAbout Is Nothing Then FrmSetupAbout = New PageSetupAbout
                 Return FrmSetupAbout
@@ -152,7 +157,7 @@ Public Class PageSetupLeft
                     ItemSystem.Checked = True
                 End If
             Case FormMain.PageSubType.SetupGameLink
-                If MyMsgBox("是否要初始化联机页的所有设置？该操作不可撤销。", "初始化确认",, "取消", IsWarn:=True) = 1 Then
+                If MyMsgBox("是否要初始化 联机 页面的所有设置？该操作不可撤销。", "初始化确认",, "取消", IsWarn:=True) = 1 Then
                     If FrmSetupGameLink Is Nothing Then FrmSetupGameLink = New PageSetupGameLink
                     FrmSetupGameLink.Reset()
                     ItemGameLink.Checked = True
