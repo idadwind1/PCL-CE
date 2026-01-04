@@ -1,15 +1,13 @@
-
 Imports System.IO.Compression
 Imports System.Net.Http
-Imports System.Text.Json
 Imports System.Text.Json.Nodes
 Imports PCL.Core.Minecraft
 Imports PCL.Core.Utils
 Imports PCL.Core.Utils.OS
-Imports PCL.Core.Net
 Imports PCL.Core.App
 Imports PCL.Core.Utils.Secret
 Imports PCL.Core.Net.Http.Client
+Imports PCL.Core.Utils.Exts
 
 Public Module ModLaunch
 
@@ -2363,7 +2361,7 @@ NextInstance:
 
         '获取窗口标题
         Dim WindowTitle As String = Setup.Get("VersionArgumentTitle", instance:=McInstanceSelected)
-        If WindowTitle = "" AndAlso Not Setup.Get("VersionArgumentTitleEmpty", instance:=McInstanceSelected) Then WindowTitle = Setup.Get("LaunchArgumentTitle")
+        If WindowTitle.IsNullOrEmpty() AndAlso Not Setup.Get("VersionArgumentTitleEmpty", instance:=McInstanceSelected) Then WindowTitle = Setup.Get("LaunchArgumentTitle")
         WindowTitle = ArgumentReplace(WindowTitle, False)
 
         'JStack 路径
