@@ -1890,6 +1890,30 @@ Retry:
         Return CompFilesCache(ProjectId)
     End Function
 
+    Public Function CompFileNameGet(proj As CompProject, file As CompFile) As String
+        Dim FileName As String
+        If proj.TranslatedName = proj.RawName Then
+            FileName = file.FileName
+        Else
+            Dim ChineseName As String = proj.TranslatedName.BeforeFirst(" (").BeforeFirst(" - ").
+                        Replace("\", "＼").Replace("/", "／").Replace("|", "｜").Replace(":", "：").Replace("<", "＜").Replace(">", "＞").Replace("*", "＊").Replace("?", "？").Replace("""", "").Replace("： ", "：")
+            Select Case Setup.Get("ToolDownloadTranslateV2")
+                Case 0
+                    FileName = $"【{ChineseName}】{file.FileName}"
+                Case 1
+                    FileName = $"[{ChineseName}] {file.FileName}"
+                Case 2
+                    FileName = $"{ChineseName}-{file.FileName}"
+                Case 3
+                    FileName = $"{file.FileName}-{ChineseName}"
+                Case Else
+                    FileName = file.FileName
+            End Select
+        End If
+        If file.Type = CompType.Mod Then FileName = FileName.Replace("~", "-") '~ 会导致 Mixin 加载失败
+        Return FileName
+    End Function
+
     ''' <summary>
     ''' 预载包含大量 CompFile 的卡片，添加必要的元素和前置列表。
     ''' </summary>

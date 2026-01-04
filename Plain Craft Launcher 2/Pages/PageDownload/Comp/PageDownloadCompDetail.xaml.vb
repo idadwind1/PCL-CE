@@ -580,26 +580,7 @@ GroupDone:
                     End If
                 End If
                 '获取基本信息
-                Dim FileName As String
-                If _project.TranslatedName = _project.RawName Then
-                    FileName = File.FileName
-                Else
-                    Dim ChineseName As String = _project.TranslatedName.BeforeFirst(" (").BeforeFirst(" - ").
-                        Replace("\", "＼").Replace("/", "／").Replace("|", "｜").Replace(":", "：").Replace("<", "＜").Replace(">", "＞").Replace("*", "＊").Replace("?", "？").Replace("""", "").Replace("： ", "：")
-                    Select Case Setup.Get("ToolDownloadTranslateV2")
-                        Case 0
-                            FileName = $"【{ChineseName}】{File.FileName}"
-                        Case 1
-                            FileName = $"[{ChineseName}] {File.FileName}"
-                        Case 2
-                            FileName = $"{ChineseName}-{File.FileName}"
-                        Case 3
-                            FileName = $"{File.FileName}-{ChineseName}"
-                        Case Else
-                            FileName = File.FileName
-                    End Select
-                End If
-                If File.Type = CompType.Mod Then FileName = FileName.Replace("~", "-") '~ 会导致 Mixin 加载失败
+                Dim FileName = CompFileNameGet(_project, File)
                 RunInUi(
                 Sub()
                     '弹窗要求选择保存位置
