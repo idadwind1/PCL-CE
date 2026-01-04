@@ -1,7 +1,9 @@
-﻿Imports System.Threading.Tasks
+﻿Imports System.Collections.Concurrent
 Imports System.Net.Http
-Imports System.Collections.Concurrent
+Imports System.Threading.Tasks
+Imports Dapper
 Imports LiteDB
+Imports Microsoft.Data.Sqlite
 Imports PCL.Core.Utils
 
 Public Module ModComp
@@ -133,41 +135,44 @@ Public Module ModComp
 
 #Region "CompDatabase | Mod 数据库"
 
-    Private _compDbLock As New Object()
-    Private _CompDatabase As LiteDatabase = Nothing
-    Private ReadOnly Property CompDatabase As LiteDatabase
+    Private ReadOnly _dbInitializer As New Lazy(Of String)(AddressOf _InitializeAndGetConnectionString)
+
+    Private ReadOnly Property CompDBConnectionString As String
         Get
-            SyncLock _compDbLock
-                If _CompDatabase Is Nothing Then
-                    Dim dbPath = $"{PathTemp}Cache\ModData.db"
-                    If Not File.Exists(dbPath) Then
-                        Directory.CreateDirectory(System.IO.Path.GetDirectoryName(dbPath))
-                        Using compressedDbData As Stream = GetResourceStream("Resources/ModData.dbcp")
-                            Log($"[DB] 解压 ModData 中")
-                            Using trueDbFile As New IO.Compression.GZipStream(compressedDbData, Compression.CompressionMode.Decompress)
-                                Using uncompressedDbFile As New FileStream(dbPath, FileMode.Create, FileAccess.ReadWrite, FileShare.Read)
-                                    trueDbFile.CopyTo(uncompressedDbFile)
-                                End Using
-                            End Using
-                            Log($"[DB] 已更新本地 ModData {dbPath}")
-                        End Using
-                    End If
-                    _CompDatabase = New LiteDatabase(dbPath)
-                    Log($"[DB] 已加载 ModData，共 {_CompDatabase.GetCollection("ModTranslation").Count()} 条数据")
-                End If
-            End SyncLock
-            Return _CompDatabase
+            Return _dbInitializer.Value
+        End Get
+    End Property
+
+    Private Function _InitializeAndGetConnectionString() As String
+        Dim dbPath = $"{PathTemp}Cache\ModData.sqlite"
+        If Not File.Exists(dbPath) Then
+            Directory.CreateDirectory(IO.Path.GetDirectoryName(dbPath))
+            Log($"[DB] 解压 ModData (SQLite) 中")
+            Using compressedDbData As Stream = GetResourceStream("Resources/ModData.dbcp")
+                Using trueDbFile As New IO.Compression.GZipStream(compressedDbData, Compression.CompressionMode.Decompress)
+                    Using uncompressedDbFile As New FileStream(dbPath, FileMode.Create, FileAccess.ReadWrite, FileShare.Read)
+                        trueDbFile.CopyTo(uncompressedDbFile)
+                    End Using
+                End Using
+            End Using
+        End If
+        Return $"Data Source={dbPath};Cache=Shared"
+    End Function
+
+    Private ReadOnly Property CompDB As SqliteConnection
+        Get
+            Dim conn = New SqliteConnection(_dbInitializer.Value)
+            conn.Open()
+            Return conn
         End Get
     End Property
 
     Private Function GetCompWikiEntryBySlug(slug As String) As CompDatabaseEntry
-        Dim dataCollection = CompDatabase.GetCollection(Of CompDatabaseEntry)("ModTranslation")
-        Dim paSlug = New BsonValue(slug)
-        Dim queryCmd = Query.Or(
-                Query.EQ("CurseForgeSlug", paSlug),
-                Query.EQ("ModrinthSlug", paSlug)
-                )
-        Return dataCollection.Find(queryCmd).FirstOrDefault()
+        Using conn = CompDB
+            Return conn.QueryFirstOrDefault(Of CompDatabaseEntry)(
+            "SELECT * FROM ModTranslation WHERE CurseForgeSlug = @s OR ModrinthSlug = @s LIMIT 1",
+            New With {Key .s = slug})
+        End Using
     End Function
 
     Private Class CompDatabaseEntry
@@ -1168,22 +1173,25 @@ NoSubtitle:
         If IsChineseSearch AndAlso (Request.Type = CompType.Mod OrElse Request.Type = CompType.DataPack) Then
             '构造搜索请求
             Dim SearchEntries As New List(Of SearchEntry(Of CompDatabaseEntry))
-            Dim datas = CompDatabase.GetCollection(Of CompDatabaseEntry)("ModTranslation")
-            Dim queryCmd = Query.Or(
-                Query.Contains("ChineseName", RawFilter),
-                Query.Contains("CurseForgeSlug", RawFilter),
-                Query.Contains("ModrinthSlug", RawFilter)
-                )
-            Dim searchRes = datas.Find(queryCmd)
-            For Each searchItem In searchRes
-                If searchItem.ChineseName.Contains("动态的树") Then Continue For
-                SearchEntries.Add(New SearchEntry(Of CompDatabaseEntry) With {
-                    .Item = searchItem,
-                    .SearchSource = New List(Of KeyValuePair(Of String, Double)) From {
-                        New KeyValuePair(Of String, Double)(searchItem.ChineseName & If(searchItem.CurseForgeSlug, "") & If(searchItem.ModrinthSlug, ""), 1)
+            Using conn = CompDB
+                Dim sql = "SELECT * FROM ModTranslation WHERE ChineseName LIKE @p OR CurseForgeSlug LIKE @p OR ModrinthSlug LIKE @p"
+                Dim searchRes = conn.Query(Of CompDatabaseEntry)(sql, New With {Key .p = RawFilter})
+                For Each searchItem In searchRes
+                    If searchItem.ChineseName.Contains("动态的树") Then Continue For
+                    Dim entry As New SearchEntry(Of CompDatabaseEntry) With {
+                        .Item = searchItem,
+                        .SearchSource = New List(Of KeyValuePair(Of String, Double)) From {
+                            New KeyValuePair(Of String, Double)(
+                                searchItem.ChineseName &
+                                If(searchItem.CurseForgeSlug, "") &
+                                If(searchItem.ModrinthSlug, ""),
+                                1.0
+                            )
+                        }
                     }
-                })
-            Next
+                    SearchEntries.Add(entry)
+                Next
+            End Using
             '获取搜索结果
             Dim SearchResults = Search(SearchEntries, Request.SearchText, 3)
             If Not SearchResults.Any() Then Throw New Exception("无搜索结果，请尝试搜索英文名称")
