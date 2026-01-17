@@ -176,7 +176,7 @@ Public Module ModComp
                     New With {Key .s = slug})
             End Using
         Catch ex As Exception
-            Log(ex, "ModComp", "获取模组翻译信息失败")
+            Log(ex, "获取模组翻译信息失败", LogLevel.Hint)
         End Try
     End Function
 
