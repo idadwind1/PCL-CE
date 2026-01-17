@@ -323,7 +323,7 @@ Public Class FormMain
         End If
         '解除帮助页面的隐藏
         If LastVersionCode <= 205 Then
-            Setup.Set("UiHiddenOtherHelp", False)
+            Config.UI.Hide.SetupAbout = False
             Log("[Start] 已解除帮助页面的隐藏")
         End If
         '迁移旧版用户档案
