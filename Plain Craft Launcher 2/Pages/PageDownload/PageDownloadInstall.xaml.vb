@@ -1317,10 +1317,10 @@ Public Class PageDownloadInstall
     Private Function LoadFabricApiGetError() As String
         '检查 Loader
         If GetLoaderError(LoadFabricApi) IsNot Nothing Then Return GetLoaderError(LoadFabricApi)
-        If DlFabricApiLoader.Output Is Nothing Then Return If(SelectedFabric Is Nothing, "需要安装 Fabric", "获取中……")
+        If DlFabricApiLoader.Output Is Nothing Then Return If(SelectedFabric Is Nothing AndAlso SelectedQuilt Is Nothing, "需要安装 Fabric", "获取中……")
         '检查版本
         If DlFabricApiLoader.Output.Any(Function(f) IsFabricApiCompatible(f)) Then
-            Return If(SelectedFabric Is Nothing, "需要安装 Fabric", Nothing)
+            Return If(SelectedFabric Is Nothing AndAlso SelectedQuilt Is Nothing, "需要安装 Fabric", Nothing)
         Else
             Return "无可用版本"
         End If
@@ -1557,7 +1557,7 @@ Public Class PageDownloadInstall
         '检查 Loader
         If GetLoaderError(LoadQuilt) IsNot Nothing Then Return GetLoaderError(LoadQuilt)
         '检查版本
-        For Each version As JObject In DlFabricListLoader.Output.Value("game")
+        For Each version As JObject In DlQuiltListLoader.Output.Value("game")
             If version("version").ToString = _vanillaName.Replace("∞", "infinite").Replace("Combat Test 7c", "1.16_combat-3") Then
                 If SelectedLoaderName IsNot Nothing AndAlso SelectedLoaderName IsNot "Fabric" Then Return $"与 {SelectedLoaderName} 不兼容"
                 Return Nothing
