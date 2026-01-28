@@ -641,7 +641,7 @@ Retry:
     Private Function MsLoginStep1Refresh(Code As String) As String()
         McLaunchLog("开始正版验证 Step 1/6（刷新登录）")
         If String.IsNullOrEmpty(Code) Then Throw New ArgumentException("传入的 Code 为空", NameOf(Code))
-        Dim Result As String
+        Dim Result As String = Nothing
         Try
             Using response = HttpRequestBuilder.Create("https://login.live.com/oauth20_token.srf", HttpMethod.Post).
                 WithContent($"client_id={OAuthClientId}&refresh_token={Uri.EscapeDataString(Code)}&grant_type=refresh_token&scope=XboxLive.signin%20offline_access", "application/x-www-form-urlencoded").
@@ -663,7 +663,6 @@ Retry:
                             End Sub)
                 If IsIgnore Then
                     Return {"Ignore", ""}
-                    Exit Function
                 End If
             End If
         End Try
@@ -703,7 +702,7 @@ Retry:
             .RelyingParty = "http://auth.xboxlive.com",
             .TokenType = "JWT"
         }
-        Dim Result As String
+        Dim Result As String = Nothing
         Try
             Using response = HttpRequestBuilder.Create("https://user.auth.xboxlive.com/user/authenticate", HttpMethod.Post).
                 WithJsonContent(requestData).
