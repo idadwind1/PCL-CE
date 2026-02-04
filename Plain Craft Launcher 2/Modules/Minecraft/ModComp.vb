@@ -8,6 +8,7 @@ Imports System.Text.Json
 Imports PCL.Core.Utils
 Imports PCL.Core.Utils.Exts
 Imports PCL.Core.App
+Imports PCL.Core.Utils.Hash
 
 Public Module ModComp
 
@@ -147,19 +148,24 @@ Public Module ModComp
     End Property
 
     Private Function _InitializeAndGetConnectionString() As String
-        Dim dbPath = IO.Path.GetFullPath(IO.Path.Combine(PathTemp, "Cache\ModData.sqlite"))
-        If Not File.Exists(dbPath) Then
-            Directory.CreateDirectory(IO.Path.GetDirectoryName(dbPath))
-            Log($"[DB] 解压 ModData (SQLite) 中")
-            Using compressedDbData As Stream = GetResourceStream("Resources/ModData.dbcp")
-                Using trueDbFile As New IO.Compression.GZipStream(compressedDbData, Compression.CompressionMode.Decompress)
-                    Using uncompressedDbFile As New FileStream(dbPath, FileMode.Create, FileAccess.ReadWrite, FileShare.Read)
-                        trueDbFile.CopyTo(uncompressedDbFile)
-                    End Using
+        Log($"[DB] 解压 ModData (SQLite) 中")
+        Using compressedDbData As Stream = GetResourceStream("Resources/ModData.dbcp")
+            Using trueDbFile As New IO.Compression.GZipStream(compressedDbData, Compression.CompressionMode.Decompress)
+                Using ms As New MemoryStream()
+                    trueDbFile.CopyTo(ms)
+                    ms.Seek(0, SeekOrigin.Begin)
+                    Dim fileHash = SHA1Provider.Instance.ComputeHash(ms)
+                    Dim dbPath = IO.Path.GetFullPath(IO.Path.Combine(PathTemp, $"Cache\ModData{fileHash}.sqlite"))
+                    If Not File.Exists(dbPath) Then
+                        Directory.CreateDirectory(IO.Path.GetDirectoryName(dbPath))
+                        Using uncompressedDbFile As New FileStream(dbPath, FileMode.Create, FileAccess.ReadWrite, FileShare.Read)
+                            ms.CopyTo(uncompressedDbFile)
+                        End Using
+                    End If
+                    Return $"Data Source=""{dbPath}"""
                 End Using
             End Using
-        End If
-        Return $"Data Source=""{dbPath}"""
+        End Using
     End Function
 
     Private ReadOnly Property CompDB As SqliteConnection
