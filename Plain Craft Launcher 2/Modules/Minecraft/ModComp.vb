@@ -705,7 +705,7 @@ Public Module ModComp
                     Dim endName = McInstanceInfo.DropToVersion(endDrop)
                     If startDrop = endDrop Then
                         segments.Add(startName)
-                    ElseIf AllDrops?.Any AndAlso startDrop >= AllDrops.First Then
+                    ElseIf AllDrops IsNot Nothing AndAlso AllDrops.Count <> 0 AndAlso startDrop >= AllDrops.First Then
                         If endDrop < 100 Then
                             segments.Clear()
                             segments.Add("全版本")
