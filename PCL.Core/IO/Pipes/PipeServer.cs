@@ -25,7 +25,7 @@ public class PipeServer(
         PipeDirection.InOut,
         1,
         PipeTransmissionMode.Byte,
-        PipeOptions.Asynchronous,
+        PipeOptions.None,
         1024,
         1024);
 
@@ -93,6 +93,8 @@ public class PipeServer(
 
             await PipeServerStream.WaitForConnectionAsync().ConfigureAwait(false);
 
+            Process? clientProcess = null;
+
             try
             {
                 KernelInterop.GetNamedPipeClientProcessId(
@@ -107,7 +109,7 @@ public class PipeServer(
                 }
                 else
                 {
-                    var clientProcess = Process.GetProcessById(clientProcessId);
+                    clientProcess = Process.GetProcessById(clientProcessId);
 
                     _isConnected = true;
                     _LogDebug($"Connected");
@@ -149,7 +151,7 @@ public class PipeServer(
         }
         catch (IOException ioEx)
         {
-            if (!(_PipeIsConnected() && _isConnected))
+            if (_IsPipeConnedted() && _isConnected)
             {
                 _LogDebug($"Client connection has been lost");
                 doNextLoop = true;
@@ -169,7 +171,7 @@ public class PipeServer(
         {
             try
             {
-                if (_PipeIsConnected())
+                if (!_IsPipeConnedted())
                 {
                     PipeServerStream.Disconnect();
                 }
@@ -192,8 +194,8 @@ public class PipeServer(
 
     #region Helper Method
 
-    private bool _PipeIsConnected() =>
-        PipeServerStream.IsConnected;
+    private bool _IsPipeConnedted() =>
+        !PipeServerStream.IsConnected;
 
     private static bool _ValidateProcessId(int clientProcessId, int[] allowedProcessId) =>
         allowedProcessId.Length == 0 || allowedProcessId.Any(id => id == clientProcessId);
