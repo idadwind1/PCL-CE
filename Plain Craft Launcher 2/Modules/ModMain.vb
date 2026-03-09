@@ -558,6 +558,9 @@ EndHint:
     '资源信息分页声明
     Public FrmDownloadCompDetail As PageDownloadCompDetail
 
+    '主页缓存
+    Public FrmHomepageNews As PageHonepageNewsView
+
 #End Region
 
 #Region "帮助"
