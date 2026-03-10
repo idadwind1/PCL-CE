@@ -324,8 +324,8 @@ Public Class PageToolsTest
 
         '提权部分
         Try
-            NtInterop.SetPrivilege(NtInterop.SePrivilege.SeProfileSingleProcessPrivilege, True)
-            NtInterop.SetPrivilege(NtInterop.SePrivilege.SeIncreaseQuotaPrivilege, True)
+            NtInterop.SetPrivilege(NtInterop.SePrivilege.SeProfileSingleProcessPrivilege, True, False)
+            NtInterop.SetPrivilege(NtInterop.SePrivilege.SeIncreaseQuotaPrivilege, True, False)
         Catch ex As System.ComponentModel.Win32Exception
             Throw New Exception(String.Format("获取内存优化权限失败（错误代码：{0}）", ex.NativeErrorCode))
         End Try
@@ -338,7 +338,6 @@ Public Class PageToolsTest
         Dim NowType = "None"
         Try
             Dim info As Integer
-            Dim scfi As SYSTEM_FILECACHE_INFORMATION
             Dim combineInfoEx As MEMORY_COMBINE_INFORMATION_EX
             Dim _gcHandle As GCHandle
 
@@ -348,13 +347,13 @@ Public Class PageToolsTest
             NtInterop.SetSystemInformation(NtInterop.SystemInformationClass.SystemMemoryListInformation,
                                            _gcHandle.AddrOfPinnedObject(), Marshal.SizeOf(info))
             _gcHandle.Free()
-            NowType = "SystemFileCacheInformation"
-            scfi.MaximumWorkingSet = UInteger.MaxValue
-            scfi.MinimumWorkingSet = UInteger.MaxValue
-            _gcHandle = GCHandle.Alloc(scfi, GCHandleType.Pinned)
-            NtInterop.SetSystemInformation(NtInterop.SystemInformationClass.SystemFileCacheInformationEx,
-                                           _gcHandle.AddrOfPinnedObject(), Marshal.SizeOf(scfi))
-            _gcHandle.Free()
+            'NowType = "SystemFileCacheInformation"
+            'scfi.MaximumWorkingSet = UInteger.MaxValue
+            'scfi.MinimumWorkingSet = UInteger.MaxValue
+            '_gcHandle = GCHandle.Alloc(scfi, GCHandleType.Pinned)
+            'NtInterop.SetSystemInformation(NtInterop.SystemInformationClass.SystemFileCacheInformationEx,
+            '                               _gcHandle.AddrOfPinnedObject(), Marshal.SizeOf(scfi))
+            '_gcHandle.Free()
             NowType = "MemoryFlushModifiedList"
             info = 3
             _gcHandle = GCHandle.Alloc(info, GCHandleType.Pinned)
