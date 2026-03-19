@@ -1,4 +1,4 @@
-﻿Imports System.Collections.Concurrent
+Imports System.Collections.Concurrent
 Imports System.Net.Http
 Imports System.Text.Json
 Imports System.Text.Json.Serialization
@@ -836,12 +836,17 @@ Public Module ModComp
             End Function) With {.Height = 64}
         End Function
         Public Function ToListItem() As MyListItem
-            Dim result As New MyListItem()
-            result.Title = TranslatedName
-            result.Info = Description.Replace(vbCr, "").Replace(vbLf, "")
-            result.Logo = LogoUrl
-            result.Tags = Tags
-            result.Tag = Me
+            Dim result As New MyListItem With {
+                .Title = TranslatedName,
+                .Info = Description.Replace(vbCr, "").Replace(vbLf, ""),
+                .Logo = LogoUrl,
+                .Tags = Tags,
+                .Tag = Me
+            }
+
+            Dim img = DirectCast(result.PathLogo, MyImage)
+            img.CornerRadius = New CornerRadius(6)
+            img.SnapsToDevicePixels = True
             Return result
         End Function
         Public Sub ApplyLogoToMyImage(img As MyImage)
