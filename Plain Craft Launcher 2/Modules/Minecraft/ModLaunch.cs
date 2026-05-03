@@ -164,6 +164,10 @@ public static class ModLaunch
                 }, "Donate");
             }
 #endif
+        
+        #if DEBUG || DEBUGCI
+        return;
+        #endif
 
         // 正版购买提示
         if (!ModProfile.ProfileList.Any(x => x.Type == McLoginType.Ms))
@@ -178,7 +182,7 @@ public static class ModLaunch
                         "https://www.xbox.com/zh-cn/games/store/minecraft-java-bedrock-edition-for-pc/9nxp44l49shj");
             }
             else
-            {
+            {                
                 switch (ModMain.MyMsgBox("你必须先登录正版账号才能启动游戏！", "正版验证", "购买正版", "试玩", "返回",
                             Button1Action: () =>
                                 ModBase.OpenWebsite(
@@ -195,7 +199,9 @@ public static class ModLaunch
                         throw new Exception("$$");
                     }
                 }
+
             }
+
         }
     }
 
