@@ -1478,6 +1478,7 @@ public partial class FormMain
         SetupUpdate = 8,
         SetupJava = 9,
         SetupLauncherMisc = 10,
+        SetupLauncherLanguage = 11,
 
         ToolsGameLink = 1,
         ToolsLauncherHelp = 2,

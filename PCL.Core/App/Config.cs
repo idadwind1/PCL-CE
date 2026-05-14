@@ -1,4 +1,4 @@
-﻿using PCL.Core.App.Configuration;
+using PCL.Core.App.Configuration;
 
 namespace PCL.Core.App;
 
@@ -227,6 +227,27 @@ public static partial class Config
         [ConfigItem<bool>("DetailedInstanceClassification", false, ConfigSource.Local)] public partial bool DetailedInstanceClassification {  get; set; }
 
         /// <summary>
+        /// 本地化配置。
+        /// </summary>
+        [ConfigGroup("Localization", ConfigSource.Local)] partial class LocalizationConfigGroup
+        {
+            /// <summary>
+            /// UI 语言。auto 表示跟随系统语言。
+            /// </summary>
+            [ConfigItem<string>("UiLanguage", "auto")] public partial string Language { get; set; }
+
+            /// <summary>
+            /// UI 展示格式所使用的区域性。auto 表示跟随系统区域格式。
+            /// </summary>
+            [ConfigItem<string>("UiFormatCulture", "auto")] public partial string FormatCulture { get; set; }
+
+            /// <summary>
+            /// 区域覆盖。auto 表示自动判断。
+            /// </summary>
+            [ConfigItem<string>("UiRegion", "auto")] public partial string Region { get; set; }
+        }
+
+        /// <summary>
         /// 界面主题配置。
         /// </summary>
         [ConfigGroup("Theme")] partial class ThemeConfigGroup
@@ -410,6 +431,7 @@ public static partial class Config
             // 子页面 设置
             [ConfigItem<bool>("UiHiddenSetupLaunch", false, ConfigSource.Local)] public partial bool SetupLaunch { get; set; }
             [ConfigItem<bool>("UiHiddenSetupUi", false, ConfigSource.Local)] public partial bool SetupUi { get; set; }
+            [ConfigItem<bool>("UiHiddenSetupLauncherLanguage", false, ConfigSource.Local)] public partial bool SetupLauncherLanguage { get; set; }
             [ConfigItem<bool>("UiHiddenSetupLauncherMisc", false, ConfigSource.Local)] public partial bool SetupLauncherMisc { get; set; }
             [ConfigItem<bool>("UiHiddenSetupGameManage", false, ConfigSource.Local)] public partial bool SetupGameManage { get; set; }
             [ConfigItem<bool>("UiHiddenSetupJava", false, ConfigSource.Local)] public partial bool SetupJava { get; set; }
