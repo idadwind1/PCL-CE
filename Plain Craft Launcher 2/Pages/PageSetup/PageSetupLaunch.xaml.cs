@@ -5,6 +5,7 @@ using System.Windows.Input;
 using System.Windows.Threading;
 using PCL.Core.App;
 using PCL.Core.Utils.OS;
+using PCL.Core.App.Localization;
 
 namespace PCL;
 
@@ -214,9 +215,9 @@ public partial class PageSetupLaunch
         else
             SliderRamCustom.MaxValue = (int)Math.Round(Math.Floor((ramTotal - 16d) / 2d) + 33d);
         // 设置文本
-        LabRamGame.Text = $"{(ramGame == Math.Floor(ramGame) ? $"{ramGame}.0" : ramGame.ToString())} GB{(ramGame != ramGameActual ? $" (可用 {(ramGameActual == Math.Floor(ramGameActual) ? $"{ramGameActual}.0" : ramGameActual.ToString())} GB)" : "")}";
-        LabRamUsed.Text = $"{(ramUsed == Math.Floor(ramUsed) ? $"{ramUsed}.0" : ramUsed.ToString())} GB";
-        LabRamTotal.Text = $" / {(ramTotal == Math.Floor(ramTotal) ? $"{ramTotal}.0" : ramTotal.ToString())} GB";
+        LabRamGame.Text = $"{Lang.Number(ramGame, "N1")} GB{(ramGame != ramGameActual ? $" (可用 {Lang.Number(ramGameActual, "N1")} GB)" : "")}";
+        LabRamUsed.Text = $"{Lang.Number(ramUsed, "N1")} GB";
+        LabRamTotal.Text = $" / {Lang.Number(ramTotal, "N1")} GB";
         LabRamWarn.Visibility =
             ramGame == 1d && !ModJava.IsGameSet64BitJava() && !ModBase.Is32BitSystem && ModJava.Javas.ExistAnyJava()
                 ? Visibility.Visible
@@ -507,7 +508,7 @@ public partial class PageSetupLaunch
                     若在游戏启动后立即关闭启动器，崩溃检测、更改游戏标题等功能将失效。
                     如果想保留这些功能，可以选择让启动器在游戏启动后隐藏，游戏退出后自动关闭。
                     """,
-                    "提醒", "继续", "取消") == 2)
+                    "提醒", "继续", Lang.Text("Common.Action.Cancel")) == 2)
                 ComboArgumentVisibie.SelectedItem = sizeChangedEventArgs.RemovedItems[0];
     }
 
@@ -557,7 +558,7 @@ public partial class PageSetupLaunch
                                  修改此项会严重影响游戏的稳定性与性能。如果你不知道你在做什么，不要修改此选项！
                                  你确定要继续修改吗？
                                  """, "警告",
-                    "我知道我在做什么", "取消", IsWarn: true) == 2)
+                    "我知道我在做什么", Lang.Text("Common.Action.Cancel"), IsWarn: true) == 2)
             {
                 ComboAdvanceRenderer.SelectedItem = ((SelectionChangedEventArgs)e).RemovedItems[0];
             }

@@ -22,6 +22,7 @@ using PCL.Network;
 using PCL.Core.IO.Net.Http;
 using PCL;
 using PCL.Core.Minecraft.IdentityModel.Yggdrasil;
+using System.Globalization;
 
 namespace PCL;
 
@@ -46,7 +47,7 @@ public static class ModLaunch
         {
             var userChoice = ModMain.MyMsgBox(
                 $"欲启动实例 \"{ModMinecraft.McInstanceSelected.Name}\" 的路径中存在可能影响游戏正常运行的字符（非 ASCII 字符），是否仍旧启动游戏？{"\r\n"}{"\r\n"}如果不清楚具体作用，你可以先选择 \"继续\"，发现游戏在启动后很快出现崩溃的情况后再尝试修改游戏路径等操作",
-                "游戏路径检查", "继续", "返回处理", "不再提示");
+                "游戏路径检查", "继续", "返回处理", Lang.Text("Common.Hint.DoNotShowAgain"));
             if (userChoice == 2) throw new Exception("$$");
             if (userChoice == 3) States.Hint.NonAsciiGamePath = true;
         }
@@ -909,7 +910,7 @@ public static class ModLaunch
         {
             if (ModMain.MyMsgBox(
                     $"请在登录时选择 {ModBase.vbLQ}其他登录方法{ModBase.vbRQ}，然后选择 {ModBase.vbLQ}使用我的密码{ModBase.vbRQ}。{"\r\n"}如果没有该选项，请选择 {ModBase.vbLQ}设置密码{ModBase.vbRQ}，设置完毕后再登录。",
-                    "需要使用密码登录", "重新登录", "设置密码", "取消",
+                    "需要使用密码登录", "重新登录", "设置密码", Lang.Text("Common.Action.Cancel"),
                     Button2Action: () => ModBase.OpenWebsite("https://account.live.com/password/Change")) ==
                 1) goto Retry;
 
@@ -971,7 +972,7 @@ public static class ModLaunch
                     return;
                 if (ModMain.MyMsgBox(
                         $"启动器在尝试刷新账号信息时遇到了网络错误。{"\r\n"}你可以选择取消，检查网络后再次启动，也可以选择忽略错误继续启动，但可能无法游玩部分服务器。",
-                        "账号信息获取失败", "继续", "取消") == 1)
+                        "账号信息获取失败", "继续", Lang.Text("Common.Action.Cancel")) == 1)
                     IsIgnore = true;
             });
             if (IsIgnore) return new[] { "Ignore", "" };
@@ -1043,7 +1044,7 @@ public static class ModLaunch
                     return;
                 if (ModMain.MyMsgBox(
                         $"启动器在尝试刷新账号信息时(Step 2)遇到了网络错误。{"\r\n"}你可以选择取消，检查网络后再次启动，也可以选择忽略错误继续启动，但可能无法游玩部分服务器。",
-                        "账号信息获取失败", "继续", "取消") == 1)
+                        "账号信息获取失败", "继续", Lang.Text("Common.Action.Cancel")) == 1)
                     IsIgnore = true;
             });
             if (IsIgnore) return "Ignore";
@@ -1108,7 +1109,7 @@ public static class ModLaunch
 
                 if (result.Contains("2148916233"))
                 {
-                    if (ModMain.MyMsgBox("你尚未注册 Xbox 账户，请在注册后再登录。", "登录提示", "注册", "取消") == 1)
+                    if (ModMain.MyMsgBox("你尚未注册 Xbox 账户，请在注册后再登录。", "登录提示", "注册", Lang.Text("Common.Action.Cancel")) == 1)
                         ModBase.OpenWebsite("https://signup.live.com/signup");
                     throw new Exception("$$");
                 }
@@ -1149,7 +1150,7 @@ public static class ModLaunch
                         return;
                     if (ModMain.MyMsgBox(
                             $"启动器在尝试刷新账号信息时(Step 3)遇到了网络错误。{"\r\n"}你可以选择取消，检查网络后再次启动，也可以选择忽略错误继续启动，但可能无法游玩部分服务器。",
-                            "账号信息获取失败", "继续", "取消") == 1)
+                            "账号信息获取失败", "继续", Lang.Text("Common.Action.Cancel")) == 1)
                         IsIgnore = true;
                 });
                 if (IsIgnore)
@@ -1216,7 +1217,7 @@ public static class ModLaunch
                     return;
                 if (ModMain.MyMsgBox(
                         $"启动器在尝试刷新账号信息时(Step 4)遇到了网络错误。{"\r\n"}你可以选择取消，检查网络后再次启动，也可以选择忽略错误继续启动，但可能无法游玩部分服务器。",
-                        "账号信息获取失败", "继续", "取消") == 1)
+                        "账号信息获取失败", "继续", Lang.Text("Common.Action.Cancel")) == 1)
                     IsIgnore = true;
             });
             if (IsIgnore)
@@ -1263,7 +1264,7 @@ public static class ModLaunch
                     x["name"]?.ToString() == "product_minecraft" || x["name"]?.ToString() == "game_minecraft")))
             {
                 switch (ModMain.MyMsgBox("暂时无法获取到此账户信息，此账户可能没有购买 Minecraft Java Edition 或者账户的 Xbox Game Pass 已过期",
-                            "登录失败", "购买 Minecraft", "取消"))
+                            "登录失败", "购买 Minecraft", Lang.Text("Common.Action.Cancel")))
                 {
                     case 1:
                     {
@@ -1321,7 +1322,7 @@ public static class ModLaunch
                 ModBase.Log(ex, "正版验证 Step 6 汇报 404");
                 ModBase.RunInNewThread(() =>
                 {
-                    switch (ModMain.MyMsgBox("请先创建 Minecraft 玩家档案，然后再重新登录。", "登录失败", "创建档案", "取消"))
+                    switch (ModMain.MyMsgBox("请先创建 Minecraft 玩家档案，然后再重新登录。", "登录失败", "创建档案", Lang.Text("Common.Action.Cancel")))
                     {
                         case 1:
                         {
@@ -1341,7 +1342,7 @@ public static class ModLaunch
                     return;
                 if (ModMain.MyMsgBox(
                         $"启动器在尝试刷新账号信息时(Step 6)遇到了网络错误。{"\r\n"}你可以选择取消，检查网络后再次启动，也可以选择忽略错误继续启动，但可能无法游玩部分服务器。",
-                        "账号信息获取失败", "继续", "取消") == 1)
+                        "账号信息获取失败", "继续", Lang.Text("Common.Action.Cancel")) == 1)
                     IsIgnore = true;
             });
             if (IsIgnore)
@@ -2105,10 +2106,10 @@ public static class ModLaunch
         }
 
         double availableGb = KernelInterop.GetAvailablePhysicalMemoryBytes() / 1073741824.0;
-        ModLaunch.McLaunchLog($"当前剩余内存：{availableGb:N1}G");
+        ModLaunch.McLaunchLog($"当前剩余内存：{availableGb.ToString("N1", CultureInfo.InvariantCulture)}G");
         double totalRamMb = PageInstanceSetup.GetRam(ModMinecraft.McInstanceSelected) * 1024d;
-        DataList.Add($"-Xmn{Math.Floor(totalRamMb * 0.15)}m");
-        DataList.Add($"-Xmx{Math.Floor(totalRamMb)}m");
+        DataList.Add("-Xmn" + Math.Floor(totalRamMb * 0.15).ToString(CultureInfo.InvariantCulture) + "m");
+        DataList.Add("-Xmx" + Math.Floor(totalRamMb).ToString(CultureInfo.InvariantCulture) + "m");
         if (!DataList.Any(d => d.Contains("-Dlog4j2.formatMsgNoLookups=true")))
             DataList.Add("-Dlog4j2.formatMsgNoLookups=true");
     }
@@ -2884,8 +2885,8 @@ public static class ModLaunch
             GameSize.Height /= ModBase.DPI / 96d;
         }
 
-        GameArguments.Add("${resolution_width}", Math.Round(GameSize.Width).ToString());
-        GameArguments.Add("${resolution_height}", Math.Round(GameSize.Height).ToString());
+        GameArguments.Add("${resolution_width}", Math.Round(GameSize.Width).ToString(CultureInfo.InvariantCulture));
+        GameArguments.Add("${resolution_height}", Math.Round(GameSize.Height).ToString(CultureInfo.InvariantCulture));
 
         // Assets 相关参数
         GameArguments.Add("${game_assets}",
@@ -3485,11 +3486,11 @@ public static class ModLaunch
         McLaunchLog("实例继承：" + (string.IsNullOrEmpty(ModMinecraft.McInstanceSelected.InheritInstanceName)
             ? "无"
             : ModMinecraft.McInstanceSelected.InheritInstanceName));
+        var launchRamGb = PageInstanceSetup.GetRam(ModMinecraft.McInstanceSelected,
+            !McLaunchJavaSelected.Installation.Is64Bit);
         McLaunchLog("分配的内存：" +
-                    PageInstanceSetup.GetRam(ModMinecraft.McInstanceSelected,
-                        !McLaunchJavaSelected.Installation.Is64Bit) + " GB（" +
-                    Math.Round(PageInstanceSetup.GetRam(ModMinecraft.McInstanceSelected,
-                        !McLaunchJavaSelected.Installation.Is64Bit) * 1024d) + " MB）");
+                    launchRamGb.ToString("N1", CultureInfo.InvariantCulture) + " GB（" +
+                    Math.Round(launchRamGb * 1024d).ToString("N0", CultureInfo.InvariantCulture) + " MB）");
         McLaunchLog("MC 文件夹：" + ModMinecraft.McFolderSelected);
         McLaunchLog("实例文件夹：" + ModMinecraft.McInstanceSelected.PathInstance);
         McLaunchLog("版本隔离：" + ((ModMinecraft.McInstanceSelected.PathIndie ?? "") ==
@@ -3636,8 +3637,8 @@ public static class ModLaunch
         // 时间
         if (replaceTime) // 在窗口标题中，时间会被后续动态替换，所以此时不应该替换
         {
-            text = text.Replace("{date}", replacer(DateTime.Now.ToString("yyyy'/'M'/'d")));
-            text = text.Replace("{time}", replacer(DateTime.Now.ToString("HH':'mm':'ss")));
+            text = text.Replace("{date}", replacer(Lang.Date(DateTime.Now, "d")));
+            text = text.Replace("{time}", replacer(Lang.Date(DateTime.Now, "T")));
         }
 
         // Minecraft

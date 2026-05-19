@@ -12,6 +12,7 @@ using PCL.Core.App;
 using PCL.Core.App.Configuration;
 using PCL.Core.App.Configuration.Storage;
 using FileSystem = Microsoft.VisualBasic.FileIO.FileSystem;
+using PCL.Core.App.Localization;
 
 namespace PCL;
 
@@ -252,7 +253,7 @@ public partial class PageSelectRight
                 #endregion
 
                 // 建立控件
-                var CardTitle = $"{CardName}{(CardName == "收藏夹" ? "" : $" ({filteredInstances.Count})")}";
+                var CardTitle = $"{CardName}{(CardName == "收藏夹" ? "" : $" ({Lang.Number(filteredInstances.Count, "N0")})")}";
                 var NewCard = new MyCard { Title = CardTitle, Margin = new Thickness(0d, 0d, 0d, 15d) };
                 var NewStack = new StackPanel
                 {
@@ -460,7 +461,7 @@ public partial class PageSelectRight
         ToolTipService.SetHorizontalOffset(BtnOpenFolder, 2d);
         BtnOpenFolder.Click += (_, _) => PageInstanceOverall.OpenVersionFolder(Version);
         var BtnDel = new MyIconButton { LogoScale = 1.1d, Logo = ModBase.Logo.IconButtonDelete };
-        BtnDel.ToolTip = "删除";
+        BtnDel.ToolTip = Lang.Text("Common.Action.Delete");
         ToolTipService.SetPlacement(BtnDel, PlacementMode.Center);
         ToolTipService.SetVerticalOffset(BtnDel, 30d);
         ToolTipService.SetHorizontalOffset(BtnDel, 2d);
@@ -487,7 +488,7 @@ public partial class PageSelectRight
         else
         {
             var BtnCont = new MyIconButton { LogoScale = 1.15d, Logo = ModBase.Logo.IconButtonOpen };
-            BtnCont.ToolTip = "打开文件夹";
+            BtnCont.ToolTip = Lang.Text("Common.Action.OpenFolder");
             ToolTipService.SetPlacement(BtnCont, PlacementMode.Center);
             ToolTipService.SetVerticalOffset(BtnCont, 30d);
             ToolTipService.SetHorizontalOffset(BtnCont, 2d);
@@ -537,7 +538,7 @@ public partial class PageSelectRight
                          你确定要{(IsShiftPressed ? "永久" : "")}删除实例 {instance.Name} 吗？{(IsHintIndie
                              ? "\r\n由于该实例开启了版本隔离，删除时该实例对应的存档、资源包、Mod 等文件也将被一并删除！"
                              : "")}
-                         """, "实例删除确认", Button2: "取消", IsWarn: true))
+                         """, "实例删除确认", Button2: Lang.Text("Common.Action.Cancel"), IsWarn: true))
             {
                 case 1:
                 {
@@ -573,8 +574,8 @@ public partial class PageSelectRight
                 {
                     // 删除后还有剩
                     var Card = (MyCard)Parent.Parent;
-                    Card.Title = Card.Title.Replace((Parent.Children.Count - 1).ToString(),
-                        (Parent.Children.Count - 2).ToString()); // 有一个占位符
+                    Card.Title = Card.Title.Replace(Lang.Number(Parent.Children.Count - 1, "N0"),
+                        Lang.Number(Parent.Children.Count - 2, "N0")); // 有一个占位符
                     Parent.Children.Remove(item);
                     if (ModMinecraft.McInstanceSelected is not null && (instance.PathInstance ?? "") ==
                         (ModMinecraft.McInstanceSelected.PathInstance ?? ""))

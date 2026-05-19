@@ -8,6 +8,7 @@ using PCL.Core.Logging;
 using PCL.Core.UI;
 using PCL.Core.Utils;
 using PCL.Core.Utils.Exts;
+using PCL.Core.App.Localization;
 
 namespace PCL;
 
@@ -56,7 +57,7 @@ public partial class PageSetupLog
                 var r = DateTime.TryParseExact(title, "yyyy-M-d-HHmmssfff", CultureInfo.InvariantCulture,
                     DateTimeStyles.None, out dt);
                 if (r)
-                    title = dt.ToString("yyyy 年 M 月 d 日 HH:mm:ss.fff");
+                    title = Lang.Date(dt, "G");
                 if (current.Any(log => log.Equals(fullPath)))
                     title = title + " (当前)";
             }
@@ -90,7 +91,7 @@ public partial class PageSetupLog
     {
         const string filter = "PCL CE 日志压缩包|*.zip";
         var desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-        var baseName = "PCL_CE_Logs_" + DateTime.Now.ToString("yyyyMMddHHmmss");
+        var baseName = "PCL_CE_Logs_" + DateTime.Now.ToString("yyyyMMddHHmmss", CultureInfo.InvariantCulture);
         var tempDirName = baseName + ".tmp";
         var fileName = baseName + ".zip";
         var selectedPath = SystemDialogs.SelectSaveFile("导出日志文件", fileName, filter, desktopPath);
@@ -133,7 +134,7 @@ public partial class PageSetupLog
 
     private void ButtonClean_OnClick(object sender, MouseButtonEventArgs e)
     {
-        var r = ModMain.MyMsgBox("是否删除所有历史日志？", "清理历史日志", "确定", "取消", IsWarn: true);
+        var r = ModMain.MyMsgBox("是否删除所有历史日志？", "清理历史日志", Lang.Text("Common.Action.Confirm"), Lang.Text("Common.Action.Cancel"), IsWarn: true);
         if (r != 1)
             return;
         var currentSet = new HashSet<string>(CurrentLogs);

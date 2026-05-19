@@ -17,6 +17,7 @@ using PCL.Network;
 using PCL.Network.Loaders;
 using PCL.Core.IO.Net.Http;
 using PCL;
+using PCL.Core.App.Localization;
 
 namespace PCL;
 
@@ -66,7 +67,7 @@ public static class ModDownloadLib
                     return null;
                 if (ModMain.MyMsgBox(
                         "实例 " + id + " 已存在，是否重新下载？" + "\r\n" + "这会覆盖实例的 Json 与 Jar 文件，但不会影响版本隔离的文件。", "实例已存在",
-                        "继续", "取消") == 1)
+                        "继续", Lang.Text("Common.Action.Cancel")) == 1)
                 {
                     File.Delete(Path.Combine(versionFolder, id + ".jar"));
                     File.Delete(Path.Combine(versionFolder, id + ".json"));
@@ -297,10 +298,10 @@ public static class ModDownloadLib
         if (Entry["lore"] is null)
         {
             if (FormattedVersion != (string)Entry["id"])
-                NewItem.Info = Entry["releaseTime"].Value<DateTime>().ToString("yyyy'/'MM'/'dd HH':'mm") + " | " +
+                NewItem.Info = Lang.Date(Entry["releaseTime"].Value<DateTime>(), "g") + " | " +
                                Entry["id"];
             else
-                NewItem.Info = Entry["releaseTime"].Value<DateTime>().ToString("yyyy'/'MM'/'dd HH':'mm");
+                NewItem.Info = Lang.Date(Entry["releaseTime"].Value<DateTime>(), "g");
         }
         else if (FormattedVersion != (string)Entry["id"])
         {
@@ -564,7 +565,7 @@ pause";
             {
                 if (ModMain.MyMsgBox(
                         "实例 " + Id + " 已存在，是否重新下载？" + "\r\n" + "这会覆盖实例的 Json 和 Jar 文件，但不会影响版本隔离的文件。", "实例已存在",
-                        "继续", "取消") == 1)
+                        "继续", Lang.Text("Common.Action.Cancel")) == 1)
                 {
                     File.Delete(Path.Combine(VersionFolder, Id + ".jar"));
                     File.Delete(Path.Combine(VersionFolder, Id + ".json"));
@@ -983,11 +984,11 @@ pause";
     ""inheritsFrom"": """ + DownloadInfo.Inherit + @""",
     ""time"": """ +
                                    (string.IsNullOrEmpty(DownloadInfo.ReleaseTime)
-                                       ? InheritInstance.ReleaseTime.ToString("yyyy'-'MM'-'dd")
+                                       ? InheritInstance.ReleaseTime.ToString("yyyy'-'MM'-'dd", CultureInfo.InvariantCulture)
                                        : DownloadInfo.ReleaseTime.Replace("/", "-")) + @"T23:33:33+08:00"",
     ""releaseTime"": """ +
                                    (string.IsNullOrEmpty(DownloadInfo.ReleaseTime)
-                                       ? InheritInstance.ReleaseTime.ToString("yyyy'-'MM'-'dd")
+                                       ? InheritInstance.ReleaseTime.ToString("yyyy'-'MM'-'dd", CultureInfo.InvariantCulture)
                                        : DownloadInfo.ReleaseTime.Replace("/", "-")) + @"T23:33:33+08:00"",
     ""type"": ""release"",
     ""libraries"": [
@@ -1206,7 +1207,7 @@ pause";
             {
                 if (ModMain.MyMsgBox(
                         "实例 " + VersionName + " 已存在，是否重新下载？" + "\r\n" + "这会覆盖实例的 Json 和 Jar 文件，但不会影响版本隔离的文件。",
-                        "实例已存在", "继续", "取消") == 1)
+                        "实例已存在", "继续", Lang.Text("Common.Action.Cancel")) == 1)
                 {
                     File.Delete(Path.Combine(VersionFolder, VersionName + ".jar"));
                     File.Delete(Path.Combine(VersionFolder, VersionName + ".json"));
@@ -1357,9 +1358,9 @@ pause";
                 var VersionJson = new JObject();
                 VersionJson.Add("id", VersionName);
                 VersionJson.Add("time",
-                    DateTime.ParseExact(DownloadInfo.ReleaseTime, "yyyy/MM/dd HH:mm", CultureInfo.CurrentCulture));
+                    DateTime.ParseExact(DownloadInfo.ReleaseTime, "yyyy/MM/dd HH:mm", CultureInfo.InvariantCulture));
                 VersionJson.Add("releaseTime",
-                    DateTime.ParseExact(DownloadInfo.ReleaseTime, "yyyy/MM/dd HH:mm", CultureInfo.CurrentCulture));
+                    DateTime.ParseExact(DownloadInfo.ReleaseTime, "yyyy/MM/dd HH:mm", CultureInfo.InvariantCulture));
                 VersionJson.Add("type", "release");
                 VersionJson.Add("arguments",
                     (JToken)ModBase.GetJson("{\"game\":[\"--tweakClass\",\"" + DownloadInfo.JsonToken["tweakClass"] +
@@ -2942,7 +2943,7 @@ pause";
             Height = 42d,
             Type = MyListItem.CheckType.Clickable,
             Tag = Entry,
-            Info = Entry.StatusDescription + "，发布于 " + Entry.ReleaseDate.ToString("yyyy'/'MM'/'dd HH':'mm"),
+            Info = Entry.StatusDescription + "，发布于 " + Lang.Date(Entry.ReleaseDate, "g"),
             Logo = ModBase.PathImage + "Blocks/Fabric.png"
         };
         NewItem.Click += OnClick;
@@ -2960,7 +2961,7 @@ pause";
             Height = 42d,
             Type = MyListItem.CheckType.Clickable,
             Tag = Entry,
-            Info = Entry.StatusDescription + "，发布于 " + Entry.ReleaseDate.ToString("yyyy'/'MM'/'dd HH':'mm"),
+            Info = Entry.StatusDescription + "，发布于 " + Lang.Date(Entry.ReleaseDate, "g"),
             Logo = ModBase.PathImage + "Blocks/OptiFabric.png"
         };
         NewItem.Click += OnClick;
@@ -3001,7 +3002,7 @@ pause";
             Height = 42d,
             Type = MyListItem.CheckType.Clickable,
             Tag = Entry,
-            Info = Entry.StatusDescription + "，发布于 " + Entry.ReleaseDate.ToString("yyyy'/'MM'/'dd HH':'mm"),
+            Info = Entry.StatusDescription + "，发布于 " + Lang.Date(Entry.ReleaseDate, "g"),
             Logo = ModBase.PathImage + "Blocks/Fabric.png"
         };
         NewItem.Click += OnClick;
@@ -3160,7 +3161,7 @@ pause";
             Height = 42d,
             Type = MyListItem.CheckType.Clickable,
             Tag = Entry,
-            Info = Entry.StatusDescription + "，发布于 " + Entry.ReleaseDate.ToString("yyyy'/'MM'/'dd HH':'mm"),
+            Info = Entry.StatusDescription + "，发布于 " + Lang.Date(Entry.ReleaseDate, "g"),
             Logo = ModBase.PathImage + "Blocks/Quilt.png"
         };
         NewItem.Click += OnClick;
