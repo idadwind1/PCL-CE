@@ -2,8 +2,6 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using Microsoft.VisualBasic;
-using Microsoft.VisualBasic.CompilerServices;
 using PCL.Core.App;
 using PCL.Core.UI;
 using PCL.Core.Utils;
@@ -50,70 +48,68 @@ public partial class PageSetupUI
         try
         {
             // 启动器
-            SliderLauncherOpacity.Value = Conversions.ToInteger(Config.Preference.Theme.WindowOpacity);
-            CheckLauncherLogo.Checked = (bool?)Config.Preference.ShowStartupLogo;
-            ComboDarkMode.SelectedIndex = Conversions.ToInteger(Config.Preference.Theme.ColorMode);
-            ComboDarkColor.SelectedIndex = Conversions.ToInteger(Config.Preference.Theme.DarkColor);
-            ComboLightColor.SelectedIndex = Conversions.ToInteger(Config.Preference.Theme.LightColor);
-            CheckShowLaunchingHint.Checked = (bool?)Config.Preference.ShowLaunchingHint;
+            SliderLauncherOpacity.Value = Config.Preference.Theme.WindowOpacity;
+            CheckLauncherLogo.Checked = Config.Preference.ShowStartupLogo;
+            ComboDarkMode.SelectedIndex = (int)Config.Preference.Theme.ColorMode;
+            ComboDarkColor.SelectedIndex = (int)Config.Preference.Theme.DarkColor;
+            ComboLightColor.SelectedIndex = (int)Config.Preference.Theme.LightColor;
+            CheckShowLaunchingHint.Checked = Config.Preference.ShowLaunchingHint;
 
             // 字体设置
-            ComboUiFont.SelectedFontTag = Conversions.ToString(Config.Preference.Font);
-            ComboUiMotdFont.SelectedFontTag = Conversions.ToString(Config.Preference.MotdFont);
+            ComboUiFont.SelectedFontTag = Config.Preference.Font;
+            ComboUiMotdFont.SelectedFontTag = Config.Preference.MotdFont;
 
-            CheckBlur.Checked = (bool?)Config.Preference.Blur.IsEnabled;
-            SliderBlurValue.Value = Conversions.ToInteger(Config.Preference.Blur.Radius);
-            SliderBlurSamplingRate.Value = Conversions.ToInteger(Config.Preference.Blur.SamplingRate);
-            ComboBlurType.SelectedIndex = Conversions.ToInteger(Config.Preference.Blur.KernelType);
+            CheckBlur.Checked = Config.Preference.Blur.IsEnabled;
+            SliderBlurValue.Value = Config.Preference.Blur.Radius;
+            SliderBlurSamplingRate.Value = Config.Preference.Blur.SamplingRate;
+            ComboBlurType.SelectedIndex = Config.Preference.Blur.KernelType;
             PanBlurValue.Visibility = CheckBlur.Checked == true ? Visibility.Visible : Visibility.Collapsed;
-            CheckLockWindowSize.Checked = (bool?)Config.Preference.LockWindowSize;
+            CheckLockWindowSize.Checked = Config.Preference.LockWindowSize;
 
             // 背景图片
-            SliderBackgroundOpacity.Value = Conversions.ToInteger(Config.Preference.Background.WallpaperOpacity);
-            SliderBackgroundBlur.Value = Conversions.ToInteger(Config.Preference.Background.WallpaperBlurRadius);
-            ComboBackgroundSuit.SelectedIndex = Conversions.ToInteger(Config.Preference.Background.WallpaperSuitMode);
-            CheckBackgroundColorful.Checked = (bool?)Config.Preference.Background.BackgroundColorful;
+            SliderBackgroundOpacity.Value = Config.Preference.Background.WallpaperOpacity;
+            SliderBackgroundBlur.Value = Config.Preference.Background.WallpaperBlurRadius;
+            ComboBackgroundSuit.SelectedIndex = Config.Preference.Background.WallpaperSuitMode;
+            CheckBackgroundColorful.Checked = Config.Preference.Background.BackgroundColorful;
             var autoPauseVideo = Config.Preference.Background.AutoPauseVideo;
-            CheckAutoPauseVideo.Checked = (bool?)autoPauseVideo;
+            CheckAutoPauseVideo.Checked = autoPauseVideo;
             if (ModVideoBack.IsGaming)
-                if (Conversions.ToBoolean(Operators.ConditionalCompareObjectEqual(autoPauseVideo, true, false)))
+                if (autoPauseVideo)
                     BtnBackgroundRefresh.IsEnabled = false;
 
             BackgroundRefresh(false, false);
 
             // 标题栏
-            ((MyRadioBox)FindName(
-                    Conversions.ToString(Operators.ConcatenateObject("RadioLogoType",
-                        Config.Preference.WindowTitleType))))
+            ((MyRadioBox)FindName("RadioLogoType" + (int)Config.Preference.WindowTitleType))
                 .Checked = true;
             CheckLogoLeft.Visibility = RadioLogoType0.Checked ? Visibility.Visible : Visibility.Collapsed;
             PanLogoText.Visibility = RadioLogoType2.Checked ? Visibility.Visible : Visibility.Collapsed;
             PanLogoChange.Visibility = RadioLogoType3.Checked ? Visibility.Visible : Visibility.Collapsed;
-            TextLogoText.Text = Conversions.ToString(Config.Preference.WindowTitleCustomText);
-            CheckLogoLeft.Checked = (bool?)Config.Preference.TopBarLeftAlign;
+            TextLogoText.Text = Config.Preference.WindowTitleCustomText;
+            CheckLogoLeft.Checked = Config.Preference.TopBarLeftAlign;
 
             // 背景音乐
-            CheckMusicRandom.Checked = (bool?)Config.Preference.Music.ShufflePlayback;
-            CheckMusicAuto.Checked = (bool?)Config.Preference.Music.StartOnStartup;
-            CheckMusicStop.Checked = (bool?)Config.Preference.Music.StopInGame;
-            CheckMusicStart.Checked = (bool?)Config.Preference.Music.StartInGame;
-            CheckMusicSMTC.Checked = (bool?)Config.Preference.Music.EnableSMTC;
-            SliderMusicVolume.Value = Conversions.ToInteger(Config.Preference.Music.Volume);
+            CheckMusicRandom.Checked = Config.Preference.Music.ShufflePlayback;
+            CheckMusicAuto.Checked = Config.Preference.Music.StartOnStartup;
+            CheckMusicStop.Checked = Config.Preference.Music.StopInGame;
+            CheckMusicStart.Checked = Config.Preference.Music.StartInGame;
+            CheckMusicSMTC.Checked = Config.Preference.Music.EnableSMTC;
+            SliderMusicVolume.Value = Config.Preference.Music.Volume;
             MusicRefreshUI();
 
             // 主页
             try
             {
-                ComboCustomPreset.SelectedIndex = Conversions.ToInteger(Config.Preference.Homepage.SelectedPreset);
+                ComboCustomPreset.SelectedIndex = Config.Preference.Homepage.SelectedPreset;
             }
             catch
             {
-                ModBase.Setup.Reset("UiCustomPreset");
+                Config.Preference.Homepage.SelectedPresetConfig.Reset();
             }
 
-            ((MyRadioBox)FindName(Conversions.ToString(Operators.ConcatenateObject("RadioCustomType",
-                ModBase.Setup.Load("UiCustomType", true))))).Checked = true;
-            TextCustomNet.Text = Conversions.ToString(Config.Preference.Homepage.CustomUrl);
+            ((MyRadioBox)FindName("RadioCustomType" + Config.Preference.Homepage.Type)).Checked = true;
+            TextCustomNet.Text = Config.Preference.Homepage.CustomUrl;
+            ModSetup.UiCustomType(Config.Preference.Homepage.Type);
 
             // 功能隐藏
             // 获取配置组引用
@@ -191,28 +187,28 @@ public partial class PageSetupUI
     {
         var sender = (MySlider)senderRaw;
         if (ModAnimation.AniControlEnabled == 0)
-            ModBase.Setup.Set(sender.Tag?.ToString(), sender.Value);
+            SetByTag(sender.Tag?.ToString(), sender.Value);
     }
 
     private void ComboChange(object senderRaw, SelectionChangedEventArgs e)
     {
         var sender = (MyComboBox)senderRaw;
         if (ModAnimation.AniControlEnabled == 0)
-            ModBase.Setup.Set(sender.Tag?.ToString(), sender.SelectedIndex);
+            SetByTag(sender.Tag?.ToString(), sender.SelectedIndex);
     }
 
     private void CheckBoxChange(object senderRaw, bool user)
     {
         var sender = (MyCheckBox)senderRaw;
-        // 仅在动画未运行或初始化完成时保存设置，防止初始化时的触发导致重复写入
-        if (ModAnimation.AniControlEnabled == 0) ModBase.Setup.Set(sender.Tag?.ToString(), sender.Checked);
+        if (ModAnimation.AniControlEnabled == 0)
+            SetByTag(sender.Tag?.ToString(), sender.Checked);
     }
 
     private void TextBoxChange(object senderRaw, RoutedEventArgs e)
     {
         var sender = (MyTextBox)senderRaw;
         if (ModAnimation.AniControlEnabled == 0)
-            ModBase.Setup.Set(sender.Tag?.ToString(), sender.Text);
+            SetByTag(sender.Tag?.ToString(), sender.Text);
     }
 
     private void RadioBoxChange(object senderRaw, ModBase.RouteEventArgs e)
@@ -220,7 +216,73 @@ public partial class PageSetupUI
         var sender = (MyRadioBox)senderRaw;
         var gotCfg = sender.Tag?.ToString()?.Split("/") ?? Array.Empty<string>();
         if (ModAnimation.AniControlEnabled == 0 && gotCfg.Length >= 2)
-            ModBase.Setup.Set(gotCfg[0], int.Parse(gotCfg[1]));
+            SetByTag(gotCfg[0], int.Parse(gotCfg[1]));
+    }
+
+    private static void SetByTag(string tag, object value)
+    {
+        switch (tag)
+        {
+            case "UiLauncherTransparent": Config.Preference.Theme.WindowOpacity = (int)value; break;
+            case "UiBackgroundOpacity": Config.Preference.Background.WallpaperOpacity = (int)value; break;
+            case "UiBackgroundBlur": Config.Preference.Background.WallpaperBlurRadius = (int)value; break;
+            case "UiBlurValue": Config.Preference.Blur.Radius = (int)value; break;
+            case "UiBlurSamplingRate": Config.Preference.Blur.SamplingRate = (int)value; break;
+            case "UiMusicVolume": Config.Preference.Music.Volume = (int)value; break;
+
+            case "UiLauncherLogo": Config.Preference.ShowStartupLogo = (bool)value; break;
+            case "UiShowLaunchingHint": Config.Preference.ShowLaunchingHint = (bool)value; break;
+            case "UiLockWindowSize": Config.Preference.LockWindowSize = (bool)value; break;
+            case "UiBlur": Config.Preference.Blur.IsEnabled = (bool)value; break;
+            case "UiAutoPauseVideo": Config.Preference.Background.AutoPauseVideo = (bool)value; break;
+            case "UiBackgroundColorful": Config.Preference.Background.BackgroundColorful = (bool)value; break;
+            case "UiMusicRandom": Config.Preference.Music.ShufflePlayback = (bool)value; break;
+            case "UiMusicAuto": Config.Preference.Music.StartOnStartup = (bool)value; break;
+            case "UiMusicStart": Config.Preference.Music.StartInGame = (bool)value; break;
+            case "UiMusicStop": Config.Preference.Music.StopInGame = (bool)value; break;
+            case "UiMusicSMTC": Config.Preference.Music.EnableSMTC = (bool)value; break;
+            case "UiLogoLeft": Config.Preference.TopBarLeftAlign = (bool)value; break;
+
+            case "UiDarkMode": Config.Preference.Theme.ColorMode = (ColorMode)(int)value; break;
+            case "UiDarkColor": Config.Preference.Theme.DarkColor = (ColorTheme)(int)value; break;
+            case "UiLightColor": Config.Preference.Theme.LightColor = (ColorTheme)(int)value; break;
+            case "UiBlurType": Config.Preference.Blur.KernelType = (int)value; break;
+            case "UiBackgroundSuit": Config.Preference.Background.WallpaperSuitMode = (int)value; break;
+            case "UiCustomPreset": Config.Preference.Homepage.SelectedPreset = (int)value; break;
+            case "UiLogoType": Config.Preference.WindowTitleType = (LauncherTitleType)(int)value; break;
+            case "UiLogoText": Config.Preference.WindowTitleCustomText = (string)value; break;
+            case "UiCustomType": Config.Preference.Homepage.Type = (int)value; break;
+
+            case "UiHiddenPageDownload": Config.Preference.Hide.PageDownload = (bool)value; break;
+            case "UiHiddenPageSetup": Config.Preference.Hide.PageSetup = (bool)value; break;
+            case "UiHiddenPageTools": Config.Preference.Hide.PageTools = (bool)value; break;
+            case "UiHiddenSetupLaunch": Config.Preference.Hide.SetupLaunch = (bool)value; break;
+            case "UiHiddenSetupUi": Config.Preference.Hide.SetupUi = (bool)value; break;
+            case "UiHiddenSetupLauncherLanguage": Config.Preference.Hide.SetupLauncherLanguage = (bool)value; break;
+            case "UiHiddenSetupLauncherMisc": Config.Preference.Hide.SetupLauncherMisc = (bool)value; break;
+            case "UiHiddenSetupGameManage": Config.Preference.Hide.SetupGameManage = (bool)value; break;
+            case "UiHiddenSetupJava": Config.Preference.Hide.SetupJava = (bool)value; break;
+            case "UiHiddenSetupUpdate": Config.Preference.Hide.SetupUpdate = (bool)value; break;
+            case "UiHiddenSetupGameLink": Config.Preference.Hide.SetupGameLink = (bool)value; break;
+            case "UiHiddenSetupAbout": Config.Preference.Hide.SetupAbout = (bool)value; break;
+            case "UiHiddenSetupFeedback": Config.Preference.Hide.SetupFeedback = (bool)value; break;
+            case "UiHiddenSetupLog": Config.Preference.Hide.SetupLog = (bool)value; break;
+            case "UiHiddenToolsGameLink": Config.Preference.Hide.ToolsGameLink = (bool)value; break;
+            case "UiHiddenToolsHelp": Config.Preference.Hide.ToolsHelp = (bool)value; break;
+            case "UiHiddenToolsTest": Config.Preference.Hide.ToolsTest = (bool)value; break;
+            case "UiHiddenVersionEdit": Config.Preference.Hide.InstanceEdit = (bool)value; break;
+            case "UiHiddenVersionExport": Config.Preference.Hide.InstanceExport = (bool)value; break;
+            case "UiHiddenVersionSave": Config.Preference.Hide.InstanceSave = (bool)value; break;
+            case "UiHiddenVersionScreenshot": Config.Preference.Hide.InstanceScreenshot = (bool)value; break;
+            case "UiHiddenVersionMod": Config.Preference.Hide.InstanceMod = (bool)value; break;
+            case "UiHiddenVersionResourcePack": Config.Preference.Hide.InstanceResourcePack = (bool)value; break;
+            case "UiHiddenVersionShader": Config.Preference.Hide.InstanceShader = (bool)value; break;
+            case "UiHiddenVersionSchematic": Config.Preference.Hide.InstanceSchematic = (bool)value; break;
+            case "UiHiddenVersionServer": Config.Preference.Hide.InstanceServer = (bool)value; break;
+            case "UiHiddenFunctionSelect": Config.Preference.Hide.FunctionSelect = (bool)value; break;
+            case "UiHiddenFunctionModUpdate": Config.Preference.Hide.FunctionModUpdate = (bool)value; break;
+            case "UiHiddenFunctionHidden": Config.Preference.Hide.FunctionHidden = (bool)value; break;
+        }
     }
 
     private void ComboFontChange(object sender, SelectionChangedEventArgs e)
@@ -324,8 +386,7 @@ public partial class PageSetupUI
             ModVideoBack.ForcePlayChanged -= ModVideoBack.OnForcePlayChanged;
             ModVideoBack.GamingStateChanged += ModVideoBack.OnGamingStateChanged;
             ModVideoBack.ForcePlayChanged += ModVideoBack.OnForcePlayChanged;
-            if (Conversions.ToBoolean(
-                    Operators.ConditionalCompareObjectEqual(Config.Preference.Background.AutoPauseVideo, false, false)))
+            if (!Config.Preference.Background.AutoPauseVideo)
                 ModVideoBack.ForcePlay = true;
             // 加载
             if (Pic.Count == 0)
@@ -359,7 +420,7 @@ public partial class PageSetupUI
                         ModVideoBack.VideoStop();
                         ModBase.Log("[UI] 加载背景内容：" + Address);
                         ModMain.FrmMain.ImgBack.Background = new MyBitmap(Address);
-                        ModBase.Setup.Load("UiBackgroundSuit", true);
+                        _ = Config.Preference.Background.WallpaperSuitMode;
                         ModMain.FrmMain.ImgBack.Visibility = Visibility.Visible;
                         if (IsHint)
                                 ModMain.Hint(Lang.Text("Setup.Ui.Background.Refresh.Success", ModBase.GetFileNameFromPath(Address)), ModMain.HintType.Finish,
@@ -625,7 +686,7 @@ public partial class PageSetupUI
     private void ThemeColor_Change(object senderRaw, SelectionChangedEventArgs e)
     {
         var sender = (MyComboBox)senderRaw;
-        ModBase.Setup.Set(sender.Tag?.ToString(), sender.SelectedIndex);
+        SetByTag(sender.Tag?.ToString(), sender.SelectedIndex);
         ThemeManager.ThemeRefresh();
     }
 
@@ -767,9 +828,8 @@ public partial class PageSetupUI
                 foreach (var category in categories)
                 {
                     var isVisible = category.Item2 || HiddenForceShow;
-                    category.Item1.Visibility =
-                        Conversions.ToBoolean(isVisible) ? Visibility.Visible : Visibility.Collapsed;
-                    if (Conversions.ToBoolean(isVisible))
+                    category.Item1.Visibility = isVisible ? Visibility.Visible : Visibility.Collapsed;
+                    if (isVisible)
                         category.Item1.Opacity = 0.6d;
                 }
 

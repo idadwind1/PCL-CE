@@ -33,7 +33,7 @@ public static class ModLaunch
 
     private static void McLaunchPrecheck()
     {
-        if (Conversions.ToBoolean(Config.Debug.AddRandomDelay))
+        if (Config.Debug.AddRandomDelay)
             Thread.Sleep(RandomUtils.NextInt(100, 2000));
         // 检查路径
         if (ModMinecraft.McInstanceSelected.PathIndie.Contains("!") ||
@@ -42,8 +42,8 @@ public static class ModLaunch
         if (ModMinecraft.McInstanceSelected.PathInstance.Contains("!") ||
             ModMinecraft.McInstanceSelected.PathInstance.Contains(";"))
             throw new Exception(Lang.Text("Minecraft.Launch.Precheck.InvalidPathChars", ModMinecraft.McInstanceSelected.PathInstance));
-        if (Conversions.ToBoolean(ModBase.IsUtf8CodePage() && !(bool)States.Hint.NonAsciiGamePath &&
-                                  !ModMinecraft.McInstanceSelected.PathInstance.IsASCII()))
+        if (ModBase.IsUtf8CodePage() && !States.Hint.NonAsciiGamePath &&
+            !ModMinecraft.McInstanceSelected.PathInstance.IsASCII())
         {
             var userChoice = ModMain.MyMsgBox(
                 Lang.Text("Minecraft.Launch.Precheck.NonAsciiPath.Message", ModMinecraft.McInstanceSelected.Name),
@@ -60,40 +60,31 @@ public static class ModLaunch
             throw new Exception(Lang.Text("Minecraft.Launch.Precheck.InstanceError", ModMinecraft.McInstanceSelected.Desc));
         // 检查输入信息
         var CheckResult = "";
-        ModBase.RunInUiWait(() => CheckResult = Conversions.ToString(ModProfile.IsProfileValid()));
+        ModBase.RunInUiWait(() => CheckResult = ModProfile.IsProfileValid());
         if (ModProfile.SelectedProfile is null) // 没选档案
         {
             CheckResult = Lang.Text("Minecraft.Launch.Precheck.NoProfile");
         }
-        else if (ModMinecraft.McInstanceSelected.Info.HasLabyMod || Conversions.ToBoolean(
-                     Operators.ConditionalCompareObjectEqual(
-                         ModBase.Setup.Get("VersionServerLoginRequire", ModMinecraft.McInstanceSelected), 1,
-                         false))) // 要求正版验证
+        else if (ModMinecraft.McInstanceSelected.Info.HasLabyMod ||
+                 Config.InstanceAuth.LoginRequirementSolution[ModMinecraft.McInstanceSelected?.PathInstance] == 1) // 要求正版验证
         {
             if (!(ModProfile.SelectedProfile.Type == McLoginType.Ms)) CheckResult = Lang.Text("Minecraft.Launch.Precheck.RequireMicrosoft");
         }
-        else if (Conversions.ToBoolean(Operators.ConditionalCompareObjectEqual(
-                     ModBase.Setup.Get("VersionServerLoginRequire", ModMinecraft.McInstanceSelected), 2,
-                     false))) // 要求第三方验证
+        else if (Config.InstanceAuth.LoginRequirementSolution[ModMinecraft.McInstanceSelected?.PathInstance] == 2) // 要求第三方验证
         {
             if (!(ModProfile.SelectedProfile.Type == McLoginType.Auth))
                 CheckResult = Lang.Text("Minecraft.Launch.Precheck.RequireThirdParty");
-            else if (Conversions.ToBoolean(!Operators.ConditionalCompareObjectEqual(
-                         ModProfile.SelectedProfile.Server.BeforeLast("/authserver"),
-                         ModBase.Setup.Get("VersionServerAuthServer", ModMinecraft.McInstanceSelected), false)))
+            else if (ModProfile.SelectedProfile.Server.BeforeLast("/authserver") !=
+                     Config.InstanceAuth.AuthServerAddress[ModMinecraft.McInstanceSelected?.PathInstance])
                 CheckResult = Lang.Text("Minecraft.Launch.Precheck.AuthServerMismatch");
         }
-        else if (Conversions.ToBoolean(Operators.ConditionalCompareObjectEqual(
-                     ModBase.Setup.Get("VersionServerLoginRequire", ModMinecraft.McInstanceSelected), 3,
-                     false))) // 要求正版验证或第三方验证
+        else if (Config.InstanceAuth.LoginRequirementSolution[ModMinecraft.McInstanceSelected?.PathInstance] == 3) // 要求正版验证或第三方验证
         {
             if (ModProfile.SelectedProfile.Type == McLoginType.Legacy)
                 CheckResult = Lang.Text("Minecraft.Launch.Precheck.RequireMicrosoftOrThirdParty");
-            else if (Conversions.ToBoolean(ModProfile.SelectedProfile.Type == McLoginType.Auth &&
-                                           !Operators.ConditionalCompareObjectEqual(
-                                               ModProfile.SelectedProfile.Server.BeforeLast("/authserver"),
-                                               ModBase.Setup.Get("VersionServerAuthServer",
-                                                   ModMinecraft.McInstanceSelected), false)))
+            else if (ModProfile.SelectedProfile.Type == McLoginType.Auth &&
+                     ModProfile.SelectedProfile.Server.BeforeLast("/authserver") !=
+                     Config.InstanceAuth.AuthServerAddress[ModMinecraft.McInstanceSelected?.PathInstance])
                 CheckResult = Lang.Text("Minecraft.Launch.Precheck.AuthServerMismatch");
         }
 
@@ -626,7 +617,7 @@ public static class ModLaunch
     {
         ModBase.Log("[Profile] 开始加载选定档案");
         // 校验登录信息
-        var CheckResult = Conversions.ToString(ModProfile.IsProfileValid());
+        var CheckResult = ModProfile.IsProfileValid();
         if (!string.IsNullOrEmpty(CheckResult))
             throw new ArgumentException(CheckResult);
         // 获取对应加载器
@@ -2079,21 +2070,20 @@ public static class ModLaunch
 
     internal static void SecretLaunchJvmArgs(ref List<string> DataList)
     {
-        var DataJvmCustom =
-            Conversions.ToString(ModBase.Setup.Get("VersionAdvanceJvm", ModMinecraft.McInstanceSelected));
+        var DataJvmCustom = Config.Instance.JvmArgs[ModMinecraft.McInstanceSelected?.PathInstance];
         DataList.Insert(0,
-            Conversions.ToString(string.IsNullOrEmpty(DataJvmCustom)
+            string.IsNullOrEmpty(DataJvmCustom)
                 ? Config.Launch.JvmArgs
-                : DataJvmCustom)); // 可变 JVM 参数
+                : DataJvmCustom); // 可变 JVM 参数
         switch (Config.Launch.PreferredIpStack)
         {
-            case var @case when Operators.ConditionalCompareObjectEqual(@case, 0, false):
+            case JvmPreferredIpStack.PreferV4:
             {
                 DataList.Add("-Djava.net.preferIPv4Stack=true");
                 DataList.Add("-Djava.net.preferIPv4Addresses=true");
                 break;
             }
-            case var case1 when Operators.ConditionalCompareObjectEqual(case1, 2, false):
+            case JvmPreferredIpStack.PreferV6:
             {
                 DataList.Add("-Djava.net.preferIPv6Stack=true");
                 DataList.Add("-Djava.net.preferIPv6Addresses=true");
@@ -2240,10 +2230,10 @@ public static class ModLaunch
     /// </summary>
     private static bool McLaunchNeedsRetroWrapper(ModMinecraft.McInstance Mc)
     {
-        return Conversions.ToBoolean((Mc.ReleaseTime >= new DateTime(2013, 6, 25) && Mc.Info.Drop == 99) ||
-                                     (Mc.Info.Drop < 60 && Mc.Info.Drop != 99 &&
-                                      !(bool)Config.Launch.DisableRw &&
-                                      !(bool)ModBase.Setup.Get("VersionAdvanceDisableRW", Mc))); // <1.6
+        return (Mc.ReleaseTime >= new DateTime(2013, 6, 25) && Mc.Info.Drop == 99) ||
+               (Mc.Info.Drop < 60 && Mc.Info.Drop != 99 &&
+                !Config.Launch.DisableRw &&
+                !Config.Instance.DisableRw[Mc.PathInstance]); // <1.6
     }
 
     /// <summary>
@@ -2339,17 +2329,14 @@ public static class ModLaunch
         // MJSB
         Arguments = Arguments.Replace(" -Dos.name=Windows 10", " -Dos.name=\"Windows 10\"");
         // 全屏
-        if (Conversions.ToBoolean(
-                Operators.ConditionalCompareObjectEqual(Config.Launch.GameWindowMode, 0, false)))
+        if (Config.Launch.GameWindowMode == 0)
             Arguments += " --fullscreen";
         // 由 Option 传入的额外参数
         foreach (var Arg in CurrentLaunchOptions.ExtraArgs)
             Arguments += " " + Arg.Trim();
         // 自定义参数
-        var ArgumentGame =
-            Conversions.ToString(ModBase.Setup.Get("VersionAdvanceGame", ModMinecraft.McInstanceSelected));
-        Arguments = Conversions.ToString(Arguments + Operators.ConcatenateObject(" ",
-            string.IsNullOrEmpty(ArgumentGame) ? Config.Launch.GameArgs : ArgumentGame));
+        var ArgumentGame = Config.Instance.GameArgs[ModMinecraft.McInstanceSelected?.PathInstance];
+        Arguments = Arguments + " " + (string.IsNullOrEmpty(ArgumentGame) ? Config.Launch.GameArgs : ArgumentGame);
         // 替换参数
         var ReplaceArguments = McLaunchArgumentsReplace(ModMinecraft.McInstanceSelected, ref Loader);
         if (string.IsNullOrWhiteSpace(ReplaceArguments["${version_type}"]))
@@ -2375,9 +2362,9 @@ public static class ModLaunch
         var WorldName = CurrentLaunchOptions.WorldName;
         if (WorldName is not null) FinalArguments += $" --quickPlaySingleplayer \"{WorldName}\"";
         // 进服
-        var Server = Conversions.ToString(string.IsNullOrEmpty(CurrentLaunchOptions.ServerIp)
-            ? ModBase.Setup.Get("VersionServerEnter", ModMinecraft.McInstanceSelected)
-            : CurrentLaunchOptions.ServerIp);
+        var Server = string.IsNullOrEmpty(CurrentLaunchOptions.ServerIp)
+            ? Config.Instance.ServerToEnter[ModMinecraft.McInstanceSelected?.PathInstance]
+            : CurrentLaunchOptions.ServerIp;
         if (string.IsNullOrWhiteSpace(WorldName) && !string.IsNullOrWhiteSpace(Server))
         {
             if (ModMinecraft.McInstanceSelected.ReleaseTime > new DateTime(2023, 4, 4))
@@ -2413,9 +2400,9 @@ public static class ModLaunch
 
         // 输出固定参数
         DataList.Add("-XX:HeapDumpPath=MojangTricksIntelDriversForPerformance_javaw.exe_minecraft.exe.heapdump");
-        var ArgumentJvm = Conversions.ToString(ModBase.Setup.Get("VersionAdvanceJvm", ModMinecraft.McInstanceSelected));
+        var ArgumentJvm = Config.Instance.JvmArgs[ModMinecraft.McInstanceSelected?.PathInstance];
         if (string.IsNullOrEmpty(ArgumentJvm))
-            ArgumentJvm = Conversions.ToString(Config.Launch.JvmArgs);
+            ArgumentJvm = Config.Launch.JvmArgs;
         if (!ArgumentJvm.Contains("-Dlog4j2.formatMsgNoLookups=true"))
             ArgumentJvm += " -Dlog4j2.formatMsgNoLookups=true";
         ArgumentJvm = ArgumentJvm.Replace(" -XX:MaxDirectMemorySize=256M", ""); // #3511 的清理
@@ -2465,13 +2452,11 @@ public static class ModLaunch
 
         // 渲染器
         var Renderer = 0;
-        if (Conversions.ToBoolean(Operators.ConditionalCompareObjectNotEqual(
-                ModBase.Setup.Get("VersionAdvanceRenderer", ModMinecraft.McInstanceSelected), 0, false)))
-            Renderer = Conversions.ToInteger(
-                Operators.SubtractObject(ModBase.Setup.Get("VersionAdvanceRenderer", ModMinecraft.McInstanceSelected),
-                    1));
+        var instanceRenderer = Config.Instance.Renderer[ModMinecraft.McInstanceSelected?.PathInstance];
+        if (instanceRenderer != 0)
+            Renderer = instanceRenderer - 1;
         else
-            Renderer = Conversions.ToInteger(Config.Launch.Renderer);
+            Renderer = Config.Launch.Renderer;
         var MesaLoaderWindowsVersion = "25.3.5";
         var MesaLoaderWindowsTargetFile =
             Path.Combine(ModBase.PathPure, "mesa-loader-windows", MesaLoaderWindowsVersion, "Loader.jar");
@@ -2486,7 +2471,7 @@ public static class ModLaunch
             !string.IsNullOrWhiteSpace(Config.Network.HttpProxy.CustomAddress))
             try
             {
-                var ProxyAddress = new Uri(Conversions.ToString(Config.Network.HttpProxy.CustomAddress));
+                var ProxyAddress = new Uri(Config.Network.HttpProxy.CustomAddress);
                 DataList.Add(
                     $"-D{(ProxyAddress.Scheme.StartsWithF("https:") ? "https" : "http")}.proxyHost={ProxyAddress.AbsoluteUri}");
                 DataList.Add(
@@ -2498,9 +2483,8 @@ public static class ModLaunch
             }
 
         // 添加 Java Wrapper 作为主 Jar
-        if (Conversions.ToBoolean(ModBase.IsUtf8CodePage() && !(bool)Config.Launch.DisableJlw &&
-                                  !(bool)ModBase.Setup.Get("VersionAdvanceDisableJLW",
-                                      ModMinecraft.McInstanceSelected)))
+        if (ModBase.IsUtf8CodePage() && !Config.Launch.DisableJlw &&
+            !Config.Instance.DisableJlw[ModMinecraft.McInstanceSelected?.PathInstance])
         {
             if (McLaunchJavaSelected.Installation.MajorVersion >= 9)
                 DataList.Add("--add-exports cpw.mods.bootstraplauncher/cpw.mods.bootstraplauncher=ALL-UNNAMED");
@@ -2590,13 +2574,11 @@ public static class ModLaunch
 
         // 渲染器
         var Renderer = 0;
-        if (Conversions.ToBoolean(Operators.ConditionalCompareObjectNotEqual(
-                ModBase.Setup.Get("VersionAdvanceRenderer", ModMinecraft.McInstanceSelected), 0, false)))
-            Renderer = Conversions.ToInteger(
-                Operators.SubtractObject(ModBase.Setup.Get("VersionAdvanceRenderer", ModMinecraft.McInstanceSelected),
-                    1));
+        var instanceRenderer = Config.Instance.Renderer[ModMinecraft.McInstanceSelected?.PathInstance];
+        if (instanceRenderer != 0)
+            Renderer = instanceRenderer - 1;
         else
-            Renderer = Conversions.ToInteger(Config.Launch.Renderer);
+            Renderer = Config.Launch.Renderer;
         var MesaLoaderWindowsVersion = "25.3.5";
         var MesaLoaderWindowsTargetFile =
             Path.Combine(ModBase.PathPure, "mesa-loader-windows", MesaLoaderWindowsVersion, "Loader.jar");
@@ -2611,7 +2593,7 @@ public static class ModLaunch
             !string.IsNullOrWhiteSpace(Config.Network.HttpProxy.CustomAddress))
             try
             {
-                var ProxyAddress = new Uri(Conversions.ToString(Config.Network.HttpProxy.CustomAddress));
+                var ProxyAddress = new Uri(Config.Network.HttpProxy.CustomAddress);
                 DataList.Add(
                     $"-D{(ProxyAddress.Scheme.StartsWithF("https:") ? "https" : "http")}.proxyHost={ProxyAddress.AbsoluteUri}");
                 DataList.Add(
@@ -2627,9 +2609,8 @@ public static class ModLaunch
             // https://github.com/NeRdTheNed/RetroWrapper/wiki/RetroWrapper-flags
             DataList.Add("-Dretrowrapper.doUpdateCheck=false");
         // 添加 Java Wrapper 作为主 Jar
-        if (Conversions.ToBoolean(ModBase.IsUtf8CodePage() && !(bool)Config.Launch.DisableJlw &&
-                                  !(bool)ModBase.Setup.Get("VersionAdvanceDisableJLW",
-                                      ModMinecraft.McInstanceSelected)))
+        if (ModBase.IsUtf8CodePage() && !Config.Launch.DisableJlw &&
+            !Config.Instance.DisableJlw[ModMinecraft.McInstanceSelected?.PathInstance])
         {
             if (McLaunchJavaSelected.Installation.MajorVersion >= 9)
                 DataList.Add("--add-exports cpw.mods.bootstraplauncher/cpw.mods.bootstraplauncher=ALL-UNNAMED");
@@ -2825,12 +2806,11 @@ public static class ModLaunch
         GameArguments.Add("${launcher_name}", "PCLCE");
         GameArguments.Add("${launcher_version}", ModBase.VersionCode.ToString());
         GameArguments.Add("${version_name}", instance.Name);
-        var ArgumentInfo =
-            Conversions.ToString(ModBase.Setup.Get("VersionArgumentInfo", ModMinecraft.McInstanceSelected));
+        var ArgumentInfo = Config.Instance.TypeInfo[ModMinecraft.McInstanceSelected?.PathInstance];
         GameArguments.Add("${version_type}",
-            Conversions.ToString(string.IsNullOrEmpty(ArgumentInfo)
+            string.IsNullOrEmpty(ArgumentInfo)
                 ? Config.Launch.TypeInfo
-                : ArgumentInfo));
+                : ArgumentInfo);
         GameArguments.Add("${game_directory}",
             ModBase.ShortenPath(Strings.Left(ModMinecraft.McInstanceSelected.PathIndie,
                 ModMinecraft.McInstanceSelected.PathIndie.Count() - 1)));
@@ -2847,7 +2827,7 @@ public static class ModLaunch
         Size GameSize;
         switch (Config.Launch.GameWindowMode)
         {
-            case var @case when Operators.ConditionalCompareObjectEqual(@case, 2, false): // 与启动器尺寸一致
+            case GameWindowSizeMode.Launcher: // 与启动器尺寸一致
             {
                 Size Result;
                 ModBase.RunInUiWait(() => Result = new Size(ModBase.GetPixelSize(ModMain.FrmMain.PanForm.ActualWidth),
@@ -2856,7 +2836,7 @@ public static class ModLaunch
                 GameSize.Height -= 29.5d * ModBase.DPI / 96d; // 标题栏高度
                 break;
             }
-            case var case1 when Operators.ConditionalCompareObjectEqual(case1, 3, false): // 自定义
+            case GameWindowSizeMode.Custom: // 自定义
             {
                 GameSize = new Size(Math.Max(100, (double)Config.Launch.GameWindowWidth),
                     Math.Max(100, (double)Config.Launch.GameWindowHeight));
@@ -3237,12 +3217,12 @@ public static class ModLaunch
         // 窗口
         switch (Config.Launch.GameWindowMode)
         {
-            case var @case when Operators.ConditionalCompareObjectEqual(@case, 0, false): // 全屏
+            case GameWindowSizeMode.Fullscreen: // 全屏
             {
                 ModBase.WriteIni(SetupFileAddress, "fullscreen", "true");
                 break;
             }
-            case var case1 when Operators.ConditionalCompareObjectEqual(case1, 1, false): // 默认
+            case GameWindowSizeMode.Default: // 默认
                 // 其他
             {
                 break;
@@ -3308,11 +3288,10 @@ public static class ModLaunch
     private static void McLaunchCustom(ModLoader.LoaderTask<int, int> Loader)
     {
         // 获取自定义命令
-        var CustomCommandGlobal = Conversions.ToString(Config.Launch.PreLaunchCommand);
+        var CustomCommandGlobal = Config.Launch.PreLaunchCommand;
         if (!string.IsNullOrEmpty(CustomCommandGlobal))
             CustomCommandGlobal = ArgumentReplace(CustomCommandGlobal, true);
-        var CustomCommandVersion =
-            Conversions.ToString(ModBase.Setup.Get("VersionAdvanceRun", ModMinecraft.McInstanceSelected));
+        var CustomCommandVersion = Config.Instance.PreLaunchCommand[ModMinecraft.McInstanceSelected?.PathInstance];
         if (!string.IsNullOrEmpty(CustomCommandVersion))
             CustomCommandVersion = ArgumentReplace(CustomCommandVersion, true);
 
@@ -3359,7 +3338,7 @@ public static class ModLaunch
                 CustomProcess.StartInfo.UseShellExecute = false;
                 CustomProcess.StartInfo.CreateNoWindow = true;
                 CustomProcess.Start();
-                if (Conversions.ToBoolean(Config.Launch.PreLaunchCommandWait))
+                if (Config.Launch.PreLaunchCommandWait)
                     while (!CustomProcess.HasExited && !Loader.IsAborted)
                         Thread.Sleep(10);
             }
@@ -3389,7 +3368,7 @@ public static class ModLaunch
                 CustomProcess.StartInfo.UseShellExecute = false;
                 CustomProcess.StartInfo.CreateNoWindow = true;
                 CustomProcess.Start();
-                if (Conversions.ToBoolean(ModBase.Setup.Get("VersionAdvanceRunWait", ModMinecraft.McInstanceSelected)))
+                if (Config.Instance.PreLaunchCommandWait[ModMinecraft.McInstanceSelected?.PathInstance])
                     while (!CustomProcess.HasExited && !Loader.IsAborted)
                         Thread.Sleep(10);
             }
@@ -3410,8 +3389,8 @@ public static class ModLaunch
 
     private static void McLaunchRun(ModLoader.LoaderTask<int, Process> Loader)
     {
-        var noJavaw = Conversions.ToBoolean((bool)Config.Launch.NoJavaw &&
-                                            McLaunchJavaSelected.Installation.JavawExePath is not null);
+        var noJavaw = Config.Launch.NoJavaw &&
+                      McLaunchJavaSelected.Installation.JavawExePath is not null;
 
         // 启动信息
         var GameProcess = new Process();
@@ -3452,12 +3431,12 @@ public static class ModLaunch
             GameProcess.PriorityBoostEnabled = true;
             switch (Config.Launch.ProcessPriority)
             {
-                case var @case when Operators.ConditionalCompareObjectEqual(@case, 0, false): // 高
+                case GameProcessPriority.AboveNormal: // 高
                 {
                     GameProcess.PriorityClass = ProcessPriorityClass.AboveNormal;
                     break;
                 }
-                case var case1 when Operators.ConditionalCompareObjectEqual(case1, 2, false): // 低
+                case GameProcessPriority.BelowNormal: // 低
                 {
                     GameProcess.PriorityClass = ProcessPriorityClass.BelowNormal; // 中
                     break;
@@ -3505,10 +3484,10 @@ public static class ModLaunch
         McLaunchLog("");
 
         // 获取窗口标题
-        var WindowTitle = (string?)ModBase.Setup.Get("VersionArgumentTitle", ModMinecraft.McInstanceSelected);
+        var WindowTitle = Config.Instance.Title[ModMinecraft.McInstanceSelected?.PathInstance];
         if (string.IsNullOrEmpty(WindowTitle) &&
-            !(bool)ModBase.Setup.Get("VersionArgumentTitleEmpty", ModMinecraft.McInstanceSelected))
-            WindowTitle = Conversions.ToString(Config.Launch.Title);
+            !Config.Instance.UseGlobalTitle[ModMinecraft.McInstanceSelected?.PathInstance])
+            WindowTitle = Config.Launch.Title;
         WindowTitle = ArgumentReplace(WindowTitle, false);
 
         // JStack 路径
@@ -3546,12 +3525,12 @@ public static class ModLaunch
         McLaunchLog("开始启动结束处理");
 
         // 暂停或开始音乐播放
-        if (Conversions.ToBoolean(Config.Preference.Music.StopInGame))
+        if (Config.Preference.Music.StopInGame)
             ModBase.RunInUi(() =>
             {
                 if (ModMusic.MusicPause()) ModBase.Log("[Music] 已根据设置，在启动后暂停音乐播放");
             });
-        else if (Conversions.ToBoolean(Config.Preference.Music.StartInGame))
+        else if (Config.Preference.Music.StartInGame)
             ModBase.RunInUi(() =>
             {
                 if (ModMusic.MusicResume()) ModBase.Log("[Music] 已根据设置，在启动后开始音乐播放");
@@ -3561,32 +3540,32 @@ public static class ModLaunch
         ModVideoBack.VideoPause();
         // 启动器可见性
         McLaunchLog(
-            Conversions.ToString(Operators.ConcatenateObject("启动器可见性：", Config.Launch.LauncherVisibility)));
+            "启动器可见性：" + Config.Launch.LauncherVisibility);
         switch (Config.Launch.LauncherVisibility)
         {
-            case var @case when Operators.ConditionalCompareObjectEqual(@case, 0, false):
+            case LauncherVisibility.ExitImmediately:
             {
                 // 直接关闭
                 McLaunchLog("已根据设置，在启动后关闭启动器");
                 ModBase.RunInUi(() => ModMain.FrmMain.EndProgram(false));
                 break;
             }
-            case var case1 when Operators.ConditionalCompareObjectEqual(case1, 2, false):
-            case var case2 when Operators.ConditionalCompareObjectEqual(case2, 3, false):
+            case LauncherVisibility.HideAndExit:
+            case LauncherVisibility.HideAndReopen:
             {
                 // 隐藏
                 McLaunchLog("已根据设置，在启动后隐藏启动器");
                 ModBase.RunInUi(() => ModMain.FrmMain.Hidden = true);
                 break;
             }
-            case var case3 when Operators.ConditionalCompareObjectEqual(case3, 4, false):
+            case LauncherVisibility.MinimizeAndReopen:
             {
                 // 最小化
                 McLaunchLog("已根据设置，在启动后最小化启动器");
                 ModBase.RunInUi(() => ModMain.FrmMain.WindowState = WindowState.Minimized);
                 break;
             }
-            case var case4 when Operators.ConditionalCompareObjectEqual(case4, 5, false):
+            case LauncherVisibility.DoNothing:
             {
                 break;
             }
@@ -3596,9 +3575,8 @@ public static class ModLaunch
         // 启动计数
         States.System.LaunchCount += 1;
 
-        ModBase.Setup.Set("VersionLaunchCount",
-            Operators.AddObject(ModBase.Setup.Get("VersionLaunchCount", ModMinecraft.McInstanceSelected), 1),
-            instance: ModMinecraft.McInstanceSelected);
+        States.Instance.LaunchCount[ModMinecraft.McInstanceSelected.PathInstance] =
+            States.Instance.LaunchCount[ModMinecraft.McInstanceSelected.PathInstance] + 1;
     }
 
     /// <summary>
