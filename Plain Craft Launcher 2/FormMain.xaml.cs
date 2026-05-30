@@ -12,6 +12,7 @@ using PCL.Core.App;
 using PCL.Core.App.IoC;
 using PCL.Core.App.Localization;
 using PCL.Core.Logging;
+using PCL.Core.Minecraft;
 using PCL.Core.UI;
 using PCL.Core.UI.Theme;
 using PCL.Core.Utils;
@@ -1086,13 +1087,46 @@ public partial class FormMain
                     {
                         var DestFolder = PageInstanceLeft.Instance.PathIndie + @"saves\" +
                                          ModBase.GetFileNameWithoutExtentionFromPath(FilePath);
+                        var DestLevelDat = Path.Combine(DestFolder, "level.dat");
                         if (Directory.Exists(DestFolder))
                         {
                             ModMain.Hint(Lang.Text("Main.FileDrag.SameFolderExists", DestFolder), ModMain.HintType.Critical);
                             return;
                         }
 
-                        ModBase.ExtractFile(FilePath, DestFolder);
+                        var ExtractFolder = Path.Combine(ModBase.PathTemp, "Cache", "WorldImport", ModBase.GetUuid().ToString());
+                        try
+                        {
+                            ModBase.ExtractFile(FilePath, ExtractFolder);
+                            var SaveRoot = SaveImportHelper.GetSaveRootDirectory(ExtractFolder);
+                            if (SaveRoot is null)
+                            {
+                                ModMain.Hint(Lang.Text("Main.FileDrag.SaveNotFound"), ModMain.HintType.Critical);
+                                return;
+                            }
+
+                            ModBase.CopyDirectory(SaveRoot, DestFolder);
+                            if (!File.Exists(DestLevelDat))
+                            {
+                                if (Directory.Exists(DestFolder))
+                                    ModBase.DeleteDirectory(DestFolder, true);
+                                ModMain.Hint(Lang.Text("Main.FileDrag.SaveInvalid"), ModMain.HintType.Critical);
+                                return;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            if (Directory.Exists(DestFolder))
+                                ModBase.DeleteDirectory(DestFolder, true);
+                            ModBase.Log(ex, Lang.Text("Main.FileDrag.SaveImportFailed"), ModBase.LogLevel.Hint);
+                            return;
+                        }
+                        finally
+                        {
+                            if (Directory.Exists(ExtractFolder))
+                                ModBase.DeleteDirectory(ExtractFolder, true);
+                        }
+
                         ModMain.Hint(Lang.Text("Main.FileDrag.Imported", ModBase.GetFileNameWithoutExtentionFromPath(FilePath)),
                             ModMain.HintType.Finish);
                         if (ModMain.FrmInstanceSaves is not null)
