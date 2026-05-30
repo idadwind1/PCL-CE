@@ -10,6 +10,7 @@ using PCL.Core.Utils.Validate;
 using PCL.Network;
 using PCL.Network.Loaders;
 using static PCL.ModLoader;
+using PCL.Core.Utils;
 
 namespace PCL;
 
@@ -451,7 +452,7 @@ public static class ModModpack
             }
 
             ModList.Add((int)ModEntry["fileID"]);
-            if (ModEntry["required"] is JsonValue { } jv && !jv.GetValue<bool>())
+            if (ModEntry["required"] is JsonNode requiredNode && !requiredNode.ToObject<bool>())
                 ModOptionalList.Add((int)ModEntry["fileID"]);
         }
 
@@ -689,31 +690,31 @@ public static class ModModpack
             {
                 case "minecraft":
                 {
-                    MinecraftVersion = Entry.Value?.GetValue<string>();
+                    MinecraftVersion = Entry.Value?.ToObject<string>();
                     break;
                 }
                 case "forge": // eg. 14.23.5.2859 / 1.19-41.1.0
                 {
-                    ForgeVersion = Entry.Value?.GetValue<string>();
+                    ForgeVersion = Entry.Value?.ToObject<string>();
                     ModBase.Log("[ModPack] 整合包 Forge 版本：" + ForgeVersion);
                     break;
                 }
                 case "neoforge":
                 case "neo-forge": // eg. 20.6.98-beta
                 {
-                    NeoForgeVersion = Entry.Value?.GetValue<string>();
+                    NeoForgeVersion = Entry.Value?.ToObject<string>();
                     ModBase.Log("[ModPack] 整合包 NeoForge 版本：" + NeoForgeVersion);
                     break;
                 }
                 case "fabric-loader": // eg. 0.14.14
                 {
-                    FabricVersion = Entry.Value?.GetValue<string>();
+                    FabricVersion = Entry.Value?.ToObject<string>();
                     ModBase.Log("[ModPack] 整合包 Fabric 版本：" + FabricVersion);
                     break;
                 }
                 case "quilt-loader": // eg. 0.26.0
                 {
-                    QuiltVersion = Entry.Value?.GetValue<string>();
+                    QuiltVersion = Entry.Value?.ToObject<string>();
                     ModBase.Log("[ModPack] 整合包 Quilt 版本：" + QuiltVersion);
                     break;
                 }
@@ -799,7 +800,7 @@ public static class ModModpack
             }
 
             FileList.Add(new DownloadFile(Urls, TargetPath,
-                new ModBase.FileChecker(ActualSize: ((JsonNode)File["fileSize"]).GetValue<long>(),
+                new ModBase.FileChecker(ActualSize: ((JsonNode)File["fileSize"]).ToObject<long>(),
                     Hash: File["hashes"]["sha1"].ToString()), true));
         }
 
