@@ -838,17 +838,18 @@ public static class ModMinecraft
                     {
                         if (ModBase.RunInUi())
                         {
-                            ModBase.Log("[Minecraft] 实例 JSON 文件为空或有误，由于代码在主线程运行，将不再进行重试", ModBase.LogLevel.Debug);
-                            ModBase.GetJson(_jsonText); // 触发异常
+                            ModBase.Log($"[Minecraft] 实例 JSON 文件为空或有误，将进行短暂重试（{JsonPath}）", ModBase.LogLevel.Debug);
+                            Thread.Sleep(200);
+                            _jsonText = ModBase.ReadFile(JsonPath);
                         }
                         else
                         {
                             ModBase.Log($"[Minecraft] 实例 JSON 文件为空或有误，将在 2s 后重试读取（{JsonPath}）", ModBase.LogLevel.Debug);
                             Thread.Sleep(2000);
                             _jsonText = ModBase.ReadFile(JsonPath);
-                            if (!FastJsonCheck(_jsonText))
-                                ModBase.GetJson(_jsonText);
-                        } // 触发异常
+                        }
+                        if (!FastJsonCheck(_jsonText))
+                            ModBase.GetJson(_jsonText);
                     }
                 }
 
