@@ -18,7 +18,6 @@ public partial class MyExtraButton
     private const int animationColorIn = 120;
     private const int animationColorOut = 150;
 
-    // 进度条
     // 鼠标点击判定（务必放在点击事件之后，以使得 Button_MouseUp 先于 Button_MouseLeave 执行）
     private bool isLeftMouseHeld;
     private bool isRightMouseHeld;
@@ -37,7 +36,7 @@ public partial class MyExtraButton
 
     public double Progress
     {
-        get => field;
+        get;
         set
         {
             if (field == value)
@@ -57,30 +56,50 @@ public partial class MyExtraButton
 
     public string Logo
     {
-        get => field;
+        get;
         set
         {
             if ((value ?? "") == (field ?? ""))
                 return;
             field = value;
             Path.Data = (Geometry)new GeometryConverter().ConvertFromString(value);
+            SvgIconControlHelper.ApplyVisibility(Path, ShapeSvgIcon, IsUsingSvgIcon);
         }
     } = "";
 
+    public string SvgIcon
+    {
+        get;
+        set
+        {
+            value ??= string.Empty;
+            if (value == field)
+                return;
+            field = value;
+            if (Path is null || ShapeSvgIcon is null)
+                return;
+            SvgIconControlHelper.ApplyIcon(Path, ShapeSvgIcon, field);
+            ApplyLogoScale();
+        }
+    } = string.Empty;
+
+    private bool IsUsingSvgIcon => SvgIconControlHelper.HasSvgIcon(SvgIcon);
+
+    private double EffectiveLogoScale => IsUsingSvgIcon ? 1D : LogoScale;
+
     public double LogoScale
     {
-        get => field;
+        get;
         set
         {
             field = value;
-            if (Path is not null)
-                Path.RenderTransform = new ScaleTransform { ScaleX = LogoScale, ScaleY = LogoScale };
+            ApplyLogoScale();
         }
     } = 1d;
 
     public bool Show
     {
-        get => field;
+        get;
         set
         {
             if (field == value)
@@ -122,6 +141,11 @@ public partial class MyExtraButton
     }
 
     public bool CanRightClick { get; set; }
+
+    private void ApplyLogoScale()
+    {
+        IconHost?.RenderTransform = new ScaleTransform { ScaleX = EffectiveLogoScale, ScaleY = EffectiveLogoScale };
+    }
 
     // 声明
     public event ClickEventHandler? Click;

@@ -239,7 +239,9 @@ public partial class PageInstanceSavesInfo : IRefreshable
 
             var chunkbaseBtn = new MyIconButton
             {
-                Logo = Icon.IconButtonlink, Width = 22d, Height = 22d,
+                SvgIcon = "lucide/external-link",
+                Width = 22d,
+                Height = 22d,
                 ToolTip = Lang.Text("Instance.Saves.Info.Chunkbase.ToolTip"),
             };
             chunkbaseBtn.Click += (_, _) => OpenChunkbase(content, versionName);
