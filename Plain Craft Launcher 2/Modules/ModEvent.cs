@@ -102,7 +102,6 @@ namespace PCL
             启动游戏,
             复制文本,
             刷新主页,
-            刷新主页市场,
             刷新页面,
             刷新帮助,
             今日人品,
@@ -224,12 +223,6 @@ namespace PCL
                         {
                             ModMain.Hint("当前页面不支持刷新操作！", ModMain.HintType.Critical);
                         }
-                        break;
-
-                    case EventType.刷新主页市场:
-                        ModMain.frmHomePageMarket?.Refresh();
-                        if (args[0] == "")
-                            ModMain.Hint("已刷新主页市场！", ModMain.HintType.Finish);
                         break;
 
                     case EventType.刷新帮助:
