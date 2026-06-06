@@ -364,7 +364,7 @@ public static class ModMain
                                                                       new ModBase.MyColor(255d, 255d, 255d) *
                                                                       (1d - percent);
                                 }, 0.7d, 250),
-                                ModAnimation.AaX(doubleStack, slideSign * 50, 200, (int)Math.Round(delay),
+                                ModAnimation.AaX(doubleStack, -slideSign * 50, 200, (int)Math.Round(delay),
                                     new ModAnimation.AniEaseInFluent()),
                                 ModAnimation.AaOpacity(doubleStack, -1, 150, (int)Math.Round(delay)),
                                 ModAnimation.AaCode(() => doubleStackTag[0] = false,
@@ -433,7 +433,7 @@ public static class ModMain
                     ModAnimation.AniStart(
                         new[]
                         {
-                            ModAnimation.AaX(newHintControl, slideSign * 50, 200, (int)Math.Round(delay),
+                            ModAnimation.AaX(newHintControl, -slideSign * 50, 200, (int)Math.Round(delay),
                                 new ModAnimation.AniEaseInFluent()),
                             ModAnimation.AaOpacity(newHintControl, -1, 150, (int)Math.Round(delay)),
                             ModAnimation.AaCode(() => newHintTag[0] = false, (int)Math.Round(delay)),
@@ -467,7 +467,7 @@ public static class ModMain
             ModAnimation.AniStart(
                 new[]
                 {
-                    ModAnimation.AaX(control, hideSign * 50, 200, ease: new ModAnimation.AniEaseInFluent()),
+                    ModAnimation.AaX(control, -hideSign * 50, 200, ease: new ModAnimation.AniEaseInFluent()),
                     ModAnimation.AaOpacity(control, -1, 150, ease: new ModAnimation.AniEaseInFluent()),
                     ModAnimation.AaCode(() => controlTag[0] = false),
                     ModAnimation.AaHeight(control, -26, 100, ease: new ModAnimation.AniEaseOutFluent(), after: true),
