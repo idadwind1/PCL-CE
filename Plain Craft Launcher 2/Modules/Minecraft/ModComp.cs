@@ -612,64 +612,7 @@ public static class ModComp
             {
                 try
                 {
-                    string? slug = null;
-                    string? projectId = null;
-                    var processedText = text.Replace("https://", "").Replace("http://", "");
-
-                    // 1. 处理 CurseForge 链接
-                    if (processedText.Contains("curseforge.com/minecraft/"))
-                    {
-                        var parts = processedText.Split('/');
-                        if (parts.Length < 4) return;
-
-                        var categoryUrl = parts[2];
-                        slug = parts[3];
-
-                        // 获取资源信息
-                        var json = ModDownload.DlModRequest<JsonObject>(
-                            $"https://api.curseforge.com/v1/mods/search?gameId=432&slug={slug}");
-                        var dataArray = (JsonArray)json["data"];
-
-                        if (dataArray.Any())
-                        {
-                            var firstData = (JsonObject)dataArray[0];
-                            var receivedClassId = firstData["classId"]?.ToString();
-
-                            // 映射分类 ID
-                            var categoryMapping = new Dictionary<string, string>
-                            {
-                                { "mc-mods", "6" },
-                                { "modpacks", "4471" },
-                                { "texture-packs", "12" },
-                                { "shaders", "6552" }
-                            };
-
-                            if (categoryMapping.TryGetValue(categoryUrl, out var targetClassId) &&
-                                receivedClassId != targetClassId)
-                            {
-                                // 如果分类不匹配，带上 classId 重新搜索
-                                json = ModDownload.DlModRequest<JsonObject>(
-                                    $"https://api.curseforge.com/v1/mods/search?gameId=432&slug={slug}&classId={targetClassId}");
-                                dataArray = (JsonArray)json["data"];
-                            }
-
-                            if (dataArray.Any()) projectId = dataArray[0]["id"]?.ToString();
-                        }
-                    }
-                    // 2. 处理 Modrinth 链接
-                    else if (processedText.Contains("modrinth.com/"))
-                    {
-                        var parts = processedText.Split('/');
-                        if (parts.Length < 3) return;
-
-                        slug = parts[2];
-                        var json = ModDownload.DlModRequest<JsonObject>($"https://api.modrinth.com/v2/project/{slug}");
-                        projectId = json["id"]?.ToString();
-                    }
-                    else
-                    {
-                        return;
-                    }
+                    var projectId = ResolveLinkToProjectId(text);
 
                     if (string.IsNullOrEmpty(projectId)) return;
                     ModBase.Log($"[Clipboard] Found ProjectId: {projectId}");
@@ -2202,12 +2145,172 @@ public static class ModComp
     public static ConcurrentDictionary<string, CompProject> compProjectCache = new();
 
     /// <summary>
+    /// CurseForge 分类 URL 段 → classId 映射。提为 static 避免每次解析重新分配。
+    /// </summary>
+    private static readonly Dictionary<string, string> curseForgeCategoryClassIds = new()
+    {
+        { "mc-mods", "6" },
+        { "modpacks", "4471" },
+        { "texture-packs", "12" },
+        { "shaders", "6552" }
+    };
+
+    private enum ResourceSite { None, CurseForge, Modrinth }
+
+    /// <summary>
+    /// 用 Uri 解析单个 token 是否为受支持的 CurseForge/Modrinth 资源链接。
+    /// 成功时输出站点、分类段与 slug（query、fragment 会被自动丢弃）。
+    /// </summary>
+    private static bool TryParseResourceLink(string token, out ResourceSite site, out string category, out string slug)
+    {
+        site = ResourceSite.None;
+        category = string.Empty;
+        slug = string.Empty;
+
+        // 容忍无协议前缀（如直接粘贴 www.curseforge.com/...）：原样试，再补 https:// 试
+        if (!Uri.TryCreate(token, UriKind.Absolute, out var uri) &&
+            !Uri.TryCreate($"https://{token}", UriKind.Absolute, out uri)) return false;
+        if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) return false;
+
+        // 仅取 path 段，天然忽略 ?query 与 #fragment
+        var segments = uri.AbsolutePath.Split(['/'], StringSplitOptions.RemoveEmptyEntries);
+
+        // CurseForge: /minecraft/{category}/{slug}
+        if (IsHostOf(uri.Host, "curseforge.com"))
+        {
+            if (segments.Length < 3 || !segments[0].Equals("minecraft", StringComparison.OrdinalIgnoreCase)) return false;
+            site = ResourceSite.CurseForge;
+            category = segments[1];
+            slug = segments[2];
+            return true;
+        }
+
+        // Modrinth: /{type}/{slug}
+        if (IsHostOf(uri.Host, "modrinth.com"))
+        {
+            if (segments.Length < 2) return false;
+            site = ResourceSite.Modrinth;
+            category = segments[0]; // 类型段，当前解析未使用
+            slug = segments[1];
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>host 等于 domain 或为其子域，避免 evilcurseforge.com 之类的伪装域名。</summary>
+    private static bool IsHostOf(string host, string domain) =>
+        host.Equals(domain, StringComparison.OrdinalIgnoreCase) ||
+        host.EndsWith($".{domain}", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>从文本中找出首个可识别的资源链接 token，找不到返回 null。</summary>
+    private static string? FindFirstResourceLinkToken(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return null;
+        foreach (var token in text.Split([' ', '\t', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
+            if (TryParseResourceLink(token, out _, out _, out _)) return token;
+        return null;
+    }
+
+    /// <summary>
+    /// 从单条 CurseForge / Modrinth 资源链接解析出 projectId。无法识别或获取失败时返回 null。
+    /// </summary>
+    public static string? ResolveLinkToProjectId(string url)
+    {
+        // 纯链接（搜索框已抽出的单 token）直接命中；含周围文本（如剪贴板整段）时回退取首个链接
+        if (!TryParseResourceLink(url, out var site, out var category, out var slug))
+        {
+            var token = FindFirstResourceLinkToken(url);
+            if (token is null || !TryParseResourceLink(token, out site, out category, out slug)) return null;
+        }
+
+        if (site == ResourceSite.CurseForge)
+        {
+            var encodedSlug = WebUtility.UrlEncode(slug);
+            var json = ModDownload.DlModRequest<JsonObject>(
+                $"https://api.curseforge.com/v1/mods/search?gameId=432&slug={encodedSlug}");
+            var dataArray = (JsonArray)json["data"];
+            if (!dataArray.Any()) return null;
+
+            var receivedClassId = ((JsonObject)dataArray[0])["classId"]?.ToString();
+            if (!curseForgeCategoryClassIds.TryGetValue(category, out var targetClassId) ||
+                receivedClassId == targetClassId)
+                return dataArray[0]["id"]?.ToString();
+
+            // 分类不符：带 classId 重搜。结果与首次查询语义不同，使用独立变量
+            var filteredJson = ModDownload.DlModRequest<JsonObject>(
+                $"https://api.curseforge.com/v1/mods/search?gameId=432&slug={encodedSlug}&classId={targetClassId}");
+            var filteredDatas = (JsonArray)filteredJson["data"];
+            return filteredDatas.Any() ? filteredDatas[0]["id"]?.ToString() : null;
+        }
+
+        // Modrinth：slug 进 path，用 EscapeDataString
+        var mr = ModDownload.DlModRequest<JsonObject>(
+            $"https://api.modrinth.com/v2/project/{Uri.EscapeDataString(slug)}");
+        return mr["id"]?.ToString();
+    }
+
+    /// <summary>
+    /// 若输入文本中恰好含 1 条 CurseForge/Modrinth 资源链接，返回该链接；含 0 条或 ≥2 条时返回 null。
+    /// </summary>
+    public static string? TryExtractSingleResourceLink(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return null;
+        var tokens = text.Split([' ', '\t', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
+        string? found = null;
+        foreach (var token in tokens)
+        {
+            if (!TryParseResourceLink(token, out _, out _, out _)) continue;
+            if (found is not null) return null; // ≥2 条链接，一条也不识别
+            found = token;
+        }
+        return found; // 恰好 1 条返回该链接；0 条返回 null
+    }
+
+    /// <summary>
     ///     根据搜索请求获取一系列的工程列表。需要基于加载器运行。
     /// </summary>
     public static void CompProjectsGet(ModLoader.LoaderTask<CompProjectRequest, int> task)
     {
         var request = task.input;
         var storage = request.storage;
+
+        // === Issue #2942: 搜索框单条资源链接识别 ===
+        var singleLink = TryExtractSingleResourceLink(request.searchText);
+        if (singleLink is not null)
+        {
+            // 已得到结果则直接结束（幂等，避免重复获取）
+            if (storage.results.Any()) return;
+
+            CompProject? project;
+            try
+            {
+                var projectId = ResolveLinkToProjectId(singleLink);
+                project = string.IsNullOrEmpty(projectId)
+                    ? null
+                    : CompRequest.GetCompProjectsByIds(new List<string> { projectId }).FirstOrDefault();
+            }
+            catch (Exception ex)
+            {
+                ModBase.Log(ex, "[Comp] 解析资源链接失败");
+                throw new Exception(Lang.Text("Download.Comp.Link.ResolveFailed"));
+            }
+
+            // 解析或获取失败 → 提示
+            if (project is null)
+                throw new Exception(Lang.Text("Download.Comp.Link.ResolveFailed"));
+
+            // 类型与当前页不符 → 按无结果处理（与既有"无匹配结果"一致）
+            if (request.type != CompType.Any && project.Type != request.type)
+                throw new Exception(Lang.Text("Download.Comp.List.NoMatchingResults"));
+
+            // 命中：单条结果，隐藏分页
+            storage.results.Add(project);
+            storage.curseForgeTotal = 0;
+            storage.modrinthTotal = 0;
+            return;
+        }
+        // === /Issue #2942 ===
 
         #region 状态与版本初步检查
 
