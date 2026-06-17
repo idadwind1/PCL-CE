@@ -55,7 +55,6 @@ public partial class PageSetupUI
             ComboDarkColor.SelectedIndex = (int)Config.Preference.Theme.DarkColor;
             ComboLightColor.SelectedIndex = (int)Config.Preference.Theme.LightColor;
             CheckShowLaunchingHint.Checked = Config.Preference.ShowLaunchingHint;
-            CheckHintAlignRight.Checked = Config.Preference.HintAlignRight;
 
             // 字体设置
             ComboUiFont.SelectedFontTag = Config.Preference.Font;
@@ -223,8 +222,6 @@ public partial class PageSetupUI
     private static void SetByTag(string tag, object value)
     {
         ConfigService.TrySetValue(tag, value);
-        if (tag == "UiHintAlignRight")
-            ModMain.Hint(Lang.Text("Setup.Ui.Basic.HintAlignRight.Changed"));
     }
 
     private void ComboFontChange(object sender, SelectionChangedEventArgs e)
