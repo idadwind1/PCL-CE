@@ -2821,7 +2821,7 @@ public partial class PageInstanceCompResource : IRefreshable
                 if (token.IsCancellationRequested) return;
                 RefreshUI();
             }
-            catch (TaskCanceledException ignore)
+            catch (TaskCanceledException)
             {
             }
             catch (Exception ex)
