@@ -365,7 +365,7 @@ namespace PCL
                 return true;
 
             ModBase.Log($"[Control] 已阻止自定义事件写入高危设置：{key}", ModBase.LogLevel.Developer);
-            ModMain.Hint($"自定义主页不能写入高危设置：{key}", ModMain.HintType.Critical);
+            HintService.Hint($"自定义主页不能写入高危设置：{key}", HintType.Error);
             return false;
         }
 
