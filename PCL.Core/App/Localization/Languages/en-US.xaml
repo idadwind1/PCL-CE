@@ -1131,6 +1131,22 @@
     <sys:String x:Key="Download.Comp.Favorites.LoaderName.BatchDownloadSuitable">Batch download applicable resources</sys:String>
     <sys:String x:Key="Download.Comp.Favorites.LoaderName.BatchDownload">Batch download resources ({0})</sys:String>
 
+    <!-- Download.Comp.QuickDownload -->
+
+    <sys:String x:Key="Download.Comp.QuickDownload.Btn.ToolTip">Download the latest version</sys:String>
+    <sys:String x:Key="Download.Comp.QuickDownload.Hint.Loading">Getting resource version info, please wait…</sys:String>
+    <sys:String x:Key="Download.Comp.QuickDownload.Hint.NoFile">No downloadable files found</sys:String>
+    <sys:String x:Key="Download.Comp.QuickDownload.Hint.NoInstance">No Minecraft instance selected!</sys:String>
+    <sys:String x:Key="Download.Comp.QuickDownload.Hint.NoCompatibleInstance">No compatible Minecraft instances found</sys:String>
+    <sys:String x:Key="Download.Comp.QuickDownload.Hint.NoCompatibleFile">No compatible version found for this instance</sys:String>
+    <sys:String x:Key="Download.Comp.QuickDownload.Hint.SelectFolder">Select a folder to save the file</sys:String>
+    <sys:String x:Key="Download.Comp.QuickDownload.Hint.DownloadStarted">Started downloading: {0}</sys:String>
+    <sys:String x:Key="Download.Comp.QuickDownload.ChooseMethod.Title">Select a download destination</sys:String>
+    <sys:String x:Key="Download.Comp.QuickDownload.ChooseMethod.CurrentInstance">Download to the current instance</sys:String>
+    <sys:String x:Key="Download.Comp.QuickDownload.ChooseMethod.AskInstance">Select an instance…</sys:String>
+    <sys:String x:Key="Download.Comp.QuickDownload.ChooseMethod.AskPath">Select a folder…</sys:String>
+    <sys:String x:Key="Download.Comp.QuickDownload.ChooseInstance.Title">Select a target Minecraft instance</sys:String>
+
     <!-- Download.Source / Tag -->
 
     <sys:String x:Key="Download.Source.CleanroomOfficial">Cleanroom official source</sys:String>
@@ -1713,6 +1729,12 @@
     <sys:String x:Key="Setup.GameManage.Community.ModManageStyle.ToolTip">Display style of mod items on the Mod management page</sys:String>
     <sys:String x:Key="Setup.GameManage.Community.ModManageStyle.TitleTranslation">Title shows translated name, details show file name</sys:String>
     <sys:String x:Key="Setup.GameManage.Community.ModManageStyle.TitleFilename">Title shows file name, details show translated name</sys:String>
+    <sys:String x:Key="Setup.GameManage.Community.QuickDownload">Quick download behavior</sys:String>
+    <sys:String x:Key="Setup.GameManage.Community.QuickDownload.ToolTip">Choose what happens when you click the quick download button on a resource card</sys:String>
+    <sys:String x:Key="Setup.GameManage.Community.QuickDownload.AlwaysAsk">Always ask</sys:String>
+    <sys:String x:Key="Setup.GameManage.Community.QuickDownload.CurrentInstance">Download to the current instance</sys:String>
+    <sys:String x:Key="Setup.GameManage.Community.QuickDownload.AskInstance">Ask which instance to use</sys:String>
+    <sys:String x:Key="Setup.GameManage.Community.QuickDownload.AskPath">Ask where to save</sys:String>
     <sys:String x:Key="Setup.GameManage.Community.HideQuilt">Hide Quilt loader</sys:String>
     <sys:String x:Key="Setup.GameManage.Community.HideQuilt.ToolTip">Hide Quilt from the community resource loader display.</sys:String>
     <sys:String x:Key="Setup.GameManage.Community.AutoInstallDependencies">Auto-check and install required dependencies when downloading mods</sys:String>
