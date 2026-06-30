@@ -1400,6 +1400,9 @@ public static class ModLaunch
             {
                 _HandleHttpWebException(ex, "验证登录失败");
             }
+            catch (HttpResponseException ex){
+                ModProfile.ProfileLog($"验证登录失败: {ex}");
+            }
             catch (Exception ex)
             {
                 _HandleException(ex, "验证登录失败", "Minecraft.Launch.Login.Auth.ValidationFailed.WithDetail");
