@@ -345,6 +345,13 @@ public partial class FormMain
         if (lowerVersionCode >= ModBase.versionCode)
             return;
         ShowUpdateLog();
+        
+        // 重置自定义主页配置
+        if (lastVersionCode < 521 && Config.Preference.Homepage.SelectedPreset >= 3)
+        {
+            Config.Preference.Homepage.SelectedPreset = 0;
+            ModMain.MyMsgBox(Lang.Text("Main.HomepageReset.Content"), Lang.Text("Main.HomepageReset.Title"));
+        }
     }
 
     private void DowngradeSub(int lastVersionCode)
