@@ -650,6 +650,12 @@ public partial class PageInstanceOverall
                 return;
             }
 
+            if (currentVersion.HasQuilt)
+            {
+                HintService.Hint(Lang.Text("Instance.Overall.Reset.QuiltUnsupported"));
+                return;
+            }
+
             // 确认操作
             if (ModMain.MyMsgBox(
                     Lang.Text("Instance.Overall.Reset.ConfirmMessage", PageInstanceLeft.McInstance.Name), Lang.Text("Instance.Overall.Reset.ConfirmTitle"), Lang.Text("Common.Action.Confirm"), Lang.Text("Common.Action.Cancel")) == 2)
@@ -683,7 +689,6 @@ public partial class PageInstanceOverall
                 neoForgeVersion = currentVersion.HasNeoForge ? currentVersion.NeoForge : null,
                 cleanroomVersion = currentVersion.HasCleanroom ? currentVersion.Cleanroom : null,
                 fabricVersion = currentVersion.HasFabric ? currentVersion.Fabric : null,
-                quiltVersion = currentVersion.HasQuilt ? currentVersion.Quilt : null,
                 liteLoaderEntry = currentVersion.HasLiteLoader
                     ? new ModDownload.DlLiteLoaderListEntry { Inherit = currentVersion.VanillaName }
                     : null,
