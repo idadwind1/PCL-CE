@@ -205,7 +205,6 @@ public partial class PageDownloadLeft : IRefreshable
 
     public PageDownloadLeft()
     {
-        AnimatedControl = PanItem;
         InitializeComponent();
         ItemInstall.Check += PageCheck;
         ItemMod.Check += PageCheck;
@@ -223,6 +222,8 @@ public partial class PageDownloadLeft : IRefreshable
         ItemFabric.Check += PageCheck;
         ItemLegacyFabric.Check += PageCheck;
         ItemLabyMod.Check += PageCheck;
+
+        AnimatedControl = PanItem;
     }
 
     /// <summary>
