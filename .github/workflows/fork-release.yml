@@ -1,0 +1,169 @@
+name: Sync CE and release
+
+on:
+  schedule:
+    - cron: '43 * * * *'
+  workflow_dispatch:
+    inputs:
+      rebuild:
+        description: 'Rebuild and replace the latest release assets'
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+    paths:
+      - '.github/fork/**'
+      - '.github/workflows/fork-release.yml'
+      - '.github/workflows/reusable-build.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fork-release
+  cancel-in-progress: false
+
+env:
+  FORK_REPOSITORY: idadwind1/PCL-CE
+  UPSTREAM_REPOSITORY: PCL-Community/PCL-CE
+
+jobs:
+  sync:
+    if: github.repository == 'idadwind1/PCL-CE' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      build: ${{ steps.sync.outputs.build }}
+      sha: ${{ steps.sync.outputs.sha }}
+      tag: ${{ steps.sync.outputs.tag }}
+      version: ${{ steps.sync.outputs.version }}
+      upstream_name: ${{ steps.sync.outputs.upstream_name }}
+      upstream_url: ${{ steps.sync.outputs.upstream_url }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Install history filter
+        run: python -m pip install git-filter-repo==2.47.0
+      - name: Sync latest stable CE and apply the fork patch
+        id: sync
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REBUILD: ${{ github.event_name == 'workflow_dispatch' && inputs.rebuild && 'true' || 'false' }}
+        run: python .github/fork/release.py
+
+  build:
+    needs: sync
+    if: needs.sync.outputs.build == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        architecture: [x64, ARM64]
+    uses: ./.github/workflows/reusable-build.yml
+    with:
+      configuration: Release
+      architecture: ${{ matrix.architecture }}
+      ref: ${{ needs.sync.outputs.sha }}
+    secrets: inherit
+
+  publish:
+    needs: [sync, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.sync.outputs.sha }}
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: PCL2_CE_Release_*
+          path: artifact
+      - name: Rename binaries
+        run: |
+          for arch in x64 ARM64; do
+            mv "artifact/PCL2_CE_Release_${arch}/Plain Craft Launcher 2.exe" "PCL2_CE_Release_${arch}.exe"
+          done
+      - name: Sign and verify binaries
+        uses: sigstore/gh-action-sigstore-python@790bc6befb9d733738f18d8f895854b453640ec9 # v3.5.0
+        with:
+          inputs: PCL2_CE_Release_x64.exe PCL2_CE_Release_ARM64.exe
+          verify: true
+          verify-cert-identity: https://github.com/${{ github.repository }}/.github/workflows/fork-release.yml@refs/heads/main
+          verify-oidc-issuer: https://token.actions.githubusercontent.com
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Package updates and generate upstream-compatible metadata
+        env:
+          RELEASE_TAG: ${{ needs.sync.outputs.tag }}
+          UPSTREAM_NAME: ${{ needs.sync.outputs.upstream_name }}
+          UPSTREAM_URL: ${{ needs.sync.outputs.upstream_url }}
+        run: python .github/fork/update_feed.py
+      - name: Set release tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_SHA: ${{ needs.sync.outputs.sha }}
+          RELEASE_TAG: ${{ needs.sync.outputs.tag }}
+          REBUILD: ${{ github.event_name == 'workflow_dispatch' && inputs.rebuild && 'true' || 'false' }}
+        run: |
+          git fetch --no-tags origin main
+          test "$(git rev-parse FETCH_HEAD)" = "$BUILD_SHA"
+          old=$(git ls-remote --tags origin "refs/tags/$RELEASE_TAG" | cut -f1)
+          if [ -n "$old" ] && [ "$old" != "$BUILD_SHA" ]; then
+            test "$REBUILD" = true
+            test "$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" --jq '.immutable')" = false
+          fi
+          git push "--force-with-lease=refs/tags/$RELEASE_TAG:$old" origin "$BUILD_SHA:refs/tags/$RELEASE_TAG"
+      - name: Upload binaries and signatures to draft
+        id: release
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        with:
+          draft: true
+          tag_name: ${{ needs.sync.outputs.tag }}
+          target_commitish: ${{ needs.sync.outputs.sha }}
+          name: Release ${{ needs.sync.outputs.version }}
+          body: |
+            **Release由GitHub Actions自动生成，且与 PCL 官方及 CE 团队无关！**
+            上游Release：[${{ needs.sync.outputs.upstream_name }}](${{ needs.sync.outputs.upstream_url }})，可以在上游检查changelog和其他说明
+          fail_on_unmatched_files: true
+          files: |
+            PCL2_CE_Release_x64.exe
+            PCL2_CE_Release_x64.exe.sigstore.json
+            PCL2_CE_Release_ARM64.exe
+            PCL2_CE_Release_ARM64.exe.sigstore.json
+            PCL2_CE_Release_x64.zip
+            PCL2_CE_Release_ARM64.zip
+      - name: Remove superseded assets after successful upload
+        if: github.event_name == 'workflow_dispatch' && inputs.rebuild
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_ID: ${{ steps.release.outputs.id }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" \
+            --jq '.assets[] | select(.name | test("^PCL2_CE_Release_(x64|ARM64)(\\.exe(\\.sigstore\\.json)?|\\.zip)$") | not) | .id' > old-assets.txt
+          while read -r id; do
+            gh api --method DELETE "repos/$GITHUB_REPOSITORY/releases/assets/$id"
+          done < old-assets.txt
+      - name: Publish release
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        with:
+          tag_name: ${{ needs.sync.outputs.tag }}
+          draft: false
+          prerelease: false
+      - name: Publish update feed after the release is available
+        run: |
+          old=$(git ls-remote origin refs/heads/codex/update-feed | cut -f1)
+          git -C update-feed init --initial-branch=codex/update-feed
+          git -C update-feed add apiv2
+          git -C update-feed -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' -c commit.gpgsign=false commit -m "Update feed for $RELEASE_TAG"
+          git fetch --no-tags ./update-feed HEAD
+          git push "--force-with-lease=refs/heads/codex/update-feed:$old" origin FETCH_HEAD:refs/heads/codex/update-feed
+        env:
+          RELEASE_TAG: ${{ needs.sync.outputs.tag }}

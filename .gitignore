@@ -346,3 +346,8 @@ MaskFiles/
 # macOS
 
 **/.DS_Store
+
+# Release archives belong in GitHub Releases, not Git history.
+/最新正式版.zip
+/最新正式版-ARM64.zip
+/release-assets/

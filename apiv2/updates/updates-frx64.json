@@ -1,0 +1,18 @@
+{
+  "assets": [
+    {
+      "file_name": "PCL_CE_idadwind_2.15.1_x64.zip",
+      "version": {
+        "channel": "stable",
+        "name": "2.15.1",
+        "code": 524
+      },
+      "downloads": [
+        "https://github.com/idadwind1/PCL-CE/releases/download/v2.15.1/PCL_CE_idadwind_2.15.1_x64.zip"
+      ],
+      "patches": [],
+      "sha256": "7c3f25dedcea18c9c1b4e70715a6cfef36c72f077db668d00ee517d20585266c",
+      "changelog": "PCL CE idadwind 修改版 2.15.1：同步上游正式版，保留 Minecraft 安装功能。"
+    }
+  ]
+}

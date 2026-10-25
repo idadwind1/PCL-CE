@@ -14,13 +14,8 @@ public static class UpdateManager
 
     public static UpdatesWrapperModel remoteServer = new(new List<IUpdateSource>
     {
-        new UpdatesMirrorChyanModel(),
-        new UpdatesRandomModel(new[]
-        {
-            new UpdatesMinioModel("https://s3.pysio.online/pcl2-ce/", "Pysio"),
-            new UpdatesMinioModel("https://staticassets.naids.com/resources/pclce/", "Naids")
-        }),
-        new UpdatesMinioModel("https://github.com/PCL-Community/PCL2_CE_Server/raw/main/", "GitHub")
+        new UpdatesMinioModel("https://gh-proxy.com/https://raw.githubusercontent.com/idadwind1/PCL-CE/codex/update-feed/", "GitHub via gh-proxy"),
+        new UpdatesMinioModel("https://raw.githubusercontent.com/idadwind1/PCL-CE/codex/update-feed/", "GitHub")
     });
 
     public static bool IsCurrentVersionBeta
