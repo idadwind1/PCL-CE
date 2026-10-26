@@ -18,6 +18,10 @@
 <a href="https://trendshift.io/repositories/21800?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-21800" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/21800/daily?language=C%23" alt="PCL-Community%2FPCL-CE | Trendshift" width="250" height="55"/></a>
 <a href="https://trendshift.io/repositories/21800" target="_blank"><img src="https://trendshift.io/api/badge/repositories/21800" alt="PCL-Community%2FPCL-CE | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 
+**An independently maintained third-party fork of PCL CE that re-enables Minecraft downloads. It is not affiliated with the official PCL project or the CE team. Copyright in the original project code belongs to LTCat and the respective contributors.**  
+**Checks upstream stable releases every hour, syncs the source code at the corresponding tag, applies the fork modifications, and automatically builds and publishes stable versions that this fork has not yet released.**  
+Upstream repo: [PCL-Community/PCL-CE](https://github.com/PCL-Community/PCL-CE)
+
 [download](https://github.com/PCL-Community/PCL-CE/releases/latest) |
 [Upstream repo](https://github.com/Meloong-Git/PCL)
 

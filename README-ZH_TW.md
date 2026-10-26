@@ -18,6 +18,10 @@
 <a href="https://trendshift.io/repositories/21800?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-21800" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/21800/daily?language=C%23" alt="PCL-Community%2FPCL-CE | Trendshift" width="250" height="55"/></a>
 <a href="https://trendshift.io/repositories/21800" target="_blank"><img src="https://trendshift.io/api/badge/repositories/21800" alt="PCL-Community%2FPCL-CE | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 
+**基於 PCL CE 獨立維護的第三方修改版，重新啟用 Minecraft 下載功能，與 PCL 官方及 CE 團隊無關！原專案程式碼著作權歸龍騰貓躍及各貢獻者所有。**  
+**每小時檢查上游正式 Release，同步對應標籤的原始碼、套用修改，並在出現尚未發布的正式版本時自動編譯和發布。**  
+上游儲存庫：[PCL-Community/PCL-CE](https://github.com/PCL-Community/PCL-CE)
+
 [社群版下載](https://github.com/PCL-Community/PCL-CE/releases/latest) |
 [上游儲存庫](https://github.com/Meloong-Git/PCL)
 
