@@ -1,0 +1,19 @@
+{
+  "assets": [
+    {
+      "file_name": "PCL2_CE_Release_x64.zip",
+      "version": {
+        "channel": "stable",
+        "name": "2.15.1",
+        "code": 524
+      },
+      "downloads": [
+        "https://gh-proxy.com/https://github.com/idadwind1/PCL-CE/releases/download/v2.15.1/PCL2_CE_Release_x64.zip",
+        "https://github.com/idadwind1/PCL-CE/releases/download/v2.15.1/PCL2_CE_Release_x64.zip"
+      ],
+      "patches": [],
+      "sha256": "2ce39ee841ccd4e6e87812534bb62dcaedb471d9a687915575a08fe0b3ce3724",
+      "changelog": "<summary>\n**Release由GitHub Actions自动生成，且与 PCL 官方及 CE 团队无关！**\n上游Release：[Release 2.15.1](https://github.com/PCL-Community/PCL-CE/releases/tag/v2.15.1)，可以在上游检查changelog和其他说明\n</summary>"
+    }
+  ]
+}
